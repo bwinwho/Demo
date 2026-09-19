@@ -1,0 +1,6 @@
+{
+  "name": "Shivam Minerals PC Software Demo",
+  "description": "Executive business intelligence desktop software demo for Shivam Minerals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
