@@ -1,0 +1,2381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Shivam Minerals | Executive Intelligence</title>
+  <meta name="description" content="Mobile-first executive intelligence prototype for Shivam Minerals owners" />
+
+  <!-- Google Fonts: DM Serif Display + Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Lucide Icons & Chart.js -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root {
+      --ivory-ground: #FCFBF8;
+      --stone-wash: #E7DFD1;
+      --stone-wash-light: #F4EFE6;
+      --mineral-sage: #6B7F6E;
+      --mineral-sage-light: #EEF3EF;
+      --deep-forest: #2F3E2E;
+      --deep-forest-hover: #243123;
+      --text-main: #1F281E;
+      --text-muted: #6A7568;
+      --text-light: #8E988C;
+      --border-subtle: #E2DBD0;
+      --color-green: #2B7A49;
+      --color-green-bg: #EAF5EE;
+      --color-amber: #B87314;
+      --color-amber-bg: #FAF2E6;
+      --color-red: #B53A2C;
+      --color-red-bg: #FDF0EE;
+      --font-serif: 'DM Serif Display', Georgia, serif;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: #EDE8DF;
+      font-family: var(--font-sans);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      overflow: hidden;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    /* Device Wrapper for Desktop Preview & Native Mobile Feel */
+    #mobile-viewport {
+      width: 100%;
+      max-width: 430px;
+      height: 100%;
+      max-height: 932px;
+      background-color: var(--ivory-ground);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 16px 48px rgba(35, 43, 34, 0.12);
+    }
+
+    @media (min-width: 481px) {
+      body {
+        padding: 16px 0;
+        align-items: center;
+      }
+      #mobile-viewport {
+        height: 880px;
+        border-radius: 40px;
+        border: 8px solid #222B21;
+      }
+    }
+
+    /* Scrollable App Body */
+    .screen-container {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 84px; /* Space for bottom navigation */
+      scroll-behavior: smooth;
+    }
+
+    /* Clean, Calm Typography */
+    .font-serif { font-family: var(--font-serif); }
+    .font-sans { font-family: var(--font-sans); }
+
+    /* Login Screen */
+    #login-screen {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--ivory-ground);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      padding: 72px 28px 48px;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    #login-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-8px);
+    }
+
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      background-color: var(--deep-forest);
+      color: var(--ivory-ground);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-serif);
+      font-size: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(47, 62, 46, 0.2);
+    }
+
+    .btn-enter {
+      width: 100%;
+      height: 54px;
+      background-color: var(--deep-forest);
+      color: var(--ivory-ground);
+      border: none;
+      border-radius: 14px;
+      font-family: var(--font-sans);
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+    .btn-enter:active {
+      background-color: var(--deep-forest-hover);
+      transform: scale(0.99);
+    }
+
+    /* Header */
+    .app-header {
+      padding: 20px 20px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      background-color: var(--ivory-ground);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    .header-left .date-badge {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+      color: var(--mineral-sage);
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .header-left .greeting-title {
+      font-family: var(--font-serif);
+      font-size: 26px;
+      line-height: 1.15;
+      color: var(--deep-forest);
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-top: 4px;
+    }
+    .header-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background-color: var(--stone-wash);
+      color: var(--deep-forest);
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1.5px solid var(--ivory-ground);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--deep-forest);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+    }
+    .icon-btn .badge-dot {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 7px;
+      height: 7px;
+      background-color: var(--color-red);
+      border-radius: 50%;
+    }
+
+    /* Screen Views */
+    .screen-view {
+      display: none;
+      padding: 4px 18px 24px;
+      animation: fadeIn 0.25s ease-out;
+    }
+    .screen-view.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Segmented Controls */
+    .segmented-control {
+      display: flex;
+      background-color: var(--stone-wash-light);
+      border-radius: 10px;
+      padding: 3px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-subtle);
+    }
+    .segmented-btn {
+      flex: 1;
+      padding: 7px 0;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .segmented-btn.active {
+      background-color: #FFFFFF;
+      color: var(--deep-forest);
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Cards */
+    .card {
+      background-color: #FFFFFF;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-subtle);
+      box-shadow: 0 1px 4px rgba(35, 43, 34, 0.03);
+    }
+
+    /* Hero Card - Deep Forest */
+    .hero-card {
+      background-color: var(--deep-forest);
+      color: var(--ivory-ground);
+      border: none;
+      padding: 22px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-label {
+      font-size: 13px;
+      letter-spacing: 0.03em;
+      color: #A3B5A2;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+    .hero-value {
+      font-family: var(--font-serif);
+      font-size: 38px;
+      line-height: 1.1;
+      color: #FCFBF8;
+      margin-bottom: 8px;
+    }
+    .hero-metric-sub {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #D3E0D2;
+    }
+    .trend-pill-hero {
+      background-color: rgba(255, 255, 255, 0.15);
+      color: #FFFFFF;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .hero-footnote {
+      font-size: 12px;
+      color: #92A391;
+      margin-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 10px;
+    }
+    .hero-sparkline {
+      position: absolute;
+      right: 16px;
+      bottom: 18px;
+      width: 100px;
+      height: 38px;
+      opacity: 0.55;
+    }
+
+    /* 2 Small Business Cards Grid */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .small-card {
+      background-color: #FFFFFF;
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 108px;
+    }
+    .small-card-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .small-card-value {
+      font-family: var(--font-serif);
+      font-size: 27px;
+      line-height: 1.15;
+      color: var(--deep-forest);
+      margin: 4px 0 2px;
+    }
+    .small-card-period {
+      font-size: 12px;
+      color: var(--mineral-sage);
+      font-weight: 500;
+    }
+
+    /* Production Readiness Card */
+    .readiness-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 12px;
+    }
+    .readiness-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+    .readiness-pct {
+      font-family: var(--font-serif);
+      font-size: 34px;
+      line-height: 1;
+      color: var(--deep-forest);
+    }
+    .readiness-statement {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+    .readiness-statement strong {
+      color: var(--text-main);
+    }
+    .progress-track {
+      width: 100%;
+      height: 8px;
+      background-color: var(--stone-wash-light);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 52%;
+      background-color: var(--color-amber);
+      border-radius: 4px;
+      transition: width 0.6s ease;
+    }
+    .limiting-box {
+      background-color: var(--color-amber-bg);
+      border: 1px solid rgba(184, 115, 20, 0.2);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+    }
+    .limiting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .limiting-name {
+      font-weight: 700;
+      color: var(--text-main);
+      font-size: 14px;
+    }
+    .badge-status {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+    .badge-amber {
+      background-color: #F0E0C7;
+      color: var(--color-amber);
+    }
+    .badge-red {
+      background-color: #F8D8D4;
+      color: var(--color-red);
+    }
+    .badge-green {
+      background-color: #D3EADB;
+      color: var(--color-green);
+    }
+    .limiting-desc {
+      font-size: 13px;
+      color: #6D5634;
+      line-height: 1.4;
+    }
+
+    /* Text Action Button */
+    .card-action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--deep-forest);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 0;
+    }
+    .card-action-btn:hover {
+      color: var(--mineral-sage);
+    }
+
+    /* Needs Attention Alerts */
+    .section-title-clean {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+      margin: 24px 0 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .alert-card {
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+    .alert-card.red {
+      background-color: var(--color-red-bg);
+      border-color: rgba(181, 58, 44, 0.15);
+    }
+    .alert-card.amber {
+      background-color: var(--color-amber-bg);
+      border-color: rgba(184, 115, 20, 0.15);
+    }
+    .alert-pill {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 4px;
+    }
+    .alert-pill.red { background-color: var(--color-red); color: #FFF; }
+    .alert-pill.amber { background-color: var(--color-amber); color: #FFF; }
+    .alert-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 2px;
+    }
+    .alert-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Buyer Summary Rows */
+    .buyer-due-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer;
+    }
+    .buyer-due-row:last-child {
+      border-bottom: none;
+      padding-bottom: 4px;
+    }
+    .buyer-name {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text-main);
+    }
+    .buyer-due-val {
+      font-family: var(--font-serif);
+      font-size: 17px;
+      color: var(--deep-forest);
+      text-align: right;
+    }
+    .buyer-sub-label {
+      font-size: 12px;
+      color: var(--text-light);
+    }
+
+    /* Detail / Sub-screen Header */
+    .page-nav-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .back-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid var(--border-subtle);
+      background-color: #FFFFFF;
+      color: var(--deep-forest);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .page-title {
+      font-family: var(--font-serif);
+      font-size: 24px;
+      color: var(--deep-forest);
+    }
+
+    /* Cost Page Styles */
+    .metric-hero-cost {
+      background-color: #FFFFFF;
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 16px;
+    }
+    .cost-main-val {
+      font-family: var(--font-serif);
+      font-size: 34px;
+      color: var(--deep-forest);
+      margin: 4px 0 14px;
+    }
+    .cost-sub-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .cost-sub-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+    .cost-sub-val {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      color: var(--text-main);
+    }
+    .cost-margin-val {
+      color: var(--color-green);
+    }
+
+    /* Cost Breakdown List */
+    .breakdown-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer;
+    }
+    .breakdown-row:last-child {
+      border-bottom: none;
+    }
+    .breakdown-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-main);
+    }
+    .breakdown-val {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--deep-forest);
+    }
+    .breakdown-row.tappable:hover {
+      background-color: var(--stone-wash-light);
+      margin: 0 -10px;
+      padding: 13px 10px;
+      border-radius: 8px;
+    }
+
+    /* Stock Large Rows */
+    .material-card {
+      background-color: #FFFFFF;
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 14px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .material-card:active {
+      transform: scale(0.99);
+    }
+    .material-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
+    }
+    .material-name {
+      font-family: var(--font-serif);
+      font-size: 22px;
+      color: var(--deep-forest);
+    }
+    .material-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 12px;
+    }
+    .material-meta-label {
+      color: var(--text-light);
+      margin-bottom: 2px;
+    }
+    .material-meta-val {
+      font-weight: 600;
+      color: var(--text-main);
+      font-size: 13px;
+    }
+
+    /* Buyer Row Cards */
+    .buyer-card-item {
+      background-color: #FFFFFF;
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: background-color 0.15s;
+    }
+    .buyer-card-item:active {
+      background-color: var(--stone-wash-light);
+    }
+    .buyer-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .buyer-card-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+    .buyer-metrics-row {
+      display: flex;
+      justify-content: space-between;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    /* Bottom Sheets & Modals */
+    .bottom-sheet-backdrop {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(31, 40, 30, 0.45);
+      z-index: 80;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .bottom-sheet-backdrop.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .bottom-sheet {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      background-color: #FFFFFF;
+      border-radius: 24px 24px 0 0;
+      padding: 24px 20px 36px;
+      z-index: 90;
+      transform: translateY(100%);
+      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      max-height: 85%;
+      overflow-y: auto;
+      box-shadow: 0 -8px 32px rgba(0,0,0,0.12);
+    }
+    .bottom-sheet.active {
+      transform: translateY(0);
+    }
+    .sheet-handle {
+      width: 40px;
+      height: 4px;
+      background-color: var(--border-subtle);
+      border-radius: 2px;
+      margin: -12px auto 16px;
+    }
+    .sheet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .sheet-title {
+      font-family: var(--font-serif);
+      font-size: 22px;
+      color: var(--deep-forest);
+    }
+    .sheet-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    /* Bottom Navigation */
+    .bottom-nav {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 72px;
+      background-color: var(--ivory-ground);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 0 10px;
+      z-index: 50;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      width: 60px;
+      height: 52px;
+      color: #929D90;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .nav-item svg {
+      width: 22px;
+      height: 22px;
+      margin-bottom: 3px;
+      stroke-width: 1.75;
+    }
+    .nav-item.active {
+      color: var(--deep-forest);
+      font-weight: 700;
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: absolute;
+      top: 24px;
+      left: 20px;
+      right: 20px;
+      z-index: 200;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .toast {
+      background-color: var(--deep-forest);
+      color: var(--ivory-ground);
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 13px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: all 0.25s ease;
+      text-align: center;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Utility Helpers */
+    .text-right { text-align: right; }
+    .mt-4 { margin-top: 16px; }
+    .mb-2 { margin-bottom: 8px; }
+    .text-sm { font-size: 13px; }
+    .text-muted { color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+  <!-- Single Mobile Frame Shell -->
+  <main id="mobile-viewport" aria-label="Shivam Minerals Mobile Interface">
+
+    <!-- Toast Notification -->
+    <aside id="toast-wrapper" class="toast-container" aria-live="polite">
+      <div id="app-toast" class="toast">Notice message</div>
+    </aside>
+
+    <!-- ============================================== -->
+    <!-- 1. LOGIN SCREEN                                 -->
+    <!-- ============================================== -->
+    <section id="login-screen" aria-label="Sign In">
+      <div></div>
+
+      <div style="text-align: center; display: flex; flex-direction: column; align-items: center;">
+        <div class="brand-mark">SM</div>
+        <h1 class="font-serif" style="font-size: 32px; letter-spacing: 0.05em; line-height: 1.15; color: var(--deep-forest); text-transform: uppercase;">
+          SHIVAM<br />MINERALS
+        </h1>
+        <p style="font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mineral-sage); margin-top: 12px; font-weight: 600;">
+          Business Intelligence
+        </p>
+      </div>
+
+      <div style="width: 100%; max-width: 320px;">
+        <button id="btn-login" class="btn-enter" onclick="appLogin()">
+          LOG IN
+          <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
+        </button>
+        <p style="font-size: 11px; text-align: center; color: var(--text-light); margin-top: 14px;">
+          Executive Demo Mode • 2026
+        </p>
+      </div>
+    </section>
+
+    <!-- App Top Header (Visible after login) -->
+    <header id="main-header" class="app-header">
+      <div class="header-left">
+        <p id="header-date" class="date-badge">19 SEPTEMBER</p>
+        <h2 id="header-greeting" class="greeting-title">Good Afternoon,<br />Shyam</h2>
+      </div>
+      <div class="header-right">
+        <button class="icon-btn" onclick="openNotifications()" aria-label="View notifications">
+          <i data-lucide="bell" style="width: 18px; height: 18px;"></i>
+          <span class="badge-dot"></span>
+        </button>
+        <div class="header-avatar" title="Shyam (Owner)">S</div>
+      </div>
+    </header>
+
+    <!-- Main Scrollable Screen Views -->
+    <div id="content-scroll" class="screen-container">
+
+      <!-- ============================================== -->
+      <!-- SCREEN: HOME                                    -->
+      <!-- ============================================== -->
+      <section id="view-home" class="screen-view active" aria-label="Home Dashboard">
+        <!-- Compact Period Filter -->
+        <nav class="segmented-control" aria-label="Filter period">
+          <button class="segmented-btn active" onclick="setHomePeriod('today', this)">Today</button>
+          <button class="segmented-btn" onclick="setHomePeriod('week', this)">Week</button>
+          <button class="segmented-btn" onclick="setHomePeriod('month', this)">Month</button>
+        </nav>
+
+        <!-- 1. MAIN HERO CARD: SN-1 Making Cost -->
+        <article class="card hero-card" onclick="navTo('cost')" style="cursor: pointer;">
+          <p class="hero-label">SN-1 Making Cost</p>
+          <h3 id="home-sn1-cost" class="hero-value">₹1,403 <span style="font-size: 20px; font-family: var(--font-sans); font-weight: 400; opacity: 0.85;">/ MT</span></h3>
+          <div class="hero-metric-sub">
+            <span class="trend-pill-hero">+1.8%</span>
+            <span>vs previous period</span>
+          </div>
+          <p class="hero-footnote">Estimated current making cost</p>
+          <!-- Subtle Sparkline -->
+          <canvas id="home-sparkline" class="hero-sparkline" width="100" height="38"></canvas>
+        </article>
+
+        <!-- 2. TWO SMALL BUSINESS CARDS -->
+        <div class="grid-2">
+          <article class="small-card">
+            <span class="small-card-label">Production</span>
+            <div id="home-prod-val" class="small-card-value">236 MT</div>
+            <span id="home-prod-period" class="small-card-period">Today</span>
+          </article>
+          <article class="small-card">
+            <span class="small-card-label">Collections</span>
+            <div id="home-coll-val" class="small-card-value">₹3.10 L</div>
+            <span id="home-coll-period" class="small-card-period">Today</span>
+          </article>
+        </div>
+
+        <!-- 3. PRODUCTION READINESS -->
+        <article class="card">
+          <div class="readiness-header">
+            <h4 class="readiness-title">Production Readiness</h4>
+            <span class="readiness-pct">52%</span>
+          </div>
+          <p class="readiness-statement">
+            <strong>3,900 MT</strong> possible of 7,500 MT planned
+          </p>
+          <div class="progress-track">
+            <div class="progress-fill" style="width: 52%;"></div>
+          </div>
+
+          <div class="limiting-box">
+            <div class="limiting-row">
+              <span class="limiting-name">Limiting: SN-2</span>
+              <span class="badge-status badge-amber">Low</span>
+            </div>
+            <p class="limiting-desc">
+              SN-2 stock is currently limiting full SN-1 production.
+            </p>
+          </div>
+
+          <button class="card-action-btn" onclick="navTo('stock')">
+            View Stock <i data-lucide="arrow-right" style="width: 15px; height: 15px;"></i>
+          </button>
+        </article>
+
+        <!-- 4. NEEDS ATTENTION (MAX 2 ALERTS) -->
+        <div class="section-title-clean">
+          <span>Needs Attention</span>
+          <span style="font-size: 12px; color: var(--mineral-sage); font-weight: 500;">2 items</span>
+        </div>
+
+        <article class="alert-card red" onclick="openMaterialDetail('SN-2')">
+          <div style="flex: 1;">
+            <span class="alert-pill red">Critical</span>
+            <h5 class="alert-title">SN-2 stock is low</h5>
+            <p class="alert-desc">Current stock may limit planned SN-1 production.</p>
+          </div>
+          <i data-lucide="chevron-right" style="width: 18px; height: 18px; color: var(--color-red); align-self: center;"></i>
+        </article>
+
+        <article class="alert-card amber" onclick="navTo('buyers', 'overdue')">
+          <div style="flex: 1;">
+            <span class="alert-pill amber">Review</span>
+            <h5 class="alert-title">₹15.3 L overdue</h5>
+            <p class="alert-desc">Payments from multiple buyers need review.</p>
+          </div>
+          <i data-lucide="chevron-right" style="width: 18px; height: 18px; color: var(--color-amber); align-self: center;"></i>
+        </article>
+
+        <!-- 5. BUYER SUMMARY -->
+        <article class="card mt-4">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+            <h4 style="font-size: 14px; font-weight: 600; color: var(--text-muted);">Buyer Dues</h4>
+            <span style="font-size: 12px; color: var(--color-red); font-weight: 600;">₹15.3 L Overdue</span>
+          </div>
+          <div style="font-family: var(--font-serif); font-size: 30px; color: var(--deep-forest); margin-bottom: 14px;">
+            ₹42.6 L <span style="font-family: var(--font-sans); font-size: 13px; color: var(--text-muted); font-weight: 400;">Total Receivable</span>
+          </div>
+
+          <div style="border-top: 1px solid var(--border-subtle); padding-top: 4px; margin-bottom: 12px;">
+            <div class="buyer-due-row" onclick="openBuyerDetail('SunRay Tiles')">
+              <div>
+                <p class="buyer-name">SunRay Tiles</p>
+                <span class="buyer-sub-label">Overdue 14 days</span>
+              </div>
+              <div class="buyer-due-val">₹6.4 L</div>
+            </div>
+            <div class="buyer-due-row" onclick="openBuyerDetail('Rich Vitrified')">
+              <div>
+                <p class="buyer-name">Rich Vitrified</p>
+                <span class="buyer-sub-label">Due in 3 days</span>
+              </div>
+              <div class="buyer-due-val">₹3.8 L</div>
+            </div>
+            <div class="buyer-due-row" onclick="openBuyerDetail('Sun World')">
+              <div>
+                <p class="buyer-name">Sun World</p>
+                <span class="buyer-sub-label">Overdue 8 days</span>
+              </div>
+              <div class="buyer-due-val">₹5.1 L</div>
+            </div>
+          </div>
+
+          <button class="card-action-btn" onclick="navTo('buyers')">
+            View Buyers <i data-lucide="arrow-right" style="width: 15px; height: 15px;"></i>
+          </button>
+        </article>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- SCREEN: COST                                    -->
+      <!-- ============================================== -->
+      <section id="view-cost" class="screen-view" aria-label="Cost Breakdown and Trends">
+        <div class="page-nav-header">
+          <h2 class="page-title">SN-1 Cost</h2>
+        </div>
+
+        <!-- Period Selector -->
+        <nav class="segmented-control" aria-label="Cost period filter">
+          <button class="segmented-btn active" onclick="setCostPeriod('1M', this)">1M</button>
+          <button class="segmented-btn" onclick="setCostPeriod('3M', this)">3M</button>
+          <button class="segmented-btn" onclick="setCostPeriod('6M', this)">6M</button>
+          <button class="segmented-btn" onclick="setCostPeriod('12M', this)">12M</button>
+          <button class="segmented-btn" onclick="setCostPeriod('All', this)">All</button>
+        </nav>
+
+        <!-- Current Cost & Margins -->
+        <article class="metric-hero-cost">
+          <p class="cost-sub-label">Current SN-1 Making Cost</p>
+          <h3 id="cost-current-val" class="cost-main-val">₹1,403 <span style="font-family: var(--font-sans); font-size: 16px; color: var(--text-muted); font-weight: 400;">/ MT</span></h3>
+
+          <div class="cost-sub-grid">
+            <div>
+              <p class="cost-sub-label">Average Selling Price</p>
+              <p id="cost-asp-val" class="cost-sub-val">₹1,685 <span style="font-size: 12px; font-family: var(--font-sans); color: var(--text-light);">/ MT</span></p>
+            </div>
+            <div>
+              <p class="cost-sub-label">ESTIMATED MARGIN</p>
+              <p id="cost-margin-val" class="cost-sub-val cost-margin-val">₹282 <span style="font-size: 12px; font-family: var(--font-sans); color: var(--color-green);">/ MT</span></p>
+            </div>
+          </div>
+        </article>
+
+        <!-- Trend Chart -->
+        <article class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="font-size: 14px; font-weight: 600; color: var(--text-muted);">Cost vs. Selling Trend</h4>
+            <span style="font-size: 11px; color: var(--mineral-sage); font-weight: 600;">₹ / MT</span>
+          </div>
+          <div style="height: 180px; position: relative;">
+            <canvas id="cost-chart"></canvas>
+          </div>
+          <div style="display: flex; gap: 16px; justify-content: center; margin-top: 12px; font-size: 12px;">
+            <span style="display: inline-flex; align-items: center; gap: 6px; color: var(--deep-forest); font-weight: 600;">
+              <span style="width: 10px; height: 3px; background: var(--deep-forest); border-radius: 2px;"></span> Making Cost
+            </span>
+            <span style="display: inline-flex; align-items: center; gap: 6px; color: var(--mineral-sage); font-weight: 600;">
+              <span style="width: 10px; height: 3px; background: var(--mineral-sage); border-radius: 2px;"></span> Selling Price
+            </span>
+          </div>
+        </article>
+
+        <!-- Cost Breakdown List -->
+        <article class="card">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px;">
+            <h4 style="font-size: 14px; font-weight: 600; color: var(--text-muted);">Cost Breakdown</h4>
+            <span style="font-size: 12px; color: var(--text-light);">Basis: 7,500 MT</span>
+          </div>
+
+          <div class="breakdown-row tappable" onclick="openRawMaterialRecipeModal()">
+            <div class="breakdown-name">
+              <span>Raw Material</span>
+              <span class="badge-status badge-amber" style="font-size: 10px;">Tap for Recipe</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="breakdown-val">₹1,075</span>
+              <i data-lucide="chevron-right" style="width: 16px; height: 16px; color: var(--text-light);"></i>
+            </div>
+          </div>
+
+          <div class="breakdown-row">
+            <span class="breakdown-name">Freight</span>
+            <span class="breakdown-val">₹190</span>
+          </div>
+
+          <div class="breakdown-row">
+            <span class="breakdown-name">Maintenance</span>
+            <span class="breakdown-val">₹60</span>
+          </div>
+
+          <div class="breakdown-row">
+            <span class="breakdown-name">Salary</span>
+            <span class="breakdown-val">₹33</span>
+          </div>
+
+          <div class="breakdown-row">
+            <span class="breakdown-name">Electricity</span>
+            <span class="breakdown-val">₹30</span>
+          </div>
+
+          <div class="breakdown-row">
+            <span class="breakdown-name">Diesel</span>
+            <span class="breakdown-val">₹15</span>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: baseline; padding-top: 14px; margin-top: 6px; border-top: 1.5px solid var(--border-subtle);">
+            <span style="font-weight: 700; color: var(--deep-forest); font-size: 15px;">Total SN-1 Cost</span>
+            <span style="font-family: var(--font-serif); font-size: 22px; color: var(--deep-forest);">₹1,403 <span style="font-family: var(--font-sans); font-size: 13px; font-weight: 400;">/ MT</span></span>
+          </div>
+        </article>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- SCREEN: STOCK                                   -->
+      <!-- ============================================== -->
+      <section id="view-stock" class="screen-view" aria-label="Raw Material Stock and Inventory">
+        <div class="page-nav-header">
+          <h2 class="page-title">Inventory</h2>
+        </div>
+
+        <!-- Top Overview -->
+        <article class="card hero-card" style="margin-bottom: 20px;">
+          <p class="hero-label">SN-1 Production Possible</p>
+          <h3 class="hero-value">3,900 MT</h3>
+          <p class="hero-metric-sub">
+            <span>Target: 7,500 MT</span>
+            <span style="opacity: 0.7;">•</span>
+            <span style="color: #F8D8D4;">52% Achievable</span>
+          </p>
+          <div class="limiting-box" style="background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.18); margin-top: 14px; margin-bottom: 0;">
+            <div class="limiting-row">
+              <span style="color: #FFF; font-weight: 600;">Limiting Material: SN-2</span>
+              <span class="badge-status badge-amber">Bottleneck</span>
+            </div>
+            <p style="color: #E2DBD0; font-size: 12px; margin-top: 2px;">
+              Requires 1,440 MT more to reach 7,500 MT target.
+            </p>
+          </div>
+        </article>
+
+        <div class="section-title-clean">
+          <span>Raw Materials (SN-1 Recipe)</span>
+          <span style="font-size: 12px; color: var(--text-light);">Tap row for details</span>
+        </div>
+
+        <!-- 5 Raw Material Rows -->
+        <div id="raw-materials-list">
+          <!-- Dynamically populated via JavaScript from DEMO_DATA -->
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- SCREEN: MATERIAL DETAIL (Progressive View)     -->
+      <!-- ============================================== -->
+      <section id="view-material-detail" class="screen-view" aria-label="Material Detail View">
+        <div class="page-nav-header">
+          <button class="back-btn" onclick="navTo('stock')" aria-label="Back to Stock">
+            <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i>
+          </button>
+          <h2 id="mat-detail-title" class="page-title">SN-2</h2>
+        </div>
+
+        <!-- Warning banner if limiting -->
+        <div id="mat-limiting-banner" class="limiting-box" style="margin-bottom: 16px;">
+          <div class="limiting-row">
+            <span class="limiting-name" id="mat-limiting-banner-title">Limiting Material</span>
+            <span id="mat-detail-status-badge" class="badge-status badge-amber">Low</span>
+          </div>
+          <p id="mat-limiting-banner-text" class="limiting-desc">
+            SN-2 is currently the material restricting production.
+          </p>
+        </div>
+
+        <!-- Key Metrics Grid -->
+        <article class="card">
+          <div style="margin-bottom: 14px;">
+            <p class="cost-sub-label">Current Available Stock</p>
+            <h3 id="mat-detail-stock" class="hero-value" style="color: var(--deep-forest); font-size: 34px;">1,560 MT</h3>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 14px 0; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle);">
+            <div>
+              <p class="cost-sub-label">Required for Target</p>
+              <p id="mat-detail-required" style="font-size: 18px; font-weight: 600; color: var(--text-main);">3,000 MT</p>
+            </div>
+            <div>
+              <p class="cost-sub-label">Shortfall</p>
+              <p id="mat-detail-shortfall" style="font-size: 18px; font-weight: 600; color: var(--color-red);">-1,440 MT</p>
+            </div>
+            <div>
+              <p class="cost-sub-label">Recipe Share</p>
+              <p id="mat-detail-share" style="font-size: 18px; font-weight: 600; color: var(--text-main);">40%</p>
+            </div>
+            <div>
+              <p class="cost-sub-label">Coverage for SN-1</p>
+              <p id="mat-detail-coverage" style="font-size: 18px; font-weight: 600; color: var(--color-amber);">52%</p>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 14px;">
+            <div>
+              <p class="cost-sub-label">Estimated Days Left</p>
+              <p id="mat-detail-days" style="font-size: 16px; font-weight: 600; color: var(--deep-forest);">6.5 Days</p>
+            </div>
+            <div>
+              <p class="cost-sub-label">Contribution</p>
+              <p id="mat-detail-contrib" style="font-size: 16px; font-weight: 600; color: var(--deep-forest);">₹460 / MT</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- Material Action -->
+        <button class="btn-enter" style="background-color: var(--mineral-sage);" onclick="showToast('Procurement alert logged for ' + currentDetailMaterial)">
+          <i data-lucide="bell" style="width: 18px; height: 18px;"></i>
+          Notify Procurement
+        </button>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- SCREEN: BUYERS                                  -->
+      <!-- ============================================== -->
+      <section id="view-buyers" class="screen-view" aria-label="Buyer Receivables and Outstanding">
+        <div class="page-nav-header" style="justify-content: space-between;">
+          <h2 class="page-title">Buyers</h2>
+          <button class="icon-btn" onclick="openFilterSheet()" title="Filter options" aria-label="Filter buyers">
+            <i data-lucide="sliders-horizontal" style="width: 17px; height: 17px;"></i>
+          </button>
+        </div>
+
+        <!-- Top Receivables Summary -->
+        <article class="card" style="margin-bottom: 16px;">
+          <p class="cost-sub-label">Total Receivable</p>
+          <h3 id="buyers-total-due" class="hero-value" style="color: var(--deep-forest); font-size: 34px;">₹42.6 L</h3>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--border-subtle); margin-top: 8px;">
+            <div>
+              <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Overdue Amount</span>
+              <p id="buyers-overdue-val" style="font-size: 18px; font-weight: 700; color: var(--color-red);">₹15.3 L</p>
+            </div>
+            <div class="text-right">
+              <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Active Accounts</span>
+              <p style="font-size: 18px; font-weight: 700; color: var(--deep-forest);">5 Buyers</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- Status Filter Tabs -->
+        <nav class="segmented-control" aria-label="Buyer status filter" style="margin-bottom: 12px;">
+          <button id="tab-buyer-all" class="segmented-btn active" onclick="setBuyerTab('all', this)">All</button>
+          <button id="tab-buyer-due" class="segmented-btn" onclick="setBuyerTab('due', this)">Due</button>
+          <button id="tab-buyer-overdue" class="segmented-btn" onclick="setBuyerTab('overdue', this)">Overdue</button>
+        </nav>
+
+        <!-- Compact Period Filter -->
+        <div style="display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px;">
+          <button class="segmented-btn active" style="flex: none; padding: 5px 14px;" onclick="setBuyerPeriod('3M', this)">3M</button>
+          <button class="segmented-btn" style="flex: none; padding: 5px 14px;" onclick="setBuyerPeriod('6M', this)">6M</button>
+          <button class="segmented-btn" style="flex: none; padding: 5px 14px;" onclick="setBuyerPeriod('12M', this)">12M</button>
+          <button class="segmented-btn" style="flex: none; padding: 5px 14px;" onclick="setBuyerPeriod('All', this)">All</button>
+        </div>
+
+        <!-- Buyer List Stack -->
+        <div id="buyers-card-list">
+          <!-- Dynamically populated from DEMO_DATA -->
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- SCREEN: BUYER DETAIL                            -->
+      <!-- ============================================== -->
+      <section id="view-buyer-detail" class="screen-view" aria-label="Buyer Account Detail">
+        <div class="page-nav-header">
+          <button class="back-btn" onclick="navTo('buyers')" aria-label="Back to Buyers">
+            <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i>
+          </button>
+          <h2 id="buyer-detail-name" class="page-title">SunRay Tiles</h2>
+        </div>
+
+        <!-- Buyer Summary Card -->
+        <article class="card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+            <div>
+              <p class="cost-sub-label">Outstanding Due</p>
+              <h3 id="buyer-detail-due" class="hero-value" style="color: var(--color-red); font-size: 32px;">₹6.4 L</h3>
+            </div>
+            <span id="buyer-detail-badge" class="badge-status badge-red">Overdue</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle);">
+            <div>
+              <p class="cost-sub-label">Total Sales (FY)</p>
+              <p id="buyer-detail-sales" style="font-size: 17px; font-weight: 600; color: var(--deep-forest);">₹24.8 L</p>
+            </div>
+            <div>
+              <p class="cost-sub-label">Avg Selling Rate</p>
+              <p id="buyer-detail-rate" style="font-size: 17px; font-weight: 600; color: var(--text-main);">₹1,710 / MT</p>
+            </div>
+          </div>
+
+          <div style="padding-top: 12px; display: flex; justify-content: space-between; font-size: 13px;">
+            <span class="text-muted">Last Payment:</span>
+            <span id="buyer-detail-last-pay" style="font-weight: 600; color: var(--deep-forest);">12 Sep (₹3.5 L)</span>
+          </div>
+        </article>
+
+        <!-- Sales Trend (Single Chart) -->
+        <article class="card">
+          <h4 style="font-size: 14px; font-weight: 600; color: var(--text-muted); margin-bottom: 12px;">Monthly Despatch Trend (MT)</h4>
+          <div style="height: 150px; position: relative;">
+            <canvas id="buyer-trend-chart"></canvas>
+          </div>
+        </article>
+
+        <!-- Recent Invoices -->
+        <article class="card">
+          <h4 style="font-size: 14px; font-weight: 600; color: var(--text-muted); margin-bottom: 10px;">Recent Invoices</h4>
+          <div id="buyer-invoices-list">
+            <!-- Dynamically populated -->
+          </div>
+        </article>
+
+        <!-- Payment History -->
+        <article class="card">
+          <h4 style="font-size: 14px; font-weight: 600; color: var(--text-muted); margin-bottom: 10px;">Payment History</h4>
+          <div id="buyer-payments-list">
+            <!-- Dynamically populated -->
+          </div>
+        </article>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- SCREEN: MORE                                    -->
+      <!-- ============================================== -->
+      <section id="view-more" class="screen-view" aria-label="More Options and Settings">
+        <div class="page-nav-header">
+          <h2 class="page-title">More</h2>
+        </div>
+
+        <!-- Menu List -->
+        <article class="card" style="padding: 6px 16px;">
+          <div class="breakdown-row" onclick="openReportsSummary()">
+            <div class="breakdown-name">
+              <i data-lucide="file-text" style="width: 18px; height: 18px; color: var(--mineral-sage);"></i>
+              <span>Reports</span>
+            </div>
+            <i data-lucide="chevron-right" style="width: 16px; height: 16px; color: var(--text-light);"></i>
+          </div>
+
+          <div class="breakdown-row" onclick="openNotifications()">
+            <div class="breakdown-name">
+              <i data-lucide="bell" style="width: 18px; height: 18px; color: var(--mineral-sage);"></i>
+              <span>Notifications</span>
+            </div>
+            <span class="badge-status badge-red" style="font-size: 10px;">2 New</span>
+          </div>
+
+          <div class="breakdown-row" onclick="openTallySync()">
+            <div class="breakdown-name">
+              <i data-lucide="refresh-cw" style="width: 18px; height: 18px; color: var(--mineral-sage);"></i>
+              <span>Tally Sync</span>
+            </div>
+            <span class="badge-status badge-amber" style="font-size: 10px;">Demo Mode</span>
+          </div>
+
+          <div class="breakdown-row" onclick="openSettingsModal()">
+            <div class="breakdown-name">
+              <i data-lucide="settings" style="width: 18px; height: 18px; color: var(--mineral-sage);"></i>
+              <span>Settings</span>
+            </div>
+            <i data-lucide="chevron-right" style="width: 16px; height: 16px; color: var(--text-light);"></i>
+          </div>
+
+          <div class="breakdown-row" onclick="openAboutModal()">
+            <div class="breakdown-name">
+              <i data-lucide="info" style="width: 18px; height: 18px; color: var(--mineral-sage);"></i>
+              <span>About Shivam Minerals</span>
+            </div>
+            <i data-lucide="chevron-right" style="width: 16px; height: 16px; color: var(--text-light);"></i>
+          </div>
+        </article>
+
+        <!-- Executive Profile Box -->
+        <article class="card" style="background-color: var(--stone-wash-light);">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div class="header-avatar" style="width: 48px; height: 48px; font-size: 18px;">S</div>
+            <div>
+              <h4 style="font-size: 16px; font-weight: 700; color: var(--deep-forest);">Shyam Agrawal</h4>
+              <p style="font-size: 13px; color: var(--text-muted);">Managing Partner • Shivam Minerals</p>
+            </div>
+          </div>
+          <button class="btn-enter" style="margin-top: 16px; height: 44px; background: transparent; border: 1px solid var(--border-subtle); color: var(--deep-forest);" onclick="appLogout()">
+            Log Out
+          </button>
+        </article>
+      </section>
+
+    </div>
+
+    <!-- ============================================== -->
+    <!-- BOTTOM NAVIGATION (Exactly 5 destinations)     -->
+    <!-- ============================================== -->
+    <nav id="bottom-nav" class="bottom-nav" aria-label="Main Navigation">
+      <button id="nav-btn-home" class="nav-item active" onclick="navTo('home')">
+        <i data-lucide="home"></i>
+        <span>Home</span>
+      </button>
+
+      <button id="nav-btn-cost" class="nav-item" onclick="navTo('cost')">
+        <i data-lucide="trending-up"></i>
+        <span>Cost</span>
+      </button>
+
+      <button id="nav-btn-stock" class="nav-item" onclick="navTo('stock')">
+        <i data-lucide="box"></i>
+        <span>Stock</span>
+      </button>
+
+      <button id="nav-btn-buyers" class="nav-item" onclick="navTo('buyers')">
+        <i data-lucide="users"></i>
+        <span>Buyers</span>
+      </button>
+
+      <button id="nav-btn-more" class="nav-item" onclick="navTo('more')">
+        <i data-lucide="more-horizontal"></i>
+        <span>More</span>
+      </button>
+    </nav>
+
+    <!-- ============================================== -->
+    <!-- BOTTOM SHEET: RAW MATERIAL RECIPE (Progressive) -->
+    <!-- ============================================== -->
+    <div id="sheet-backdrop" class="bottom-sheet-backdrop" onclick="closeSheet()"></div>
+
+    <div id="recipe-sheet" class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="recipe-sheet-title">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div>
+          <h3 id="recipe-sheet-title" class="sheet-title">SN-1 Raw Material Recipe</h3>
+          <p style="font-size: 12px; color: var(--text-muted);">Total Raw Material Cost: ₹1,075 / MT</p>
+        </div>
+        <button class="sheet-close" onclick="closeSheet()" aria-label="Close dialog">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <div class="breakdown-row" style="padding: 10px 0;">
+          <div>
+            <p style="font-weight: 700; color: var(--deep-forest);">SN-2</p>
+            <span style="font-size: 12px; color: var(--text-muted);">40% Share • ₹1,150/MT rate</span>
+          </div>
+          <div class="text-right">
+            <span style="font-weight: 700; font-size: 16px; color: var(--deep-forest);">₹460</span>
+            <div style="font-size: 11px; color: var(--text-light);">contribution</div>
+          </div>
+        </div>
+
+        <div class="breakdown-row" style="padding: 10px 0;">
+          <div>
+            <p style="font-weight: 700; color: var(--deep-forest);">J-7</p>
+            <span style="font-size: 12px; color: var(--text-muted);">20% Share • ₹950/MT rate</span>
+          </div>
+          <div class="text-right">
+            <span style="font-weight: 700; font-size: 16px; color: var(--deep-forest);">₹190</span>
+            <div style="font-size: 11px; color: var(--text-light);">contribution</div>
+          </div>
+        </div>
+
+        <div class="breakdown-row" style="padding: 10px 0;">
+          <div>
+            <p style="font-weight: 700; color: var(--deep-forest);">SD-2</p>
+            <span style="font-size: 12px; color: var(--text-muted);">20% Share • ₹900/MT rate</span>
+          </div>
+          <div class="text-right">
+            <span style="font-weight: 700; font-size: 16px; color: var(--deep-forest);">₹180</span>
+            <div style="font-size: 11px; color: var(--text-light);">contribution</div>
+          </div>
+        </div>
+
+        <div class="breakdown-row" style="padding: 10px 0;">
+          <div>
+            <p style="font-weight: 700; color: var(--deep-forest);">RD-2</p>
+            <span style="font-size: 12px; color: var(--text-muted);">10% Share • ₹1,650/MT rate</span>
+          </div>
+          <div class="text-right">
+            <span style="font-weight: 700; font-size: 16px; color: var(--deep-forest);">₹165</span>
+            <div style="font-size: 11px; color: var(--text-light);">contribution</div>
+          </div>
+        </div>
+
+        <div class="breakdown-row" style="padding: 10px 0;">
+          <div>
+            <p style="font-weight: 700; color: var(--deep-forest);">C-5</p>
+            <span style="font-size: 12px; color: var(--text-muted);">10% Share • ₹800/MT rate</span>
+          </div>
+          <div class="text-right">
+            <span style="font-weight: 700; font-size: 16px; color: var(--deep-forest);">₹80</span>
+            <div style="font-size: 11px; color: var(--text-light);">contribution</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-enter" style="height: 46px; background-color: var(--deep-forest);" onclick="closeSheet(); navTo('stock');">
+        Check Current Stock In Hand
+      </button>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- BOTTOM SHEET: FILTER SHEET                      -->
+    <!-- ============================================== -->
+    <div id="filter-sheet" class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="filter-sheet-title">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <h3 id="filter-sheet-title" class="sheet-title">Filter</h3>
+        <button class="sheet-close" onclick="closeSheet()" aria-label="Close dialog">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <label style="font-size: 13px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 8px;">Period</label>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="display: flex; align-items: center; gap: 10px; font-size: 14px;">
+            <input type="radio" name="sheet-period" value="1M" checked /> 1 Month
+          </label>
+          <label style="display: flex; align-items: center; gap: 10px; font-size: 14px;">
+            <input type="radio" name="sheet-period" value="3M" /> 3 Months
+          </label>
+          <label style="display: flex; align-items: center; gap: 10px; font-size: 14px;">
+            <input type="radio" name="sheet-period" value="6M" /> 6 Months
+          </label>
+          <label style="display: flex; align-items: center; gap: 10px; font-size: 14px;">
+            <input type="radio" name="sheet-period" value="12M" /> 12 Months
+          </label>
+          <label style="display: flex; align-items: center; gap: 10px; font-size: 14px;">
+            <input type="radio" name="sheet-period" value="All" /> All Time
+          </label>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <label style="font-size: 13px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 8px;">Status</label>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="display: flex; align-items: center; gap: 10px; font-size: 14px;">
+            <input type="checkbox" id="filter-status-healthy" checked /> Healthy
+          </label>
+          <label style="display: flex; align-items: center; gap: 10px; font-size: 14px;">
+            <input type="checkbox" id="filter-status-watch" checked /> Watch / Due
+          </label>
+          <label style="display: flex; align-items: center; gap: 10px; font-size: 14px;">
+            <input type="checkbox" id="filter-status-critical" checked /> Critical / Overdue
+          </label>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px;">
+        <button class="btn-enter" style="flex: 2; height: 48px;" onclick="applyFilterSheet()">
+          APPLY FILTERS
+        </button>
+        <button class="btn-enter" style="flex: 1; height: 48px; background: transparent; border: 1px solid var(--border-subtle); color: var(--text-main);" onclick="resetFilterSheet()">
+          Reset
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- BOTTOM SHEET: TALLY STATUS & SYNC               -->
+    <!-- ============================================== -->
+    <div id="tally-sheet" class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="tally-sheet-title">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <h3 id="tally-sheet-title" class="sheet-title">Tally Connection</h3>
+        <button class="sheet-close" onclick="closeSheet()" aria-label="Close dialog">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+
+      <div class="card" style="background-color: var(--stone-wash-light); margin-bottom: 18px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="font-size: 13px; color: var(--text-muted);">Connection Status</span>
+          <span class="badge-status badge-amber">Demo Mode</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="font-size: 13px; color: var(--text-muted);">Last Sync</span>
+          <span style="font-size: 13px; font-weight: 600; color: var(--deep-forest);">Not connected</span>
+        </div>
+      </div>
+
+      <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px;">
+        When integrated with your Tally Prime server, vouchers, ledger outstandings, and material inventory will update automatically every 30 minutes.
+      </p>
+
+      <button class="btn-enter" onclick="connectTallyAction()">
+        Connect Tally
+      </button>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- BOTTOM SHEET: REPORTS MODAL                     -->
+    <!-- ============================================== -->
+    <div id="reports-sheet" class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="reports-sheet-title">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <h3 id="reports-sheet-title" class="sheet-title">Executive Reports</h3>
+        <button class="sheet-close" onclick="closeSheet()" aria-label="Close dialog">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
+        <div class="breakdown-row tappable" onclick="showReportSummary('Cost Analysis', 'SN-1 current cost ₹1,403/MT is +1.8% vs last month. Raw material accounts for 76.6% (₹1,075/MT). Diesel rate stabilized at ₹15/MT.')">
+          <span style="font-weight: 600;">Cost Analysis</span>
+          <i data-lucide="chevron-right" style="width: 16px; height: 16px; color: var(--text-light);"></i>
+        </div>
+        <div class="breakdown-row tappable" onclick="showReportSummary('Sales Analysis', 'Current ASP is ₹1,685/MT with an estimated margin of ₹282/MT. Total FY volume tracking at 48,200 MT.')">
+          <span style="font-weight: 600;">Sales Analysis</span>
+          <i data-lucide="chevron-right" style="width: 16px; height: 16px; color: var(--text-light);"></i>
+        </div>
+        <div class="breakdown-row tappable" onclick="showReportSummary('Buyer Outstanding', 'Total receivables stand at ₹42.6 L with ₹15.3 L overdue. Average collection cycle: 38 days.')">
+          <span style="font-weight: 600;">Buyer Outstanding</span>
+          <i data-lucide="chevron-right" style="width: 16px; height: 16px; color: var(--text-light);"></i>
+        </div>
+        <div class="breakdown-row tappable" onclick="showReportSummary('Inventory', 'Current plant stock allows 3,900 MT of SN-1. SN-2 is the bottleneck with 1,560 MT in stock against 3,000 MT target.')">
+          <span style="font-weight: 600;">Inventory Status</span>
+          <i data-lucide="chevron-right" style="width: 16px; height: 16px; color: var(--text-light);"></i>
+        </div>
+        <div class="breakdown-row tappable" onclick="showReportSummary('Production', 'Daily output: 236 MT. Plant operational efficiency at 89% with steady power availability.')">
+          <span style="font-weight: 600;">Production Summary</span>
+          <i data-lucide="chevron-right" style="width: 16px; height: 16px; color: var(--text-light);"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- BOTTOM SHEET: NOTIFICATIONS MODAL               -->
+    <!-- ============================================== -->
+    <div id="notifications-sheet" class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="notifications-sheet-title">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <h3 id="notifications-sheet-title" class="sheet-title">Notifications</h3>
+        <button class="sheet-close" onclick="closeSheet()" aria-label="Close dialog">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+        <div class="alert-card red" onclick="closeSheet(); openMaterialDetail('SN-2');">
+          <div>
+            <span class="alert-pill red">Stock Alert</span>
+            <p style="font-weight: 600; font-size: 14px;">SN-2 stock below 7-day safety buffer</p>
+            <p style="font-size: 12px; color: var(--text-muted);">Current inventory covers 52% of planned production.</p>
+            <span style="font-size: 11px; color: var(--text-light); margin-top: 4px; display: block;">Today, 09:30 AM</span>
+          </div>
+        </div>
+
+        <div class="alert-card amber" onclick="closeSheet(); navTo('buyers', 'overdue');">
+          <div>
+            <span class="alert-pill amber">Payment Overdue</span>
+            <p style="font-weight: 600; font-size: 14px;">SunRay Tiles ₹6.4 L overdue by 14 days</p>
+            <p style="font-size: 12px; color: var(--text-muted);">Invoice #INV-2026-842 pending settlement.</p>
+            <span style="font-size: 11px; color: var(--text-light); margin-top: 4px; display: block;">Yesterday, 04:15 PM</span>
+          </div>
+        </div>
+
+        <div class="alert-card" style="background: var(--stone-wash-light); border-color: var(--border-subtle);">
+          <div>
+            <span class="alert-pill" style="background: var(--mineral-sage); color: #FFF;">Production Log</span>
+            <p style="font-weight: 600; font-size: 14px;">236 MT finished product packed today</p>
+            <p style="font-size: 12px; color: var(--text-muted);">Plant B grinding mill running smoothly.</p>
+            <span style="font-size: 11px; color: var(--text-light); margin-top: 4px; display: block;">Today, 01:00 PM</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- BOTTOM SHEET: SETTINGS / ABOUT MODAL            -->
+    <!-- ============================================== -->
+    <div id="about-sheet" class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="about-sheet-title">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <h3 id="about-sheet-title" class="sheet-title">Shivam Minerals</h3>
+        <button class="sheet-close" onclick="closeSheet()" aria-label="Close dialog">
+          <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+        </button>
+      </div>
+
+      <div style="font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px;">
+        <p style="margin-bottom: 12px;">
+          <strong>Shivam Minerals Executive Intelligence</strong> is designed specifically for plant owners to monitor production, recipe economics, stock limits, and buyer dues at a glance.
+        </p>
+        <p style="margin-bottom: 8px;"><strong>Finished Product:</strong> SN-1 Grinded Mineral</p>
+        <p style="margin-bottom: 8px;"><strong>Primary Raw Material:</strong> SN-2 (40% Recipe Share)</p>
+        <p style="margin-bottom: 8px;"><strong>App Design System:</strong> Stone Ivory</p>
+        <p><strong>Version:</strong> 1.0.4 Mobile Prototype</p>
+      </div>
+
+      <button class="btn-enter" style="height: 46px;" onclick="closeSheet()">
+        Close
+      </button>
+    </div>
+
+  </main>
+
+  <!-- ============================================== -->
+  <!-- APPLICATION DATA & SCRIPT ENGINE               -->
+  <!-- ============================================== -->
+  <script>
+    // ==============================================
+    // CURRENT ESTIMATE
+    // CLIENT PROVIDED
+    // DEMO ONLY
+    // ==============================================
+    const DEMO_DATA = {
+      // 1. FINISHED PRODUCT
+      finishedProduct: {
+        code: "SN-1",
+        name: "SN-1 Grinded Ceramic Grade",
+        targetProduction: 7500, // MT
+        achievableProduction: 3900, // MT
+        readinessPct: 52, // %
+        currentMakingCost: 1403, // ₹ / MT
+        averageSellingPrice: 1685, // ₹ / MT
+        estimatedMargin: 282, // ₹ / MT (Label: ESTIMATED MARGIN)
+        costChangePeriod: "+1.8%",
+      },
+
+      // 2. RECIPE (CLIENT SPECIFICATION - NEVER SHOW SN-1 AS RAW MATERIAL)
+      recipe: [
+        { code: "SN-2", share: 40, ratePerMT: 1150, contribution: 460, availableStock: 1560, requiredForTarget: 3000, shortfall: 1440, coverage: 52, daysLeft: 6.5, status: "LIMITING", badgeClass: "badge-amber" },
+        { code: "J-7",  share: 20, ratePerMT: 950,  contribution: 190, availableStock: 2100, requiredForTarget: 1500, shortfall: 0,    coverage: 140, daysLeft: 22.0, status: "Healthy",  badgeClass: "badge-green" },
+        { code: "SD-2", share: 20, ratePerMT: 900,  contribution: 180, availableStock: 1950, requiredForTarget: 1500, shortfall: 0,    coverage: 130, daysLeft: 19.5, status: "Healthy",  badgeClass: "badge-green" },
+        { code: "RD-2", share: 10, ratePerMT: 1650, contribution: 165, availableStock: 980,  requiredForTarget: 750,  shortfall: 0,    coverage: 131, daysLeft: 24.0, status: "Healthy",  badgeClass: "badge-green" },
+        { code: "C-5",  share: 10, ratePerMT: 800,  contribution: 80,  availableStock: 820,  requiredForTarget: 750,  shortfall: 0,    coverage: 109, daysLeft: 10.5, status: "Watch",    badgeClass: "badge-amber" }
+      ],
+
+      // 3. OPERATING COSTS
+      operatingCost: {
+        rawMaterialTotal: 1075,
+        freight: 190,
+        maintenance: 60,
+        salary: 33,
+        electricity: 30,
+        diesel: 15,
+        total: 1403
+      },
+
+      // 4. DAILY / PERIOD METRICS
+      dailyMetrics: {
+        today: { production: "236 MT", collections: "₹3.10 L" },
+        week: { production: "1,520 MT", collections: "₹18.4 L" },
+        month: { production: "6,410 MT", collections: "₹76.5 L" }
+      },
+
+      // 5. CLIENT-PROVIDED BUYERS (DEMO ONLY VALUES)
+      buyers: [
+        {
+          id: "b1",
+          name: "SunRay Tiles",
+          sales: "₹24.8 L",
+          salesNum: 24.8,
+          due: "₹6.4 L",
+          dueNum: 6.4,
+          status: "Overdue",
+          badgeClass: "badge-red",
+          avgSellingRate: 1710,
+          lastPayment: "12 Sep (₹3.5 L)",
+          daysOverdue: 14,
+          invoices: [
+            { inv: "INV-2026-842", date: "28 Aug 2026", amount: "₹3.8 L", status: "Overdue 14d" },
+            { inv: "INV-2026-889", date: "08 Sep 2026", amount: "₹2.6 L", status: "Due" }
+          ],
+          payments: [
+            { date: "12 Sep 2026", amount: "₹3.5 L", mode: "RTGS" },
+            { date: "18 Aug 2026", amount: "₹4.2 L", mode: "RTGS" }
+          ]
+        },
+        {
+          id: "b2",
+          name: "Rich Vitrified",
+          sales: "₹21.2 L",
+          salesNum: 21.2,
+          due: "₹3.8 L",
+          dueNum: 3.8,
+          status: "Due",
+          badgeClass: "badge-amber",
+          avgSellingRate: 1675,
+          lastPayment: "14 Sep (₹2.8 L)",
+          daysOverdue: 0,
+          invoices: [
+            { inv: "INV-2026-904", date: "10 Sep 2026", amount: "₹3.8 L", status: "Due in 3d" }
+          ],
+          payments: [
+            { date: "14 Sep 2026", amount: "₹2.8 L", mode: "NEFT" },
+            { date: "22 Aug 2026", amount: "₹5.0 L", mode: "RTGS" }
+          ]
+        },
+        {
+          id: "b3",
+          name: "Sun World",
+          sales: "₹18.6 L",
+          salesNum: 18.6,
+          due: "₹5.1 L",
+          dueNum: 5.1,
+          status: "Overdue",
+          badgeClass: "badge-red",
+          avgSellingRate: 1690,
+          lastPayment: "05 Sep (₹4.0 L)",
+          daysOverdue: 8,
+          invoices: [
+            { inv: "INV-2026-865", date: "01 Sep 2026", amount: "₹5.1 L", status: "Overdue 8d" }
+          ],
+          payments: [
+            { date: "05 Sep 2026", amount: "₹4.0 L", mode: "RTGS" }
+          ]
+        },
+        {
+          id: "b4",
+          name: "Buyer 04",
+          sales: "₹12.4 L",
+          salesNum: 12.4,
+          due: "₹1.9 L",
+          dueNum: 1.9,
+          status: "Due",
+          badgeClass: "badge-amber",
+          avgSellingRate: 1660,
+          lastPayment: "16 Sep (₹1.5 L)",
+          daysOverdue: 0,
+          invoices: [
+            { inv: "INV-2026-912", date: "12 Sep 2026", amount: "₹1.9 L", status: "Due in 10d" }
+          ],
+          payments: [
+            { date: "16 Sep 2026", amount: "₹1.5 L", mode: "NEFT" }
+          ]
+        },
+        {
+          id: "b5",
+          name: "Buyer 05",
+          sales: "₹8.5 L",
+          salesNum: 8.5,
+          due: "₹0.0 L",
+          dueNum: 0,
+          status: "Healthy",
+          badgeClass: "badge-green",
+          avgSellingRate: 1720,
+          lastPayment: "17 Sep (₹2.2 L)",
+          daysOverdue: 0,
+          invoices: [
+            { inv: "INV-2026-898", date: "09 Sep 2026", amount: "₹2.2 L", status: "Cleared" }
+          ],
+          payments: [
+            { date: "17 Sep 2026", amount: "₹2.2 L", mode: "RTGS" }
+          ]
+        }
+      ],
+
+      // 6. TOTAL RECEIVABLES
+      receivablesSummary: {
+        totalDue: "₹42.6 L",
+        overdue: "₹15.3 L"
+      }
+    };
+
+    // Global State
+    let currentTab = "home";
+    let currentDetailMaterial = "SN-2";
+    let currentDetailBuyer = "SunRay Tiles";
+    let activeBuyerFilter = "all";
+    let costChartInstance = null;
+    let buyerChartInstance = null;
+
+    // Initialize App on DOM Load
+    document.addEventListener("DOMContentLoaded", () => {
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+      renderSparkline();
+      renderRawMaterialsList();
+      renderBuyersList();
+    });
+
+    // Login Transition
+    function appLogin() {
+      const loginScreen = document.getElementById("login-screen");
+      loginScreen.classList.add("hidden");
+      showToast("Welcome back, Shyam");
+      setTimeout(() => {
+        initCostChart();
+      }, 300);
+    }
+
+    function appLogout() {
+      const loginScreen = document.getElementById("login-screen");
+      loginScreen.classList.remove("hidden");
+      navTo("home");
+    }
+
+    // Navigation System
+    function navTo(screenId, filterParam) {
+      closeSheet();
+      window.scrollTo(0, 0);
+      document.getElementById("content-scroll").scrollTop = 0;
+
+      // Update Nav Buttons
+      document.querySelectorAll(".nav-item").forEach(btn => btn.classList.remove("active"));
+      const navBtn = document.getElementById(`nav-btn-${screenId}`);
+      if (navBtn) navBtn.classList.add("active");
+
+      // Update Screen Views
+      document.querySelectorAll(".screen-view").forEach(view => view.classList.remove("active"));
+      const targetView = document.getElementById(`view-${screenId}`);
+      if (targetView) {
+        targetView.classList.add("active");
+      }
+
+      currentTab = screenId;
+
+      // Screen specific initializers
+      if (screenId === "cost") {
+        setTimeout(initCostChart, 150);
+      } else if (screenId === "buyers" && filterParam) {
+        setBuyerTab(filterParam, document.getElementById(`tab-buyer-${filterParam}`));
+      }
+
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    }
+
+    // Home Period Selector
+    function setHomePeriod(period, btn) {
+      document.querySelectorAll("#view-home .segmented-control .segmented-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      const prodVal = document.getElementById("home-prod-val");
+      const collVal = document.getElementById("home-coll-val");
+      const prodPeriod = document.getElementById("home-prod-period");
+      const collPeriod = document.getElementById("home-coll-period");
+
+      const data = DEMO_DATA.dailyMetrics[period];
+      if (data) {
+        prodVal.textContent = data.production;
+        collVal.textContent = data.collections;
+        const cap = period.charAt(0).toUpperCase() + period.slice(1);
+        prodPeriod.textContent = cap;
+        collPeriod.textContent = cap;
+      }
+    }
+
+    // Render Sparkline on Hero Card
+    function renderSparkline() {
+      const canvas = document.getElementById("home-sparkline");
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const pts = [20, 24, 22, 28, 26, 31, 30, 34];
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.beginPath();
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = "round";
+
+      pts.forEach((pt, i) => {
+        const x = (i / (pts.length - 1)) * (w - 8) + 4;
+        const y = h - ((pt - 18) / 18) * (h - 8) - 4;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+
+    // Cost Chart Setup
+    function initCostChart(period = "1M") {
+      const ctx = document.getElementById("cost-chart");
+      if (!ctx) return;
+
+      if (costChartInstance) {
+        costChartInstance.destroy();
+      }
+
+      let labels = ["May", "Jun", "Jul", "Aug", "Sep"];
+      let makingCosts = [1370, 1385, 1390, 1395, 1403];
+      let sellingPrices = [1650, 1660, 1675, 1680, 1685];
+
+      if (period === "3M") {
+        labels = ["Jul", "Aug", "Sep"];
+        makingCosts = [1390, 1395, 1403];
+        sellingPrices = [1675, 1680, 1685];
+      } else if (period === "12M" || period === "All") {
+        labels = ["Oct '25", "Dec '25", "Feb '26", "Apr '26", "Jun '26", "Sep '26"];
+        makingCosts = [1320, 1340, 1360, 1380, 1390, 1403];
+        sellingPrices = [1600, 1620, 1640, 1660, 1675, 1685];
+      }
+
+      costChartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Making Cost",
+              data: makingCosts,
+              borderColor: "#2F3E2E",
+              backgroundColor: "transparent",
+              borderWidth: 2.5,
+              tension: 0.3,
+              pointRadius: 3,
+              pointBackgroundColor: "#2F3E2E"
+            },
+            {
+              label: "Selling Price",
+              data: sellingPrices,
+              borderColor: "#6B7F6E",
+              backgroundColor: "transparent",
+              borderWidth: 2,
+              borderDash: [4, 4],
+              tension: 0.3,
+              pointRadius: 3,
+              pointBackgroundColor: "#6B7F6E"
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "#2F3E2E",
+              titleColor: "#FCFBF8",
+              bodyColor: "#FCFBF8",
+              padding: 10,
+              displayColors: false,
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: ₹${ctx.parsed.y} / MT`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { font: { size: 11, family: "Inter" }, color: "#8E988C" }
+            },
+            y: {
+              grid: { color: "#EAE3D8" },
+              ticks: {
+                font: { size: 10, family: "Inter" },
+                color: "#8E988C",
+                callback: (v) => "₹" + v
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function setCostPeriod(period, btn) {
+      document.querySelectorAll("#view-cost .segmented-control .segmented-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      initCostChart(period);
+      showToast(`Cost trend adjusted for ${period}`);
+    }
+
+    // Render 5 Raw Material Rows on Stock View
+    function renderRawMaterialsList() {
+      const container = document.getElementById("raw-materials-list");
+      if (!container) return;
+
+      container.innerHTML = DEMO_DATA.recipe.map(mat => `
+        <article class="material-card" onclick="openMaterialDetail('${mat.code}')">
+          <div class="material-card-top">
+            <h4 class="material-name">${mat.code}</h4>
+            <span class="badge-status ${mat.badgeClass}">${mat.status}</span>
+          </div>
+          <div class="material-meta-grid">
+            <div>
+              <p class="material-meta-label">Available</p>
+              <p class="material-meta-val">${mat.availableStock} MT</p>
+            </div>
+            <div>
+              <p class="material-meta-label">Recipe Need</p>
+              <p class="material-meta-val">${mat.share}%</p>
+            </div>
+            <div>
+              <p class="material-meta-label">Coverage</p>
+              <p class="material-meta-val" style="color: ${mat.coverage < 100 ? 'var(--color-amber)' : 'var(--color-green)'};">${mat.coverage}%</p>
+            </div>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    // Open Material Detail Screen
+    function openMaterialDetail(matCode) {
+      currentDetailMaterial = matCode;
+      const mat = DEMO_DATA.recipe.find(m => m.code === matCode) || DEMO_DATA.recipe[0];
+
+      document.getElementById("mat-detail-title").textContent = mat.code;
+      document.getElementById("mat-detail-stock").innerHTML = `${mat.availableStock.toLocaleString()} <span style="font-size: 16px; font-family: var(--font-sans); color: var(--text-muted); font-weight: 400;">MT</span>`;
+      document.getElementById("mat-detail-required").textContent = `${mat.requiredForTarget.toLocaleString()} MT`;
+      document.getElementById("mat-detail-shortfall").textContent = mat.shortfall > 0 ? `-${mat.shortfall.toLocaleString()} MT` : "0 MT (Surplus)";
+      document.getElementById("mat-detail-shortfall").style.color = mat.shortfall > 0 ? "var(--color-red)" : "var(--color-green)";
+      document.getElementById("mat-detail-share").textContent = `${mat.share}%`;
+      document.getElementById("mat-detail-coverage").textContent = `${mat.coverage}%`;
+      document.getElementById("mat-detail-days").textContent = `${mat.daysLeft} Days`;
+      document.getElementById("mat-detail-contrib").textContent = `₹${mat.contribution} / MT`;
+
+      const banner = document.getElementById("mat-limiting-banner");
+      const bannerBadge = document.getElementById("mat-detail-status-badge");
+      const bannerText = document.getElementById("mat-limiting-banner-text");
+
+      bannerBadge.className = `badge-status ${mat.badgeClass}`;
+      bannerBadge.textContent = mat.status;
+
+      if (mat.code === "SN-2") {
+        banner.style.display = "block";
+        banner.className = "limiting-box";
+        bannerText.textContent = "SN-2 is currently the material restricting production.";
+      } else if (mat.status === "Watch") {
+        banner.style.display = "block";
+        banner.className = "limiting-box";
+        bannerText.textContent = `${mat.code} stock is sufficient for current week but nearing watch buffer.`;
+      } else {
+        banner.style.display = "block";
+        banner.className = "limiting-box";
+        banner.style.backgroundColor = "var(--color-green-bg)";
+        banner.style.borderColor = "rgba(43, 122, 73, 0.2)";
+        bannerText.textContent = `${mat.code} stock is healthy and covers full 7,500 MT target.`;
+      }
+
+      navTo("material-detail");
+    }
+
+    // Render Buyers List
+    function renderBuyersList() {
+      const container = document.getElementById("buyers-card-list");
+      if (!container) return;
+
+      const filtered = DEMO_DATA.buyers.filter(b => {
+        if (activeBuyerFilter === "overdue") return b.status === "Overdue";
+        if (activeBuyerFilter === "due") return b.dueNum > 0;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div style="text-align: center; padding: 32px; color: var(--text-muted);">No buyers found for this filter.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(b => `
+        <article class="buyer-card-item" onclick="openBuyerDetail('${b.name}')">
+          <div class="buyer-card-top">
+            <h4 class="buyer-card-name">${b.name}</h4>
+            <span class="badge-status ${b.badgeClass}">${b.status}</span>
+          </div>
+          <div class="buyer-metrics-row">
+            <div>
+              <span class="cost-sub-label">Sales</span>
+              <p style="font-size: 15px; font-weight: 600; color: var(--text-main);">${b.sales}</p>
+            </div>
+            <div class="text-right">
+              <span class="cost-sub-label">Due Amount</span>
+              <p style="font-family: var(--font-serif); font-size: 19px; color: ${b.dueNum > 0 ? 'var(--deep-forest)' : 'var(--text-muted)'};">${b.due}</p>
+            </div>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function setBuyerTab(tab, btn) {
+      document.querySelectorAll("#view-buyers .segmented-control .segmented-btn").forEach(b => b.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+      activeBuyerFilter = tab;
+      renderBuyersList();
+    }
+
+    function setBuyerPeriod(period, btn) {
+      document.querySelectorAll("#view-buyers .segmented-btn").forEach(b => {
+        if (b.parentElement && b.parentElement.tagName !== "NAV") b.classList.remove("active");
+      });
+      if (btn) btn.classList.add("active");
+      showToast(`Buyers data filtered for ${period}`);
+    }
+
+    // Open Buyer Detail Screen
+    function openBuyerDetail(buyerName) {
+      currentDetailBuyer = buyerName;
+      const b = DEMO_DATA.buyers.find(item => item.name === buyerName) || DEMO_DATA.buyers[0];
+
+      document.getElementById("buyer-detail-name").textContent = b.name;
+      document.getElementById("buyer-detail-due").textContent = b.due;
+      document.getElementById("buyer-detail-sales").textContent = b.sales;
+      document.getElementById("buyer-detail-rate").textContent = `₹${b.avgSellingRate} / MT`;
+      document.getElementById("buyer-detail-last-pay").textContent = b.lastPayment;
+
+      const badge = document.getElementById("buyer-detail-badge");
+      badge.className = `badge-status ${b.badgeClass}`;
+      badge.textContent = b.status;
+
+      // Render Invoices
+      const invContainer = document.getElementById("buyer-invoices-list");
+      invContainer.innerHTML = b.invoices.map(inv => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-subtle); font-size: 13px;">
+          <div>
+            <p style="font-weight: 600; color: var(--text-main);">${inv.inv}</p>
+            <span style="font-size: 11px; color: var(--text-light);">${inv.date}</span>
+          </div>
+          <div class="text-right">
+            <p style="font-weight: 600; color: var(--deep-forest);">${inv.amount}</p>
+            <span class="badge-status ${inv.status.includes('Overdue') ? 'badge-red' : 'badge-amber'}" style="font-size: 10px;">${inv.status}</span>
+          </div>
+        </div>
+      `).join("");
+
+      // Render Payments
+      const payContainer = document.getElementById("buyer-payments-list");
+      payContainer.innerHTML = b.payments.map(pay => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); font-size: 13px;">
+          <div>
+            <p style="font-weight: 500; color: var(--text-main);">${pay.date}</p>
+            <span style="font-size: 11px; color: var(--text-light);">${pay.mode}</span>
+          </div>
+          <p style="font-weight: 600; color: var(--color-green);">${pay.amount}</p>
+        </div>
+      `).join("");
+
+      navTo("buyer-detail");
+      setTimeout(() => initBuyerTrendChart(b.name), 150);
+    }
+
+    // Buyer Trend Chart
+    function initBuyerTrendChart(buyerName) {
+      const ctx = document.getElementById("buyer-trend-chart");
+      if (!ctx) return;
+
+      if (buyerChartInstance) {
+        buyerChartInstance.destroy();
+      }
+
+      buyerChartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: ["Jun", "Jul", "Aug", "Sep"],
+          datasets: [{
+            label: "Despatch Volume (MT)",
+            data: [320, 410, 380, 460],
+            backgroundColor: "#6B7F6E",
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "#2F3E2E",
+              callbacks: {
+                label: (ctx) => `${ctx.parsed.y} MT despatched`
+              }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11, family: "Inter" }, color: "#8E988C" } },
+            y: { grid: { color: "#EAE3D8" }, ticks: { font: { size: 10, family: "Inter" }, color: "#8E988C" } }
+          }
+        }
+      });
+    }
+
+    // Bottom Sheet Helpers
+    function openRawMaterialRecipeModal() {
+      openSheet("recipe-sheet");
+    }
+
+    function openFilterSheet() {
+      openSheet("filter-sheet");
+    }
+
+    function openTallySync() {
+      openSheet("tally-sheet");
+    }
+
+    function openReportsSummary() {
+      openSheet("reports-sheet");
+    }
+
+    function openNotifications() {
+      openSheet("notifications-sheet");
+    }
+
+    function openSettingsModal() {
+      showToast("Settings: Configured for Shyam Agrawal (Owner)");
+    }
+
+    function openAboutModal() {
+      openSheet("about-sheet");
+    }
+
+    function openSheet(sheetId) {
+      closeSheet();
+      const backdrop = document.getElementById("sheet-backdrop");
+      const sheet = document.getElementById(sheetId);
+      if (backdrop && sheet) {
+        backdrop.classList.add("active");
+        sheet.classList.add("active");
+      }
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    }
+
+    function closeSheet() {
+      const backdrop = document.getElementById("sheet-backdrop");
+      if (backdrop) backdrop.classList.remove("active");
+      document.querySelectorAll(".bottom-sheet").forEach(s => s.classList.remove("active"));
+    }
+
+    function applyFilterSheet() {
+      closeSheet();
+      showToast("Filters successfully applied");
+    }
+
+    function resetFilterSheet() {
+      closeSheet();
+      showToast("Filters reset to default");
+    }
+
+    function connectTallyAction() {
+      closeSheet();
+      showToast("Tally integration will be configured during implementation.");
+    }
+
+    function showReportSummary(title, summary) {
+      closeSheet();
+      alert(`${title}\n\n${summary}`);
+    }
+
+    // Toast Notification System
+    function showToast(msg) {
+      const toast = document.getElementById("app-toast");
+      if (!toast) return;
+      toast.textContent = msg;
+      toast.classList.add("show");
+      setTimeout(() => {
+        toast.classList.remove("show");
+      }, 2600);
+    }
+  </script>
+</body>
+</html>

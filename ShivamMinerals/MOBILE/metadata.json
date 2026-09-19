@@ -1,0 +1,6 @@
+{
+  "name": "Shivam Minerals Mobile Demo",
+  "description": "Mobile-first executive intelligence prototype for Shivam Minerals owners",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
