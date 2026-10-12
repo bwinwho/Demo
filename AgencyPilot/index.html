@@ -3,258 +3,370 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-<meta name="theme-color" content="#fbfaf7">
+<meta name="theme-color" content="#f7f6f2">
 <meta name="color-scheme" content="light">
 <title>Agency Pilot V2</title>
 <style id="pageSize"></style>
 <style>
-/* ================= AGENCY PILOT V2 — design tokens (from the Canva PDF) ================= */
+/* ================= AGENCY PILOT V2 — Swiss editorial design system ================= */
 :root{
-  --bg:#fbfaf7;          /* warm white */
+  /* colour — predominantly monochrome. Green = important positive action. Red = real dues, shortages, errors. */
+  --bg:#f7f6f2;          /* warm white page */
   --paper:#ffffff;
-  --ink:#111111;
-  --ink2:#47453f;
-  --mute:#6a6862;
-  --line:#e4e1d9;
-  --char:#32302d;        /* charcoal panes + dark buttons */
-  --pane:#4a4844;        /* lighter charcoal list pane */
-  --green:#00763f;       /* restrained primary */
+  --tint:#efeee9;        /* pale grey surface: settlement receipts, pressed rows */
+  --ink:#111110;
+  --ink2:#3a3936;        /* graphite */
+  --mute:#67655f;
+  --faint:#9a978f;
+  --line:#e2e0d9;        /* hairline divider */
+  --line2:#c8c5bc;       /* control outline */
+  --char:#1c1c1a;        /* graphite for the few dark moments */
+  --green:#00763f;
   --green-d:#005a30;
-  --red:#c62828;         /* only for due / error */
-  --on-dark-mute:rgba(255,255,255,.68);
-  --hair-dark:rgba(255,255,255,.13);
-  --r:12px;
-  --tap:56px;
-  --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --red:#b3261e;
+  --on-dark-mute:rgba(255,255,255,.66);
+  --hair-dark:rgba(255,255,255,.14);
+  /* geometry */
+  --r:2px;
+  --r2:4px;
+  --tap:52px;
+  /* spacing scale: 4 / 8 / 12 / 16 / 24 / 32 / 48 */
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--s7:48px;
+  --gut:20px;            /* page gutter — every list, rule and title aligns to it */
+  --font:"Helvetica Neue","Inter",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --ease:cubic-bezier(.2,.7,.2,1);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;margin:0}
-body{background:#e8e6e0;color:var(--ink);font:17px/1.35 var(--font);-webkit-text-size-adjust:100%;overflow:hidden}
+body{background:#e6e5e0;color:var(--ink);font:16px/1.4 var(--font);-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased;overflow:hidden}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer;border:0;background:none;padding:0}
 [hidden]{display:none!important}
-:focus-visible{outline:3px solid var(--green);outline-offset:2px}
-.pane :focus-visible,.btn.dark:focus-visible,.btn.primary:focus-visible{outline-color:#fff;outline-offset:-4px}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.pane.ink :focus-visible,.btn.black:focus-visible,.btn.primary:focus-visible,.btn.danger:focus-visible{outline-color:#fff;outline-offset:-4px}
+/* financial figures always line up */
+.r,.kv,.big,.huge,.amt,.n,.flowbar b,.ol .nm,.ol .ln,.tile b,.rc-amt,.rc-ref,.rc-bal,.rc-end,.tl time,.denom input,.stepper input{font-variant-numeric:tabular-nums}
 
 /* ---------- shell: centred phone-width app ---------- */
 #app{position:relative;margin:0 auto;height:100vh;height:100dvh;max-width:430px;background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
 @media (min-width:560px){
   body{display:flex;align-items:center;justify-content:center}
-  #app{height:min(100dvh - 32px,880px);width:430px;border-radius:30px;box-shadow:0 24px 70px rgba(0,0,0,.2),0 0 0 1px rgba(0,0,0,.06)}
+  #app{height:min(100dvh - 48px,880px);width:430px;box-shadow:0 0 0 1px rgba(17,17,16,.10),0 28px 60px -20px rgba(17,17,16,.22)}
 }
 #stage{position:relative;flex:1;min-height:0;overflow:hidden}
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg)}
-.screen.enter{animation:inR .22s ease-out both}
-.screen.enter-back{animation:inL .22s ease-out both}
-.screen.leave{animation:fadeOut .16s ease-in both;pointer-events:none}
-@keyframes inR{from{transform:translateX(26px);opacity:0}to{transform:none;opacity:1}}
-@keyframes inL{from{transform:translateX(-26px);opacity:0}to{transform:none;opacity:1}}
+.screen.enter{animation:inR .24s var(--ease) both}
+.screen.enter-back{animation:inL .24s var(--ease) both}
+.screen.leave{animation:fadeOut .14s ease-in both;pointer-events:none}
+@keyframes inR{from{transform:translateX(18px);opacity:0}to{transform:none;opacity:1}}
+@keyframes inL{from{transform:translateX(-18px);opacity:0}to{transform:none;opacity:1}}
 @keyframes fadeOut{to{opacity:0}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
-/* ---------- header (back circle left, title right — like the PDF) ---------- */
-.hdr{display:flex;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top)) 16px 8px;min-height:68px}
-.hdr .back{flex:none;width:48px;height:48px;border-radius:50%;background:#000;color:#fff;display:grid;place-items:center;box-shadow:0 0 0 2px #dcdad3}
-.hdr .back svg{width:24px;height:24px}
-.hdr .ttl{flex:1;min-width:0;text-align:right}
-.hdr .ttl h1{margin:0;font-size:21px;line-height:1.15;font-weight:600;overflow-wrap:anywhere}
-.hdr .ttl h1.big{font-size:36px;line-height:1.05}
-.hdr .ttl .sub{font-size:13px;color:var(--mute);margin-top:2px}
-.hdr .help{flex:none;width:46px;height:46px;border-radius:50%;border:2px solid var(--ink);display:grid;place-items:center;font-weight:700;font-size:17px}
-.hdr .help[aria-pressed=true]{background:var(--ink);color:#fff}
-.hdr.nohdr-back .ttl{text-align:left}
-.prog{height:4px;background:var(--line);margin:0 16px;border-radius:2px;overflow:hidden}
-.prog i{display:block;height:100%;background:var(--green);transition:width .25s}
-.stepline{padding:6px 16px 0;font-size:13px;color:var(--mute);font-weight:600;letter-spacing:.02em}
+/* ---------- header: quiet arrow · left-aligned editorial title · optional help ---------- */
+.hdr{display:flex;align-items:center;gap:var(--s1);padding:calc(var(--s2) + env(safe-area-inset-top)) var(--s3) var(--s2) var(--s1);min-height:64px}
+.hdr .back{flex:none;width:48px;height:48px;display:grid;place-items:center;color:var(--ink);border-radius:var(--r)}
+.hdr .back:active{background:var(--tint)}
+.hdr .back svg{width:22px;height:22px}
+.hdr .ttl{flex:1;min-width:0;text-align:left;padding-left:var(--s1)}
+.hdr.nohdr-back .ttl{padding-left:calc(var(--gut) - var(--s1))}
+.hdr .ttl h1{margin:0;font-size:19px;line-height:1.2;font-weight:600;letter-spacing:-.01em;overflow-wrap:anywhere}
+.hdr .ttl h1.big{font-size:34px;line-height:1.04;letter-spacing:-.03em}
+.hdr .ttl .sub{font-size:13px;color:var(--mute);margin-top:3px}
+.hdr .ttl .eyebrow{margin-bottom:var(--s2)}
+.hdr.root{padding-top:calc(var(--s5) + env(safe-area-inset-top));padding-bottom:var(--s3)}
+.hdr.stack{flex-wrap:wrap;padding-bottom:var(--s3)}
+.hdr.stack .ttl{order:3;flex-basis:100%;padding:var(--s1) 0 0 calc(var(--gut) - var(--s1))}
+.hdr .help{flex:none;margin-left:auto;width:44px;height:44px;border-radius:var(--r);display:grid;place-items:center;font-weight:600;font-size:15px;color:var(--ink2);position:relative}
+.hdr .help::before{content:"";position:absolute;inset:8px;border:1px solid var(--line2);border-radius:50%;z-index:-1}
+.hdr .help{isolation:isolate}
+.hdr .help[aria-pressed=true]{color:#fff}
+.hdr .help[aria-pressed=true]::before{background:var(--ink);border-color:var(--ink)}
+.stepline{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s3);padding:0 var(--gut) var(--s2);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.stepline b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.prog{height:2px;background:var(--line);margin:0 var(--gut);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--ink);transition:width .3s var(--ease)}
 
 /* ---------- body / foot ---------- */
-.body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:10px 16px 24px;display:flex;flex-direction:column}
+.body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:var(--s4) var(--gut) var(--s6);display:flex;flex-direction:column}
 .body>*{flex:none}
 .body.center>.mid{margin:auto 0;flex:none}
-.foot{flex:none;padding:10px 16px calc(12px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;background:var(--bg);border-top:1px solid transparent}
+.foot{flex:none;padding:var(--s3) var(--gut) calc(var(--s4) + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:var(--s2);background:var(--bg);border-top:1px solid var(--line)}
 .foot.row2{flex-direction:row}
 .foot.row2>*{flex:1;min-width:0}
-.btnrow{display:flex;gap:10px}
-.btnrow>*{flex:1;min-width:0}
-.foot .pair{display:flex;gap:10px}
-.foot .pair>*{flex:1;min-width:0}
+.btnrow,.foot .pair{display:flex;gap:var(--s2)}
+.btnrow>*,.foot .pair>*{flex:1;min-width:0}
+.btnrow.split>.btn.primary{flex:2}
+.linkrow{display:flex;justify-content:center;flex-wrap:wrap;column-gap:var(--s5)}
+.linkrow>.btn{width:auto;padding:0 var(--s1)}
 
-/* ---------- tab bar ---------- */
-.tabbar{flex:none;display:flex;background:#fff;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
-.tabbar button{flex:1;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--mute);font-size:12px;font-weight:700;position:relative}
-.tabbar button svg{width:26px;height:26px}
+/* ---------- tab bar: architectural, neutral ---------- */
+.tabbar{flex:none;display:flex;background:var(--bg);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tabbar button{flex:1;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--mute);font-size:10px;font-weight:600;letter-spacing:.12em;position:relative}
+.tabbar button svg{width:20px;height:20px;stroke-width:1.6}
 .tabbar button[aria-current=page]{color:var(--ink)}
-.tabbar button[aria-current=page]::before{content:"";position:absolute;top:0;left:22%;right:22%;height:3px;background:var(--green);border-radius:0 0 3px 3px}
-.tabbar .dot{position:absolute;top:8px;left:calc(50% + 8px);min-width:18px;height:18px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;line-height:18px;text-align:center;padding:0 4px}
+.tabbar button[aria-current=page]::before{content:"";position:absolute;top:-1px;left:50%;width:24px;margin-left:-12px;height:2px;background:var(--ink)}
+.tabbar .dot{position:absolute;top:8px;left:calc(50% + 8px);min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:10px;line-height:16px;text-align:center;padding:0 4px}
 #app.flow .tabbar{display:none}
 
-/* ---------- buttons ---------- */
-.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:var(--tap);padding:10px 18px;border-radius:var(--r);font-size:17px;font-weight:700;text-align:center;line-height:1.2;text-decoration:none}
+/* ---------- buttons: primary (filled) · secondary (outlined) · tertiary (text) · destructive ---------- */
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:var(--tap);padding:10px 18px;border:1px solid transparent;border-radius:var(--r);font-size:14px;font-weight:600;letter-spacing:.07em;text-align:center;line-height:1.25;text-decoration:none;transition:background-color .15s,border-color .15s,color .15s}
 .btn.primary{background:var(--green);color:#fff}
 .btn.primary:active{background:var(--green-d)}
-.btn.dark{background:var(--char);color:#fff}
-.btn.black{background:#000;color:#fff}
-.btn.ghost{border:2px solid var(--ink);color:var(--ink)}
+.btn.black{background:var(--ink);color:#fff}
+.btn.black:active{background:#000}
+.btn.dark{background:transparent;color:var(--ink);border-color:var(--ink)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line2)}
+.btn.dark:active,.btn.ghost:active,.btn.neg:active{background:var(--tint)}
 .btn.danger{background:var(--red);color:#fff}
-.pane .btn.ghost,.card.dark .btn.ghost{border-color:#fff;color:#fff}
-.pane .btn.black{background:#000}
+.btn.neg{background:transparent;color:var(--red);border-color:currentColor}
+.pane.ink .btn.ghost,.pane.ink .btn.dark{border-color:rgba(255,255,255,.7);color:#fff}
+.pane.ink .btn.ghost:active{background:rgba(255,255,255,.08)}
 summary{cursor:pointer}
-.btn.link{background:none;color:var(--ink2);text-decoration:underline;font-weight:600;min-height:48px}
-.btn.sm{min-height:48px;font-size:15px;width:auto;padding:8px 16px}
-.btn:disabled,.btn[aria-disabled=true]{opacity:.38;pointer-events:none}
-.btn svg{width:24px;height:24px;flex:none}
-.btn small{display:block;font-weight:500;font-size:13px;opacity:.8}
+.btn.link{background:none;border:0;color:var(--ink2);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:5px;font-weight:500;font-size:12.5px;letter-spacing:.1em;min-height:44px}
+.btn.link.neg{color:var(--red)}
+.btn.sm{min-height:44px;font-size:12.5px;width:auto;padding:6px 14px}
+.btn:disabled,.btn[aria-disabled=true]{opacity:.32;pointer-events:none}
+.btn svg{width:18px;height:18px;flex:none}
+.btn small{display:block;font-weight:400;font-size:13px;letter-spacing:0;opacity:.75;margin-top:3px}
+.btn.dark>span,.btn.ghost>span{text-align:center}
 
-/* ---------- panes + rows (charcoal list surfaces, as in the PDF) ---------- */
-.pane{background:var(--char);color:#fff;border-radius:14px;overflow:hidden}
-.pane.mid{background:var(--pane)}
-.pane .pad{padding:16px}
-.row{display:flex;align-items:center;gap:12px;width:100%;min-height:64px;padding:12px 16px;text-align:left;color:inherit;border-bottom:1px solid var(--hair-dark)}
-.row:last-child{border-bottom:0}
-button.row:active{background:rgba(255,255,255,.08)}
-.row .t{font-weight:600;font-size:18px;overflow-wrap:anywhere}
-.row .s{font-size:14px;color:var(--on-dark-mute);margin-top:1px;overflow-wrap:anywhere}
+/* ---------- lists: open rows on a top rule (no boxes). .pane.ink = a rare dark moment ---------- */
+.pane{color:var(--ink);border-top:1px solid var(--ink)}
+.pane .pad{padding:var(--s4) 0}
+.pane>.pad.center{text-align:left}
+.pane.ink{background:var(--char);color:#fff;border-top:0;padding:0 var(--s4);border-radius:var(--r)}
+.pane.ink .eyebrow{color:var(--on-dark-mute)}
+.pane.ink .kv span:first-child{color:var(--on-dark-mute)}
+.row{display:flex;align-items:center;gap:var(--s3);width:100%;min-height:64px;padding:var(--s3) 0;text-align:left;color:inherit;border-bottom:1px solid var(--line)}
+button.row:active{background:var(--tint)}
+.row .t{font-weight:500;font-size:17px;line-height:1.25;overflow-wrap:anywhere}
+.row .s{font-size:13.5px;color:var(--mute);margin-top:3px;overflow-wrap:anywhere}
 .row .l{flex:1;min-width:0}
-.row .r{text-align:right;flex:none;font-weight:600}
-.row .r small{display:block;font-weight:500;font-size:13px;color:var(--on-dark-mute)}
-.row .chev{flex:none;width:20px;height:20px;opacity:.6}
-.row.off{opacity:.45}
-.row.new{background:rgba(0,118,63,.45)}
-.empty{padding:28px 16px;text-align:center;color:var(--on-dark-mute)}
-.light .empty{color:var(--mute)}
-.chip{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:700;background:rgba(255,255,255,.16);color:#fff;vertical-align:middle;white-space:nowrap}
-.chip.ok{background:var(--green)}
-.chip.bad{background:var(--red)}
-.chip.line{background:none;border:1.5px solid currentColor;color:inherit}
-.lt .chip{background:#ece9e1;color:var(--ink)}
-.lt .chip.ok{background:var(--green);color:#fff}
-.lt .chip.bad{background:var(--red);color:#fff}
+.row .r{text-align:right;flex:none;font-weight:500;font-size:16px}
+.row .r small{display:block;font-weight:600;font-size:10.5px;letter-spacing:.09em;color:var(--mute);margin-top:4px;text-transform:uppercase}
+.row .chev{flex:none;width:16px;height:16px;color:var(--faint)}
+.row.off{opacity:.42}
+.row.new{background:linear-gradient(90deg,rgba(0,118,63,.09),rgba(0,118,63,0) 70%);box-shadow:inset 2px 0 0 var(--green);padding-left:var(--s3)}
+.empty{padding:var(--s6) 0;color:var(--mute)}
+.chip{display:inline-block;padding:1px 6px;border:1px solid currentColor;border-radius:var(--r);font-size:10.5px;font-weight:600;letter-spacing:.09em;line-height:1.6;color:var(--ink2);text-transform:uppercase;vertical-align:middle;white-space:nowrap}
+.chip.ok{color:var(--green)}
+.chip.bad{color:var(--red)}
+.chip.warn{border-style:dashed}
+.chip.line{color:inherit}
+.pane.ink .chip{color:#fff}
 
-/* ---------- typography blocks ---------- */
-.eyebrow{font-size:13px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.03em}
-.big{font-size:34px;font-weight:700;line-height:1.1}
-.huge{font-size:44px;font-weight:700;line-height:1.05}
+/* ---------- typography ---------- */
+.eyebrow{font-size:11px;font-weight:600;color:var(--mute);text-transform:uppercase;letter-spacing:.1em}
+.big{font-size:30px;font-weight:600;line-height:1.08;letter-spacing:-.025em}
+.huge{font-size:44px;font-weight:600;line-height:1.02;letter-spacing:-.035em}
 .mute{color:var(--mute)}
 .red{color:var(--red)}
 .green{color:var(--green)}
 .center{text-align:center}
-.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt24{margin-top:24px}
-.gap{display:flex;flex-direction:column;gap:12px}
-.sec{margin:20px 2px 8px;font-size:13px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.03em;display:flex;justify-content:space-between;align-items:center}
+.mt8{margin-top:var(--s2)}.mt12{margin-top:var(--s3)}.mt16{margin-top:var(--s4)}.mt24{margin-top:var(--s5)}
+.gap{display:flex;flex-direction:column;gap:var(--s4)}
+.sec{margin:var(--s6) 0 var(--s3);font-size:11px;font-weight:600;color:var(--ink);text-transform:uppercase;letter-spacing:.1em;display:flex;justify-content:space-between;align-items:baseline;gap:var(--s3)}
+.sec>span+span{color:var(--mute);font-variant-numeric:tabular-nums}
+.gap>.sec{margin:var(--s4) 0 calc(-1 * var(--s1))}
+.aside{font-size:14px;line-height:1.5;color:var(--ink2);padding:2px 0 2px var(--s3);border-left:2px solid var(--line2)}
+.aside b{color:var(--ink);font-weight:600}
+.aside.bad{border-left-color:var(--red)}
 
 /* ---------- forms ---------- */
-.input,.select{width:100%;min-height:56px;font-size:19px;padding:0 14px;border:2px solid var(--line);border-radius:var(--r);background:#fff;color:var(--ink)}
-.input::placeholder{color:#8a877f}
+.input,.select{width:100%;min-height:52px;font-size:17px;font-weight:400;padding:0 14px;border:1px solid var(--line2);border-radius:var(--r);background:var(--paper);color:var(--ink);text-transform:none;letter-spacing:normal}
+.input:focus,.select:focus{outline:none;border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.input::placeholder{color:var(--faint)}
 textarea.input{padding:12px 14px;min-height:96px}
-.lbl{display:block;font-size:14px;font-weight:700;color:var(--ink2);margin:14px 2px 6px}
+.lbl{display:block;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);margin:var(--s5) 0 var(--s2)}
+.lbl>.input,.lbl>.select{margin-top:var(--s2);display:block}
 .input.err{border-color:var(--red)}
-.errtxt{color:var(--red);font-size:14px;font-weight:600;margin-top:6px}
+.errtxt{color:var(--red);font-size:14px;font-weight:500;margin-top:6px}
 .search{position:relative}
-.search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:22px;height:22px;color:var(--mute);pointer-events:none}
-.search .input{padding-left:46px;background:var(--char);border-color:var(--char);color:#fff}
-.search .input::placeholder{color:rgba(255,255,255,.55)}
-.oq{text-align:center}
-.oq .q{font-size:15px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.03em}
-.oq .a{width:100%;margin-top:12px;font-size:30px;text-align:center;border:0;border-bottom:3px solid var(--ink);background:transparent;padding:8px 4px;border-radius:0;min-height:60px}
+.search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:20px;height:20px;color:var(--ink2);pointer-events:none}
+.search .input{padding-left:44px;border-color:var(--ink)}
+.oq{text-align:left}
+.oq .q{font-size:11px;font-weight:600;color:var(--mute);text-transform:uppercase;letter-spacing:.1em}
+.oq .a{width:100%;margin-top:var(--s3);font-size:30px;font-weight:500;letter-spacing:-.015em;text-align:left;border:0;border-bottom:2px solid var(--ink);background:transparent;padding:8px 0;border-radius:0;min-height:60px}
+.oq .a:focus{outline:none;border-bottom-color:var(--green)}
 .oq .a::placeholder{color:#c4c1b8}
-.oq .hint{margin-top:14px;font-size:14px;color:var(--mute)}
+.oq .hint{margin-top:var(--s3);font-size:14px;color:var(--mute)}
+.center .oq,.oq.center{text-align:center}
 
-/* steppers */
-.stepper{display:flex;align-items:center;gap:8px}
-.stepper button{flex:none;width:52px;height:52px;border-radius:50%;background:#000;color:#fff;font-size:28px;line-height:1;display:grid;place-items:center}
-.stepper button:disabled{opacity:.3}
-.stepper input{width:76px;min-height:52px;text-align:center;font-size:22px;font-weight:700;border:2px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)}
-.dk .stepper input{border-color:transparent}
-.unitrow{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+/* steppers: square, outlined */
+.stepper{display:flex;align-items:center}
+.stepper button{flex:none;width:48px;height:48px;border:1px solid var(--ink);border-radius:var(--r);background:transparent;color:var(--ink);font-size:24px;font-weight:300;line-height:1;display:grid;place-items:center}
+.stepper button:active{background:var(--tint)}
+.stepper button:disabled{opacity:.25}
+.stepper input{width:64px;min-height:48px;margin:0 var(--s1);text-align:center;font-size:21px;font-weight:600;border:0;border-bottom:1px solid var(--line2);border-radius:0;background:transparent;color:var(--ink)}
+.stepper input:focus{outline:none;border-bottom:2px solid var(--ink)}
+.unitrow{display:flex;align-items:center;gap:10px;padding:var(--s3) 0;border-bottom:1px solid var(--line)}
 .unitrow:last-child{border-bottom:0}
+.pane>.unitrow:last-child{border-bottom:1px solid var(--line)}
 .unitrow .u{flex:1;min-width:0}
-.unitrow .u b{font-size:19px}
-.unitrow .u span{display:block;font-size:13px;color:var(--mute)}
-.card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.unitrow .u b{font-size:17px;font-weight:600;letter-spacing:.02em}
+.unitrow .u span{display:block;font-size:13px;color:var(--mute);margin-top:2px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:var(--s4)}
 .card.dark{background:var(--char);color:#fff;border-color:var(--char)}
-.kv{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:7px 0}
+.kv{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s3);padding:var(--s2) 0}
+.kv span:first-child{flex:0 1 auto;max-width:62%;color:var(--mute);font-size:14px}
 .kv span:last-child,.kv b:last-child{text-align:right;overflow-wrap:anywhere;min-width:0}
-.kv span:first-child{flex:none}
-.kv span:first-child{color:var(--mute)}
-.pane .kv span:first-child{color:var(--on-dark-mute)}
-.kv.tot{border-top:1px solid var(--hair-dark);margin-top:6px;padding-top:12px;font-weight:700;font-size:20px}
-.kv.tot span:first-child{color:inherit}
-.lt .kv.tot{border-top-color:var(--line)}
+.kv.tot{border-top:1px solid var(--ink);margin-top:var(--s2);padding-top:var(--s3);font-weight:600;font-size:22px;letter-spacing:-.015em}
+.kv.tot span:first-child{color:var(--ink);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.pane.ink .kv.tot{border-top-color:var(--hair-dark)}
 .hrow{display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-size:15px}
 .hrow span:first-child{min-width:0;overflow-wrap:anywhere}
 .hrow span:last-child{flex:none}
-.divider{height:1px;background:var(--line);margin:14px 0}
+.divider{height:1px;background:var(--line);margin:var(--s4) 0}
 
-/* order lines (PDF review layout) */
-.ol{padding:14px 16px;border-bottom:1px solid var(--hair-dark)}
-.ol:last-child{border-bottom:0}
-.ol .nm{font-weight:700;font-size:17px;display:flex;justify-content:space-between;gap:10px}
-.ol .ln{display:grid;grid-template-columns:1.2fr 1fr auto;gap:8px;font-size:15px;margin-top:6px;align-items:baseline}
-.ol .ln .a{text-align:right;font-weight:600}
-.ol .ln .rt{color:var(--on-dark-mute);font-size:14px}
-.ol .sub{display:flex;justify-content:flex-end;gap:12px;margin-top:6px;font-weight:700}
-.ol.strike .nm,.ol.strike .ln{text-decoration:line-through;opacity:.55}
+/* order lines — a compact operational document */
+.ol{padding:var(--s4) 0;border-bottom:1px solid var(--line)}
+.ol .nm{font-weight:500;font-size:17px;display:flex;justify-content:space-between;gap:10px}
+.ol .nm span:last-child{font-weight:600;flex:none}
+.ol .ln{display:grid;grid-template-columns:1fr auto auto;gap:2px var(--s4);font-size:14px;margin-top:var(--s1);color:var(--ink2);align-items:baseline}
+.ol .ln .a{text-align:right;min-width:68px}
+.ol .ln .rt{color:var(--mute)}
+.ol .sub{display:flex;justify-content:flex-end;gap:12px;margin-top:6px;font-weight:600}
+.ol.strike .nm,.ol.strike .ln{text-decoration:line-through;opacity:.5}
+.ol-tot{padding:var(--s2) 0 0}
+.ol-tot .kv:not(.tot){padding:var(--s1) 0}
+.ol-tot .kv.tot{border-top-width:2px;margin-top:var(--s3);font-size:26px}
+.dochead{padding:var(--s1) 0 0}
+.dochead .meta{font-size:13.5px;color:var(--mute);font-variant-numeric:tabular-nums}
+.docst{display:flex;align-items:center;gap:var(--s3);margin-top:var(--s3)}
+.tl{display:grid;grid-template-columns:auto 1fr;gap:var(--s2) var(--s4);font-size:14.5px;align-items:baseline;padding-top:var(--s1)}
+.tl time{color:var(--mute);font-size:13px;white-space:nowrap}
+.tl span{color:var(--ink2)}
+.tl span:last-child{color:var(--ink)}
 
-/* help card + toast + sheet */
-.helpcard{background:#eef5f0;border:1px solid #cfe3d6;border-radius:var(--r);padding:12px 14px;margin:0 0 12px;font-size:15px;color:#173d27;position:relative}
-.helpcard b{display:block;margin-bottom:2px}
-.helpcard button{position:absolute;top:0;right:0;width:46px;height:46px;font-size:20px;color:#173d27}
-.toast{position:absolute;left:16px;right:16px;top:calc(10px + env(safe-area-inset-top));pointer-events:none;background:#111;color:#fff;border-radius:14px;padding:13px 16px;display:flex;gap:10px;align-items:center;z-index:50;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.3);animation:inR .2s ease-out both}
-.toast svg{flex:none;width:22px;height:22px;color:#6fe3a2}
+/* help card · toast · sheet */
+.helpcard{background:var(--paper);border:1px solid var(--line);border-left:2px solid var(--green);padding:var(--s3) 48px var(--s3) var(--s4);margin:0 0 var(--s4);font-size:14.5px;color:var(--ink2);position:relative}
+.helpcard b{display:block;margin-bottom:var(--s1);color:var(--ink);font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:600}
+.helpcard div+div{margin-top:var(--s1)}
+.helpcard button{position:absolute;top:0;right:0;width:46px;height:46px;font-size:20px;color:var(--ink2)}
+.toast{position:absolute;left:var(--s4);right:var(--s4);top:calc(var(--s3) + env(safe-area-inset-top));pointer-events:none;background:var(--char);color:#fff;border-radius:var(--r);padding:13px var(--s4);display:flex;gap:10px;align-items:center;z-index:50;font-weight:500;font-size:15px;box-shadow:0 14px 30px -12px rgba(0,0,0,.4);animation:toastIn .22s var(--ease) both}
+@keyframes toastIn{from{transform:translateY(-8px);opacity:0}}
+.toast svg{flex:none;width:20px;height:20px;color:#7fe0a8}
 .toast.bad svg{color:#ff8a80}
-.sheetbg{position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:40;display:flex;align-items:flex-end;animation:fadeIn .15s both}
+.sheetbg{position:absolute;inset:0;background:rgba(17,17,16,.42);z-index:40;display:flex;align-items:flex-end;animation:fadeIn .16s both}
 @keyframes fadeIn{from{opacity:0}}
-.sheet{width:100%;max-height:88%;overflow-y:auto;background:var(--bg);border-radius:20px 20px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom));animation:up .2s ease-out both}
-@keyframes up{from{transform:translateY(30px);opacity:0}}
-.sheet h2{margin:0 0 4px;font-size:22px}
-.sheet-act{position:sticky;bottom:calc(-1 * (16px + env(safe-area-inset-bottom)));margin:16px -16px calc(-1 * (16px + env(safe-area-inset-bottom)));padding:12px 16px calc(16px + env(safe-area-inset-bottom));background:var(--bg);box-shadow:0 -10px 14px -10px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:12px}
+.sheet{width:100%;max-height:88%;overflow-y:auto;background:var(--bg);border-radius:var(--r2) var(--r2) 0 0;padding:var(--s5) var(--gut) calc(var(--s4) + env(safe-area-inset-bottom));animation:up .24s var(--ease) both}
+@keyframes up{from{transform:translateY(28px);opacity:0}}
+.sheet h2{margin:0 0 var(--s1);font-size:21px;font-weight:600;letter-spacing:-.015em}
+.sheet-act{position:sticky;bottom:calc(-1 * (var(--s4) + env(safe-area-inset-bottom)));margin:var(--s4) calc(-1 * var(--gut)) calc(-1 * (var(--s4) + env(safe-area-inset-bottom)));padding:var(--s3) var(--gut) calc(var(--s4) + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line);display:flex;flex-direction:column;gap:var(--s2)}
 .sheet .x{position:absolute;right:8px;top:8px}
 
-/* auth checkpoint */
-.auth{border:2px dashed var(--ink);border-radius:var(--r);padding:16px;background:#fff}
-.auth .lock{display:flex;gap:10px;align-items:center;font-weight:800;font-size:17px}
-.auth p{margin:8px 0 0;font-size:14px;color:var(--ink2)}
+/* auth checkpoint (simulated approval) */
+.auth{border:1px dashed var(--ink);padding:var(--s4);background:var(--paper)}
+.auth .lock{display:flex;gap:var(--s2);align-items:center;font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.auth .lock svg{width:18px;height:18px}
+.auth p{margin:var(--s2) 0 0;font-size:14px;line-height:1.5;color:var(--ink2)}
 
-/* denominations */
-.denom{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
-.denom:last-child{border:0}
-.denom .note{flex:none;width:76px;height:42px;border-radius:6px;display:grid;place-items:center;font-weight:800;font-size:16px;color:#1b1b1b}
-.denom .x{color:var(--mute);font-weight:700}
-.denom .amt{flex:1;text-align:right;font-weight:700;font-size:17px;min-width:0}
-.denom input{width:64px;min-height:46px;text-align:center;font-size:20px;font-weight:700;border:2px solid var(--line);border-radius:10px;background:#fff}
-.n500{background:#cfd1c6}.n200{background:#f3d19c}.n100{background:#c9c3ec}.n50{background:#bfe0e6}.n20{background:#e6d2a6}.n10{background:#e6c9b4}.nc{background:#ddd}
+/* denominations: the banknote colour survives only as a thin edge, for recognition */
+.denom{display:flex;align-items:center;gap:10px;padding:var(--s2) 0;border-bottom:1px solid var(--line)}
+.denom:last-child{border-bottom:1px solid var(--line)}
+.denom .note{flex:none;width:68px;height:40px;border:1px solid var(--line2);border-left-width:6px;border-radius:var(--r);display:grid;place-items:center;font-weight:600;font-size:15px;color:var(--ink);background:var(--paper)}
+.denom .x{color:var(--mute);font-weight:500}
+.denom .amt{flex:1;text-align:right;font-weight:600;font-size:16px;min-width:0}
+.denom input{width:64px;min-height:44px;text-align:center;font-size:19px;font-weight:600;border:1px solid var(--line2);border-radius:var(--r);background:var(--paper)}
+.denom input:focus{outline:none;border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.n500{border-left-color:#8f927e}.n200{border-left-color:#e0a548}.n100{border-left-color:#8c82cf}.n50{border-left-color:#6fb6c2}.n20{border-left-color:#c9a64f}.n10{border-left-color:#c08a63}.nc{border-left-color:#b9b7b0}
 
-.seg{display:flex;gap:8px;flex-wrap:wrap}
-.seg button{flex:1;min-width:30%;min-height:52px;border-radius:var(--r);border:2px solid var(--line);background:#fff;font-weight:700;padding:6px 10px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1;min-width:30%;min-height:48px;border-radius:var(--r);border:1px solid var(--line2);background:var(--paper);font-weight:600;font-size:14px;letter-spacing:.02em;padding:6px 10px;color:var(--ink2)}
 .seg button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
-.tog{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:60px;padding:8px 0;border-bottom:1px solid var(--line);width:100%;text-align:left}
-.tog .sw{flex:none;width:56px;height:32px;border-radius:16px;background:#cfcdc5;position:relative;transition:background .15s}
-.tog .sw::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:left .15s}
+.tog{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:60px;padding:var(--s2) 0;border-bottom:1px solid var(--line);width:100%;text-align:left}
+.tog:last-child{border-bottom:0}
+.tog .sw{flex:none;width:48px;height:28px;border-radius:var(--r);background:var(--line2);position:relative;transition:background .15s}
+.tog .sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:1px;background:#fff;transition:left .15s var(--ease)}
 .tog[aria-checked=true] .sw{background:var(--green)}
-.tog[aria-checked=true] .sw::after{left:27px}
-.tog .tx b{display:block}
+.tog[aria-checked=true] .sw::after{left:23px}
+.tog .tx b{display:block;font-weight:500}
 .tog .tx span{font-size:13px;color:var(--mute)}
-.check{flex:none;width:46px;height:46px;border-radius:50%;border:2.5px solid rgba(255,255,255,.6);display:grid;place-items:center;color:#fff}
+.check{flex:none;width:44px;height:44px;border-radius:var(--r);border:1.5px solid var(--line2);background:var(--paper);display:grid;place-items:center;color:#fff}
 .check.on{background:var(--green);border-color:var(--green)}
-.check svg{width:24px;height:24px}
-.lt .check{border-color:#bdbab1;color:#fff}
-.stat{display:flex;flex-direction:column}
-.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.tile{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:14px;min-height:76px;text-align:left}
-.tile b{display:block;font-size:20px}
-.tile span{font-size:13px;color:var(--mute)}
-.attn{display:flex;align-items:center;gap:12px;width:100%;min-height:62px;padding:10px 14px;background:#fff;border:1px solid var(--line);border-radius:var(--r);text-align:left}
-.attn .n{flex:none;min-width:34px;height:34px;border-radius:17px;background:var(--char);color:#fff;display:grid;place-items:center;font-weight:800;padding:0 8px}
-.attn .n.red{background:var(--red);color:#fff}
-.attn .l{flex:1;min-width:0;font-weight:700}
-.attn .l small{display:block;font-weight:500;color:var(--mute);font-size:13px}
-.attn svg{flex:none;width:20px;height:20px;color:var(--mute)}
-.resume{background:#fff8e6;border:1px solid #ecd9a3;border-radius:var(--r);padding:12px 14px}
-.resume .rr{display:flex;gap:8px;margin-top:10px}
-.resume .rr .btn{min-height:48px;font-size:15px}
-.flowbar{margin:8px 0 12px;padding:12px 14px;background:var(--char);color:#fff;border-radius:var(--r);display:flex;justify-content:space-between;gap:10px;align-items:center}
-.flowbar>b{white-space:nowrap;flex:none}
-.flowbar small{display:block;color:var(--on-dark-mute);font-size:13px}
+.check svg{width:22px;height:22px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:var(--s4)}
+.tile{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:var(--s4);min-height:80px;text-align:left}
+.tile:active{background:var(--tint)}
+.tile b{display:block;font-size:24px;font-weight:600;letter-spacing:-.02em}
+.tile span{display:block;margin-top:var(--s1);font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--mute)}
+
+/* Today: numbered attention index */
+.attn-list{border-top:1px solid var(--ink)}
+.attn{display:grid;grid-template-columns:52px 1fr 16px;align-items:center;column-gap:var(--s2);width:100%;min-height:72px;padding:var(--s3) 0;border-bottom:1px solid var(--line);text-align:left}
+.attn:active{background:var(--tint)}
+.attn .n{font-size:26px;font-weight:500;letter-spacing:-.03em;color:var(--ink);line-height:1}
+.attn .n.red{color:var(--red)}
+.attn .l{font-weight:500;font-size:17px;min-width:0}
+.attn .l small{display:block;font-weight:400;color:var(--mute);font-size:13.5px;margin-top:3px}
+.attn svg{width:16px;height:16px;color:var(--faint)}
+.allclear{padding:var(--s5) 0;border-top:1px solid var(--ink);color:var(--mute)}
+.resume{border:1px solid var(--line2);border-left:2px solid var(--ink);padding:var(--s3) var(--s4);background:var(--paper);font-size:15px}
+.resume b{font-weight:600}
+.resume .rr{display:flex;gap:var(--s2);margin-top:var(--s3)}
+.resume .rr .btn{min-height:44px}
+.flowbar{margin:0 0 var(--s4);padding:var(--s3) 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center}
+.flowbar>b{white-space:nowrap;flex:none;font-weight:600;font-size:17px}
+.flowbar small{display:block;color:var(--mute);font-size:13px;margin-top:2px}
+.foot .flowbar{margin:0;border-top:0;padding:0 0 var(--s2)}
+.donemark{display:grid;place-items:center;width:64px;height:64px;margin:var(--s4) auto;color:var(--green);border:1.5px solid var(--green);border-radius:50%}
+.donemark svg{width:30px;height:30px;stroke-width:2}
+
+/* ---------- KHATA: balance summary + receipt conversation ---------- */
+.kh-bal{display:block;width:100%;text-align:left;padding:var(--s2) 0 var(--s4);color:var(--ink)}
+.kh-bal .eyebrow{display:block}
+.kh-bal .amt{display:block;margin-top:var(--s2);font-size:48px;font-weight:600;letter-spacing:-.04em;line-height:1}
+.kh-bal .dir{display:block;margin-top:var(--s3);font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
+.kh-bal .hint{display:inline-flex;align-items:center;gap:6px;margin-top:var(--s3);font-size:12px;color:var(--mute);text-decoration:underline;text-decoration-color:var(--line2);text-underline-offset:4px}
+.kh-bal .hint svg{width:14px;height:14px;transition:transform .2s var(--ease)}
+.kh-bal[aria-expanded=true] .hint svg{transform:rotate(90deg)}
+.kh-brk{padding:0 0 var(--s4);animation:brkIn .22s var(--ease) both}
+@keyframes brkIn{from{opacity:0;transform:translateY(-4px)}}
+.kh-pend{margin:0 0 var(--s4);font-size:14px;line-height:1.45;color:var(--ink2);padding:var(--s3) var(--s4);border:1px dashed var(--ink2)}
+.kh-pend b{color:var(--ink)}
+.rc-conv{border-top:1px solid var(--ink);padding-bottom:var(--s2)}
+.rc-legend{display:flex;justify-content:space-between;padding:var(--s3) 0 0;font-size:10.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.rc-legend span:first-child::before{content:"← "}
+.rc-legend span:last-child::after{content:" →"}
+.rc-day{display:flex;align-items:center;gap:var(--s3);margin:var(--s5) 0 var(--s3);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2)}
+.rc-day::after{content:"";flex:1;height:1px;background:var(--line)}
+.rc-item{display:flex;margin:0 0 var(--s3)}
+.rc-item.right{justify-content:flex-end}
+.rc{width:84%;max-width:330px;text-align:left;background:var(--paper);border:1px solid var(--line2);border-radius:var(--r);padding:var(--s3) var(--s4) var(--s3);color:var(--ink);transition:transform .15s var(--ease),border-color .15s}
+.rc:active{transform:translateY(1px);border-color:var(--ink)}
+.rc-item.left .rc{border-left:3px solid var(--ink)}
+.rc-item.right .rc{background:var(--tint);border-right:3px solid var(--ink)}
+.rc-top{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s2);font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.rc-ref{color:var(--ink2);letter-spacing:.04em;white-space:nowrap}
+.rc-amt{display:block;margin-top:var(--s2);padding-top:var(--s2);border-top:1px dashed var(--line2);font-size:25px;font-weight:600;letter-spacing:-.025em;line-height:1.15}
+.rc-desc{font-size:14px;color:var(--ink2);margin-top:3px;overflow-wrap:anywhere}
+.rc-note{font-size:13px;color:var(--ink2);margin-top:var(--s2)}
+.rc-foot{display:flex;justify-content:space-between;align-items:center;gap:var(--s2);margin-top:var(--s3);font-size:12px;color:var(--mute)}
+.rc-st{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;text-align:right}
+.rc-st svg{width:13px;height:13px;stroke-width:2.6;flex:none}
+.rc-st.ok{color:var(--green)}
+.rc-st.wait{color:var(--ink2)}
+.rc-st.bad{color:var(--red)}
+.rc-item .rc.pending{background:transparent;border:1px dashed var(--ink2)}
+.rc.pending .rc-amt{color:var(--ink2)}
+.rc-item .rc.void{background:transparent;border:1px dashed var(--line2)}
+.rc.void .rc-amt{color:var(--mute);text-decoration:line-through;text-decoration-thickness:1px}
+.rc.fresh{animation:rcIn .55s var(--ease) both}
+@keyframes rcIn{from{opacity:0;transform:translateY(10px)}}
+.rc-bal{display:flex;justify-content:flex-end;align-items:baseline;gap:var(--s2);margin:calc(-1 * var(--s1)) 0 var(--s3);font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.rc-bal b{color:var(--ink);font-size:13px;letter-spacing:0}
+.rc-earlier{display:flex;justify-content:space-between;align-items:center;gap:var(--s3);width:100%;min-height:52px;margin-top:var(--s3);padding:var(--s2) 0;border-bottom:1px solid var(--line);text-align:left;font-size:13.5px;color:var(--ink2)}
+.rc-earlier b{color:var(--ink);font-variant-numeric:tabular-nums}
+.rc-earlier svg{width:16px;height:16px;color:var(--faint);flex:none}
+.rc-end{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s3);margin-top:var(--s5);padding-top:var(--s3);border-top:2px solid var(--ink);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.rc-end b{font-size:24px;letter-spacing:-.02em;font-weight:600}
+.rc-end-sub{margin-top:var(--s1);font-size:12px;color:var(--mute);text-align:right}
+.rd-amt{font-size:36px;font-weight:600;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
+.rd-st{margin-top:var(--s2)}
+.rd-kv{margin-top:var(--s4);border-top:1px solid var(--ink)}
+.rd-kv .kv{border-bottom:1px solid var(--line)}
+.rd-kv .kv.tot{border-bottom:0}
 
 /* ---------- documents (print + preview) ---------- */
 #printRoot{display:none}
@@ -340,7 +452,7 @@ function ic(name, cls) {
   const NS = 'http://www.w3.org/2000/svg';
   const s = document.createElementNS(NS, 'svg');
   s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('fill', 'none'); s.setAttribute('stroke', 'currentColor');
-  s.setAttribute('stroke-width', name === 'more' ? '3.4' : '2.3'); s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round');
+  s.setAttribute('stroke-width', name === 'more' ? '3' : '1.75'); s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round');
   s.setAttribute('aria-hidden', 'true'); if (cls) s.setAttribute('class', cls);
   if (name === 'search') {
     const c = document.createElementNS(NS, 'circle'); c.setAttribute('cx', 11); c.setAttribute('cy', 11); c.setAttribute('r', 6.5); s.append(c);
@@ -1469,6 +1581,7 @@ function stepper(o) {
   minus.disabled = (o.value || 0) <= (o.min || 0); plus.disabled = o.max != null && (o.value || 0) >= o.max;
   return h('div', { class: 'stepper' }, minus, inp, plus);
 }
+const docTitle = (eyebrow, name) => h('div', { class: 'dochead' }, h('div', { class: 'eyebrow' }, eyebrow), h('div', { class: 'big mt8' }, name));      // the heading of a review / confirm document
 const helpCard = (text, onClose) => h('div', { class: 'helpcard', role: 'note' }, h('b', null, 'How this works'), ...[].concat(text).map(t => h('div', null, t)), h('button', { type: 'button', 'aria-label': 'Close help', onClick: onClose }, '×'));
 
 /* ---- sheet (one at a time, small tasks only) ---- */
@@ -1494,7 +1607,7 @@ function confirmSheet(o) {                       // small yes/no — use sparing
   openSheet({ title: o.title, sub: o.sub, body: o.body || h('div'), actions: [Btn(o.yes || 'YES', { kind: o.danger ? 'danger' : 'primary', onClick: () => { closeSheet(); o.onYes(); } }), Btn(o.no || 'NO, GO BACK', { kind: 'ghost', onClick: closeSheet })] });
 }
 
-/* ---- screen frame: header (back circle + right-aligned title) · progress · body · sticky footer ---- */
+/* ---- screen frame: header (quiet back arrow + left-aligned title) · progress · body · sticky footer ---- */
 function buildScreen(E) {
   const spec = ROUTES[E.name](E.params || {}, E) || {};
   const isRoot = TABS.includes(E.name);
@@ -1503,13 +1616,14 @@ function buildScreen(E) {
   if (spec.hdr) kids.push(spec.hdr);
   else {
     const canBack = spec.back !== false && UI.stack.length > 1 && !isRoot;
+    const big = isRoot || spec.big;                 // tab roots and "document" screens get a large editorial title
     const helpBtn = spec.help ? h('button', { class: 'help', type: 'button', 'aria-label': 'How this works', 'aria-pressed': String(!!E.help), onClick: () => { E.help = !E.help; nav.refresh(); } }, '?') : null;
-    kids.push(h('header', { class: 'hdr' + (canBack ? '' : ' nohdr-back') },
+    kids.push(h('header', { class: 'hdr' + (canBack ? '' : ' nohdr-back') + (big && canBack ? ' stack' : big ? ' root' : '') },
       canBack ? h('button', { class: 'back', type: 'button', 'aria-label': 'Back', onClick: () => (spec.onBack ? spec.onBack() : nav.back()) }, ic('back')) : null,
-      h('div', { class: 'ttl' }, h('h1', { tabindex: '-1' }, spec.title || ''), spec.sub ? h('div', { class: 'sub' }, spec.sub) : null), helpBtn));
+      h('div', { class: 'ttl' }, h('h1', { tabindex: '-1', class: big ? 'big' : null }, spec.title || ''), spec.sub ? h('div', { class: 'sub' }, spec.sub) : null), helpBtn));
   }
   if (spec.step) {
-    kids.push(h('div', { class: 'stepline' }, spec.step.label + ' · Step ' + spec.step.n + ' of ' + spec.step.of));
+    kids.push(h('div', { class: 'stepline' }, h('span', null, spec.step.label), h('span', { 'aria-label': 'Step ' + spec.step.n + ' of ' + spec.step.of }, h('b', null, pad2(spec.step.n)), ' / ' + pad2(spec.step.of))));
     kids.push(h('div', { class: 'prog', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(spec.step.of), 'aria-valuenow': String(spec.step.n) }, h('i', { style: { width: Math.round(100 * spec.step.n / spec.step.of) + '%' } })));
   }
   const body = h('div', { class: 'body' + (spec.center ? ' center' : '') });
@@ -1632,22 +1746,22 @@ function attention() {
   const out = [];
   const waiting = S.orders.filter(o => o.status === 'WAITING');
   const need = waiting.filter(o => o.needsApproval && !o.approved).length;
-  if (waiting.length) out.push({ n: waiting.length, text: plural(waiting.length, 'Order') + ' Waiting', sub: need ? need + ' need Manager approval' : 'Ready to load', go: () => nav.go('orders.all', { filter: 'WAITING' }) });
+  if (waiting.length) out.push({ n: waiting.length, text: waiting.length === 1 ? 'Order waiting' : 'Orders waiting', sub: need ? need + ' need Manager approval' : 'Ready for loading', go: () => nav.go('orders.all', { filter: 'WAITING' }) });
   const by = st => S.trips.filter(t => t.status === st);
-  by('LOADING').forEach(t => out.push({ n: 1, text: 'Pickup Loading', sub: t.no + ' · ' + (t.vehicleId ? vehOf(t.vehicleId).reg : 'choose pickup'), go: () => tripGo(t) }));
-  by('READY').forEach(t => out.push({ n: 1, text: 'Pickup Ready', sub: t.no + ' · ' + vehOf(t.vehicleId).reg + ' — start the trip', go: () => tripGo(t) }));
-  const road = by('ON_ROAD'); if (road.length) out.push({ n: road.length, text: plural(road.length, 'Pickup') + ' On Road', sub: road.map(t => vehOf(t.vehicleId).reg).join(', '), go: () => road.length === 1 ? tripGo(road[0]) : nav.go('pk.list') });
-  by('RETURNED').forEach(t => out.push({ n: 1, text: 'Pickup Returned — Check Cash', sub: t.no + ' · ' + vehOf(t.vehicleId).reg, tone: 'red', go: () => tripGo(t) }));
+  by('LOADING').forEach(t => out.push({ n: 1, text: 'Pickup loading', sub: t.no + ' · ' + (t.vehicleId ? vehOf(t.vehicleId).reg : 'choose pickup'), go: () => tripGo(t) }));
+  by('READY').forEach(t => out.push({ n: 1, text: 'Pickup ready', sub: t.no + ' · ' + vehOf(t.vehicleId).reg + ' — start the trip', go: () => tripGo(t) }));
+  const road = by('ON_ROAD'); if (road.length) out.push({ n: road.length, text: road.length === 1 ? 'Pickup on road' : 'Pickups on road', sub: road.map(t => vehOf(t.vehicleId).reg).join(', '), go: () => road.length === 1 ? tripGo(road[0]) : nav.go('pk.list') });
+  by('RETURNED').forEach(t => out.push({ n: 1, text: 'Pickup back — check cash', sub: t.no + ' · ' + vehOf(t.vehicleId).reg, tone: 'red', go: () => tripGo(t) }));
   const collect = S.sales.filter(s => !s.cashAndCarry && !s.legacy && s.partyId && s.source !== 'DIRECT' && saleDue(s) > 0 && !s.dueMarked && (s.orderId || s.source === 'SIDE'));
-  collect.forEach(s => out.push({ n: 1, text: 'Delivered — Collect Money', sub: partyName(s.partyId) + ' · ' + rs(saleDue(s)), tone: 'red', go: () => nav.go('col.home', { sid: s.id }) }));
-  const pend = pendingPayments(); if (pend.length) out.push({ n: pend.length, text: plural(pend.length, 'Payment') + ' Need' + (pend.length === 1 ? 's' : '') + ' Verification', sub: 'Not counted as money until checked', go: () => nav.go('cash.pend') });
+  collect.forEach(s => out.push({ n: 1, text: 'Delivered — collect money', sub: partyName(s.partyId) + ' · ' + rs(saleDue(s)), tone: 'red', go: () => nav.go('col.home', { sid: s.id }) }));
+  const pend = pendingPayments(); if (pend.length) out.push({ n: pend.length, text: pend.length === 1 ? 'Payment needs verification' : 'Payments need verification', sub: 'Not counted as money until checked', go: () => nav.go('cash.pend') });
   return out;
 }
 
 route('today', (p, E) => {
   const d = new Date();
-  const hdr = h('header', { class: 'hdr nohdr-back' }, h('div', { class: 'ttl' }, h('div', { class: 'eyebrow' }, 'Agency Pilot'), h('h1', { class: 'big', tabindex: '-1' }, 'Today'), h('div', { class: 'sub' }, weekday(d) + ', ' + fmtDY(d))));
-  const body = h('div', { class: 'gap' });
+  const hdr = h('header', { class: 'hdr nohdr-back root' }, h('div', { class: 'ttl' }, h('div', { class: 'eyebrow' }, 'Agency Pilot'), h('h1', { class: 'big', tabindex: '-1' }, 'Today'), h('div', { class: 'sub' }, weekday(d) + ', ' + fmtDY(d))));
+  const body = h('div');
   const startOrder = () => {
     const dr = S.drafts.order;
     if (dr && DRAFTS.order.on(dr)) openSheet({ title: 'Unfinished order', sub: DRAFTS.order.text(dr) + ' is still open.', body: h('div'), actions: [Btn('RESUME IT', { kind: 'primary', onClick: () => { closeSheet(); DRAFTS.order.go(dr); } }), Btn('START A NEW ORDER', { kind: 'ghost', onClick: () => { closeSheet(); delete S.drafts.order; nav.go('cart.cust', { mode: 'order' }); } }), sheetClose('CANCEL')] });
@@ -1655,13 +1769,12 @@ route('today', (p, E) => {
   };
   body.append(Btn('TAKE ORDER', { kind: 'primary', icon: 'plus', onClick: startOrder }));
   const drafts = activeDrafts();
-  drafts.forEach(k => body.append(h('div', { class: 'resume' }, h('div', null, h('b', null, 'Unfinished: '), DRAFTS[k].text(S.drafts[k])),
-    h('div', { class: 'rr' }, Btn('RESUME', { kind: 'dark', cls: 'sm', onClick: () => DRAFTS[k].go(S.drafts[k]) }), Btn('DISCARD', { kind: 'ghost', cls: 'sm', onClick: () => discardDraft(k) })))));
+  drafts.forEach(k => body.append(h('div', { class: 'resume mt16' }, h('div', null, h('b', null, 'Unfinished: '), DRAFTS[k].text(S.drafts[k])),
+    h('div', { class: 'rr' }, Btn('RESUME', { kind: 'dark', cls: 'sm', onClick: () => DRAFTS[k].go(S.drafts[k]) }), Btn('DISCARD', { kind: 'link', cls: 'sm', onClick: () => discardDraft(k) })))));
   const att = attention();
-  if (att.length) {
-    body.append(Sec('Needs you'));
-    att.forEach(a => body.append(h('button', { class: 'attn', type: 'button', onClick: act(a.go) }, h('span', { class: 'n' + (a.tone === 'red' ? ' red' : '') }, a.n), h('span', { class: 'l' }, a.text, a.sub ? h('small', null, a.sub) : null), ic('next'))));
-  } else if (!drafts.length) body.append(h('div', { class: 'center mute mt16' }, 'All clear. Nothing is waiting right now.'));
+  body.append(Sec('Needs attention', att.length ? h('span', null, pad2(att.length)) : null));
+  if (att.length) body.append(h('div', { class: 'attn-list' }, att.map(a => h('button', { class: 'attn', type: 'button', onClick: act(a.go) }, h('span', { class: 'n' + (a.tone === 'red' ? ' red' : '') }, pad2(a.n)), h('span', { class: 'l' }, a.text, a.sub ? h('small', null, a.sub) : null), ic('next')))));
+  else body.append(h('div', { class: 'allclear' }, 'All clear. Nothing is waiting right now.'));
   body.append(Sec('Recent orders'));
   const recent = S.orders.filter(isOpenOrder).sort((a, b) => b.createdAt - a.createdAt).slice(0, 4);
   body.append(recent.length ? Pane(recent.map(o => orderRow(o))) : Pane(Empty('No orders yet. Tap TAKE ORDER.')));
@@ -1677,8 +1790,8 @@ route('orders', (p, E) => {
   const hl = S.highlight; S.highlight = null;
   const hlOrder = hl ? orderOf(hl) : null, justTaken = hlOrder && !act_.includes(hlOrder) && isActiveOrder(hlOrder) ? hlOrder : null;
   const body = h('div', { class: 'gap' }, justTaken ? h('div', null, Sec('Just taken'), Pane([orderRow(justTaken, true)])) : null, justTaken ? Sec('Top active orders by value') : null,
-    act_.length ? h('div', { class: 'pane' }, act_.map(o => orderRow(o, hl === o.id)), h('div', { class: 'empty', style: { padding: '14px 16px 18px' } }, 'Top ' + act_.length + ' active orders by value'))
-      : Pane(h('div', { class: 'empty', style: { padding: '70px 16px', fontSize: '26px', color: '#fff' } }, 'No order active')));
+    act_.length ? h('div', { class: 'pane' }, act_.map(o => orderRow(o, hl === o.id)), h('div', { class: 'empty', style: { padding: '12px 0 0', fontSize: '13px' } }, 'Top ' + act_.length + ' active orders by value'))
+      : Pane(h('div', { class: 'empty', style: { padding: '56px 0', fontSize: '24px', color: 'var(--ink2)' } }, 'No order active')));
   return { title: 'Orders', body, foot: [Btn('TAKE ORDER', { kind: 'primary', onClick: () => nav.go('cart.cust', { mode: 'order' }) }), Btn('CHECK ALL ORDERS', { kind: 'dark', onClick: () => nav.go('orders.all', {}) })] };
 });
 route('orders.all', (p, E) => {
@@ -1703,7 +1816,7 @@ function linesPane(rows, tot, o) {
     );
     if (o.edit) { const b = h('button', { type: 'button', class: 'row', style: { padding: 0, minHeight: 0, border: 0, display: 'block' }, onClick: act(() => o.edit(r)), 'aria-label': 'Change ' + pr.name }, blk); pane.append(b); } else pane.append(blk);
   });
-  const t = h('div', { class: 'pad', style: { borderTop: '1px solid var(--hair-dark)' } });
+  const t = h('div', { class: 'ol-tot' });
   if (tot.waived) { t.append(KV('Items', rs(tot.items))); t.append(KV('Paise waived', '−' + rs(tot.waived))); }
   if (o.discount) t.append(KV('Discount ' + pctText(o.discount.bp), '−' + rs(o.discount.amt)));
   t.append(KV(o.totalLabel || 'Total', rs(o.finalTotal != null ? o.finalTotal : tot.total), 'tot'));
@@ -1715,28 +1828,31 @@ route('order.detail', (p, E) => {
   const o = orderOf(p.id); if (!o) return { title: 'Order', body: Empty('Order not found') };
   const st = orderState(o), tot = orderTotals(o), sale = st.sale;
   const body = h('div', { class: 'gap' });
-  body.append(h('div', { class: 'pane' }, h('div', { class: 'pad', style: { textAlign: 'center' } }, h('div', { style: { fontSize: '13px', opacity: .7 } }, o.no + ' · taken ' + fmtDT(o.createdAt)), h('div', { style: { fontSize: '24px', fontWeight: 700, marginTop: '4px' } }, orderTitle(o).toUpperCase() + ' ORDER'), h('div', { class: 'mt8' }, Chip(st.text, st.tone === 'ok' ? 'ok' : st.tone === 'bad' ? 'bad' : '')))));
+  body.append(h('div', { class: 'dochead' }, h('div', { class: 'meta' }, [o.no, areaOf(o.partyId), 'taken ' + fmtDT(o.createdAt)].filter(Boolean).join(' · ')),
+    h('div', { class: 'docst' }, h('span', { class: 'eyebrow' }, 'Status'), Chip(st.text, st.tone === 'ok' ? 'ok' : st.tone === 'bad' ? 'bad' : st.tone === 'warn' ? 'warn' : ''))));
   body.append(linesPane(sale ? sale.lines : tot.rows, sale ? { items: sale.items, waived: sale.waived, total: sale.gross } : tot, { discount: sale && sale.discount, finalTotal: sale ? saleTotal(sale) : tot.total, totalLabel: sale ? 'Bill total' : 'Order total' }));
   if (sale) {
     const owe = saleDue(sale);
-    body.append(h('div', { class: 'card' }, KV('Bill', sale.no), KV('Paid', rs(salePaid(sale, false))), KV('Still due', h('b', { class: owe > 0 ? 'red' : 'green' }, rs(owe)))));
-    if (o.alloc) { const dl = S.deliveries.find(d => d.orderId === o.id); if (dl && dl.outcome !== 'DELIVERED') body.append(h('div', { class: 'card' }, h('b', null, 'Not accepted: '), Object.keys(dl.rejected).map(pid => qtyText(prod(pid), dl.rejected[pid]) + ' ' + prod(pid).name).join(', ') + ' — ' + REASONS[dl.reason])); }
+    body.append(h('div', { class: 'pane' }, h('div', { class: 'pad', style: { paddingTop: '8px', paddingBottom: 0 } }, KV('Bill', sale.no), KV('Paid', rs(salePaid(sale, false))), KV('Still due', h('b', { class: owe > 0 ? 'red' : 'green' }, rs(owe))))));
+    if (o.alloc) { const dl = S.deliveries.find(d => d.orderId === o.id); if (dl && dl.outcome !== 'DELIVERED') body.append(h('div', { class: 'aside bad' }, h('b', null, 'Not accepted: '), Object.keys(dl.rejected).map(pid => qtyText(prod(pid), dl.rejected[pid]) + ' ' + prod(pid).name).join(', ') + ' — ' + REASONS[dl.reason])); }
   }
   if (o.needsApproval && !o.approved && o.status === 'WAITING')
     body.append(authBox('MANAGER APPROVAL', 'This order is for ' + partyKind(o.partyId) + ' ' + partyName(o.partyId) + '. Stock needs Manager approval before it can be loaded. (Approval is not physical release — no goods move yet.)', 'CONFIRM APPROVAL', () => { approveOrder(o.id); nav.refresh(); toast('Manager approval recorded'); }));
-  body.append(Sec('What happened'));
-  body.append(h('div', { class: 'card lt' }, o.history.slice().reverse().map(x => h('div', { class: 'hrow' }, h('span', null, x.text), h('span', { class: 'mute' }, fmtT(x.at))))));
+  /* activity, oldest first — a quiet log, not a set of boxes */
+  const sameDay = d => ymd(d) === ymd(new Date());
+  body.append(Sec('Activity'));
+  body.append(h('div', { class: 'tl' }, o.history.map(x => [h('time', null, sameDay(x.at) ? fmtT(x.at) : fmtDT(x.at)), h('span', null, x.text)])));
   const foot = [];
   const t = o.tripId ? tripOf(o.tripId) : null;
   if (o.status === 'WAITING') {
-    foot.push(h('div', { class: 'btnrow' }, Btn('EDIT', { kind: 'black', onClick: () => startEdit(o) }), Btn('START LOADING', { kind: 'black', disabled: o.needsApproval && !o.approved, onClick: () => { S.drafts.pk = { orderIds: [o.id] }; nav.go('pk.orders'); } })));
-    foot.push(Btn('CANCEL THIS ORDER', { kind: 'link', onClick: () => confirmSheet({ title: 'Cancel this order?', sub: orderTitle(o) + ' · ' + rs(tot.total), yes: 'YES, CANCEL ORDER', danger: true, no: 'KEEP ORDER', onYes: () => { cancelOrder(o.id); nav.back(); toast('Order cancelled'); } }) }));
+    foot.push(h('div', { class: 'btnrow split' }, Btn('EDIT', { kind: 'ghost', onClick: () => startEdit(o) }), Btn('START LOADING', { kind: 'primary', disabled: o.needsApproval && !o.approved, onClick: () => { S.drafts.pk = { orderIds: [o.id] }; nav.go('pk.orders'); } })));
+    foot.push(Btn('CANCEL THIS ORDER', { kind: 'link', cls: 'neg', onClick: () => confirmSheet({ title: 'Cancel this order?', sub: orderTitle(o) + ' · ' + rs(tot.total), yes: 'YES, CANCEL ORDER', danger: true, no: 'KEEP ORDER', onYes: () => { cancelOrder(o.id); nav.back(); toast('Order cancelled'); } }) }));
   } else if (t && ['LOADING', 'LOADED', 'ON_ROAD'].includes(o.status)) foot.push(Btn(o.status === 'LOADING' ? 'CONTINUE LOADING' : 'OPEN PICKUP ' + t.no, { kind: 'primary', onClick: () => tripGo(t) }));
   else if (sale) {
     if (saleDue(sale) > 0) foot.push(Btn('COLLECT ' + rs(saleDue(sale)), { kind: 'primary', onClick: () => nav.go('col.home', { sid: sale.id }) }));
-    foot.push(h('div', { class: 'btnrow' }, Btn('VIEW CHALLAN', { kind: 'dark', onClick: () => nav.go('print', { docs: [['DC', o.dcId], ['BILL', sale.id]], start: 0 }) }), Btn('VIEW BILL', { kind: 'dark', onClick: () => nav.go('print', { docs: [['BILL', sale.id], ['DC', o.dcId]], start: 0 }) })));
-  } else if (o.dcId) foot.push(Btn('VIEW CHALLAN', { kind: 'dark', onClick: () => nav.go('print', { docs: [['DC', o.dcId]], start: 0 }) }));
-  return { title: orderTitle(o), sub: o.no + (areaOf(o.partyId) ? ' · ' + areaOf(o.partyId) : ''), body, foot };
+    foot.push(h('div', { class: 'btnrow' }, Btn('VIEW CHALLAN', { kind: 'ghost', onClick: () => nav.go('print', { docs: [['DC', o.dcId], ['BILL', sale.id]], start: 0 }) }), Btn('VIEW BILL', { kind: 'ghost', onClick: () => nav.go('print', { docs: [['BILL', sale.id], ['DC', o.dcId]], start: 0 }) })));
+  } else if (o.dcId) foot.push(Btn('VIEW CHALLAN', { kind: 'ghost', onClick: () => nav.go('print', { docs: [['DC', o.dcId]], start: 0 }) }));
+  return { title: orderTitle(o), sub: partyKind(o.partyId), big: true, body, foot };
 });
 
 /* =====================================================================
@@ -1813,7 +1929,7 @@ route('cart.qty', (p, E) => {
   } });
   const body = h('div', null,
     h('div', { class: 'oq' }, h('div', { class: 'q' }, 'HOW MANY?'), h('div', { class: 'big mt8' }, prodLabel(pr)), stockMode ? h('div', { class: 'mute mt8' }, 'In godown: ' + qtyText(pr, avail(pr.id))) : null),
-    h('div', { class: 'card mt16' }, unitList(pr).map(u => h('div', { class: 'unitrow' }, h('div', { class: 'u' }, h('b', null, u), h('span', null, u === pr.base ? '₹' + (rate / 100).toFixed(2).replace(/\.00$/, '') + ' each' : '₹' + INR.format(unitSize(pr, u) * rate / 100) + ' per ' + u + ' (' + unitSize(pr, u) + ' ' + pr.base.toLowerCase() + 's)')),
+    h('div', { class: 'pane mt16' }, unitList(pr).map(u => h('div', { class: 'unitrow' }, h('div', { class: 'u' }, h('b', null, u), h('span', null, u === pr.base ? '₹' + (rate / 100).toFixed(2).replace(/\.00$/, '') + ' each' : '₹' + INR.format(unitSize(pr, u) * rate / 100) + ' per ' + u + ' (' + unitSize(pr, u) + ' ' + pr.base.toLowerCase() + 's)')),
       stepper({ value: units[u] || 0, max: cap_ != null ? Math.floor(cap_ / unitSize(pr, u)) : 99999, label: u + ' quantity', onChange: v => { units[u] = v; upd(); } })))),
     h('div', { class: 'center mt16' }, totalEl, subEl, errEl));
   upd();
@@ -1827,7 +1943,7 @@ route('cart.review', (p, E) => {
   if (!c.lines.length) return { title: C.title, step: { label: C.label, n: C.reviewN || 4, of: C.steps }, body: Empty('No products yet. Go back and add one.'), foot: [Btn('ADD PRODUCTS', { kind: 'primary', onClick: () => nav.back() })] };
   const tot = cartCalc(c);
   const body = h('div', { class: 'gap' },
-    h('div', { class: 'pane' }, h('div', { class: 'pad', style: { textAlign: 'center', fontSize: '22px', fontWeight: 700 } }, partyName(c.partyId).toUpperCase() + (c.editId ? ' — EDIT' : ' ORDER'.replace('ORDER', mode === 'order' ? 'ORDER' : 'SALE')))),
+    docTitle(c.editId ? 'Editing order' : mode === 'order' ? 'Order for' : 'Sale to', partyName(c.partyId)),
     linesPane(tot.rows, tot, { edit: r => nav.go('cart.qty', { mode, pid: r.pid }), totalLabel: mode === 'order' ? 'Order total' : 'Total' }),
     h('div', { class: 'center mute', style: { fontSize: '14px' } }, 'Tap a product to change it. Prices are the agency selling price (not the printed MRP).'));
     const foot = [Btn(mode === 'order' ? (c.editId ? 'SAVE CHANGES' : 'CONFIRM ORDER') : C.confirm, { kind: 'primary', onClick: () => cartConfirm(mode) }), Btn('ADD MORE PRODUCTS', { kind: 'ghost', onClick: () => nav.back() })];
@@ -1908,11 +2024,11 @@ const PK_STEPS = t => ['orders', 'vehicle', 'driver', 'helper'].concat(t && trip
 const pkStep = (t, name) => { const s = PK_STEPS(t); return { label: 'LOADING PICKUP', n: s.indexOf(name) + 1, of: s.length }; };
 const tripSub = t => t.no + ' · ' + tripOrders(t).map(o => partyName(o.partyId)).join(', ');
 function unitsEditor(pr, units, o) {
-  return h('div', { class: 'card' }, unitList(pr).map(u => h('div', { class: 'unitrow' }, h('div', { class: 'u' }, h('b', null, u), h('span', null, u === pr.base ? 'single ' + pr.base.toLowerCase() : unitSize(pr, u) + ' ' + pr.base.toLowerCase() + 's each')),
+  return h('div', { class: 'pane' }, unitList(pr).map(u => h('div', { class: 'unitrow' }, h('div', { class: 'u' }, h('b', null, u), h('span', null, u === pr.base ? 'single ' + pr.base.toLowerCase() : unitSize(pr, u) + ' ' + pr.base.toLowerCase() + 's each')),
     stepper({ value: units[u] || 0, max: o.max != null ? Math.floor(o.max / unitSize(pr, u)) : undefined, label: u + ' quantity', onChange: v => { units[u] = v; o.onChange(toBase(pr, units)); } }))));
 }
 const tripBar = t => h('div', { class: 'flowbar' }, h('span', null, t.no + (t.vehicleId ? ' · ' + vehOf(t.vehicleId).reg : ''), h('small', null, tripOrders(t).map(o => partyName(o.partyId)).join(', '))), h('b', null, plural(tripOrders(t).length, 'order')));
-const cancelLink = t => Btn('CANCEL THIS PICKUP', { kind: 'link', onClick: () => confirmSheet({ title: 'Cancel this pickup?', sub: 'The orders go back to “waiting”. Nothing has left the godown yet.', yes: 'YES, CANCEL PICKUP', danger: true, no: 'KEEP IT', onYes: () => { cancelTrip(t.id); nav.reset([['today']], 'back'); toast('Pickup cancelled'); } }) });
+const cancelLink = t => Btn('CANCEL THIS PICKUP', { kind: 'link', cls: 'neg', onClick: () => confirmSheet({ title: 'Cancel this pickup?', sub: 'The orders go back to “waiting”. Nothing has left the godown yet.', yes: 'YES, CANCEL PICKUP', danger: true, no: 'KEEP IT', onYes: () => { cancelTrip(t.id); nav.reset([['today']], 'back'); toast('Pickup cancelled'); } }) });
 
 /* ---- 1. select orders (only when more than one could go together) ---- */
 route('pk.orders', (p, E) => {
@@ -1959,8 +2075,8 @@ route('pk.stops', (p, E) => {
   const t = tripOf(p.tid), os = tripOrders(t);
   const body = h('div', null, h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Which shop first?'), h('div', { class: 'hint' }, 'Use the arrows to set the order of delivery stops.')),
     Pane(os.map((o, i) => h('div', { class: 'row' }, h('span', { class: 'chip' }, i + 1), h('div', { class: 'l' }, h('div', { class: 't' }, orderTitle(o)), h('div', { class: 's' }, areaOf(o.partyId))),
-      h('button', { class: 'btn black sm', type: 'button', style: { minWidth: '48px', padding: 0 }, disabled: i === 0, 'aria-label': 'Move up', onClick: act(() => { reorderStops(t.id, o.id, -1); nav.refresh(); }) }, ic('up')),
-      h('button', { class: 'btn black sm', type: 'button', style: { minWidth: '48px', padding: 0 }, disabled: i === os.length - 1, 'aria-label': 'Move down', onClick: act(() => { reorderStops(t.id, o.id, 1); nav.refresh(); }) }, ic('down'))))));
+      h('button', { class: 'btn ghost sm', type: 'button', style: { minWidth: '48px', padding: 0 }, disabled: i === 0, 'aria-label': 'Move up', onClick: act(() => { reorderStops(t.id, o.id, -1); nav.refresh(); }) }, ic('up')),
+      h('button', { class: 'btn ghost sm', type: 'button', style: { minWidth: '48px', padding: 0 }, disabled: i === os.length - 1, 'aria-label': 'Move down', onClick: act(() => { reorderStops(t.id, o.id, 1); nav.refresh(); }) }, ic('down'))))));
   return { title: 'Delivery order', step: pkStep(t, 'stops'), body, foot: [Btn('CONTINUE', { kind: 'primary', onClick: () => nav.go('pk.load', { tid: t.id }) })] };
 });
 
@@ -1978,7 +2094,7 @@ route('pk.load', (p, E) => {
   const rows = pids.map(pid => { const pr = prod(pid), c = t.counted[pid], ok = c != null, diff = ok && c !== needs[pid];
     return h('div', { class: 'row' }, h('button', { class: 'check' + (ok ? ' on' : ''), type: 'button', 'aria-label': (ok ? 'Unmark ' : 'Mark loaded ') + pr.name, onClick: act(() => toggle(pid)) }, ok ? ic('check') : null),
       h('div', { class: 'l' }, h('div', { class: 't' }, prodLabel(pr)), h('div', { class: 's' }, 'Orders need ' + qtyText(pr, needs[pid]) + (diff ? ' · counted ' + qtyText(pr, c) : ''), diff ? [' ', Chip(c < needs[pid] ? 'SHORT' : 'EXTRA', 'bad')] : null)),
-      h('button', { class: 'btn black sm', type: 'button', onClick: act(() => change(pid)) }, 'CHANGE')); });
+      h('button', { class: 'btn ghost sm', type: 'button', onClick: act(() => change(pid)) }, 'CHANGE')); });
   const body = h('div', null, tripBar(t), h('div', { class: 'oq mt12', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Loading list'), h('div', { class: 'hint' }, 'Tick each product when the count on the pickup is right.')), Pane(rows),
     h('div', { class: 'mt12' }, Btn(allOk ? 'UNTICK ALL' : 'TICK ALL — COUNTS MATCH', { kind: 'link', onClick: () => { if (allOk) pids.forEach(pid => delete t.counted[pid]); else pids.forEach(pid => { if (t.counted[pid] == null && avail(pid) >= needs[pid]) t.counted[pid] = needs[pid]; }); nav.refresh(); } })));
   return { title: 'Loading list', step: pkStep(t, 'load'), body, help: ['This is the combined list of everything the selected orders need.', 'If what you counted is different from the order, a small step lets you fix it. Nothing leaves the godown yet.'],
@@ -2014,7 +2130,7 @@ route('pk.confirm', (p, E) => {
 route('pk.ready', (p, E) => {
   const t = tripOf(p.tid);
   if (t.status !== 'READY') return { title: t.no, body: Empty('This pickup is ' + t.status.toLowerCase().replace('_', ' ') + '.'), foot: [Btn('OPEN PICKUP', { kind: 'primary', onClick: () => tripGo(t) })] };
-  const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { style: { opacity: .7, fontSize: '14px' } }, 'Pickup number'), h('div', { class: 'huge' }, t.no), h('div', { class: 'mt8' }, vehOf(t.vehicleId).reg + ' · ' + staffOf(t.driverId).name + (t.helperId ? ' + ' + staffOf(t.helperId).name : '')), h('div', { class: 'mt8' }, Chip('LOADED', 'ok')))),
+  const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'Pickup number'), h('div', { class: 'huge' }, t.no), h('div', { class: 'mt8' }, vehOf(t.vehicleId).reg + ' · ' + staffOf(t.driverId).name + (t.helperId ? ' + ' + staffOf(t.helperId).name : '')), h('div', { class: 'mt8' }, Chip('LOADED', 'ok')))),
     Sec('Orders'), Pane(tripOrders(t).map((o, i) => Row({ title: (i + 1) + '. ' + orderTitle(o), sub: areaOf(o.partyId) + ' · ' + chalOf(o.dcId).no + ' ' + chalOf(o.dcId).status.toLowerCase(), right: rs(orderTotals(o).total) }))));
   return { title: 'Pickup Ready', body, help: 'Starting the trip issues the delivery challans. The driver then works through the stops one by one.', foot: [Btn('START TRIP', { kind: 'primary', icon: 'truck', onClick: () => { startTrip(t.id); nav.replace('pk.road', { tid: t.id }); toast('Trip started'); } }),
     Btn('PRINT', { kind: 'dark', icon: 'print', onClick: () => nav.go('print', { docs: [['MANIFEST', t.id]].concat(tripOrders(t).map(o => ['DC', o.dcId])), start: 0 }) })] };
@@ -2037,7 +2153,7 @@ route('pk.road', (p, E) => {
   const body = h('div', { class: 'gap' });
   if (nx) {
     const c = party(nx.partyId);
-    body.append(h('div', { class: 'pane' }, h('div', { class: 'pad' }, h('div', { style: { fontSize: '13px', opacity: .7, fontWeight: 700 } }, 'NEXT STOP'), h('div', { style: { fontSize: '26px', fontWeight: 700, margin: '4px 0' } }, orderTitle(nx).toUpperCase()), h('div', null, c && c.addr ? addrLine(c) : areaOf(nx.partyId)), h('div', { class: 'mt8', style: { fontSize: '22px', fontWeight: 700 } }, rs(orderTotals(nx).total)),
+    body.append(h('div', { class: 'pane ink' }, h('div', { class: 'pad' }, h('div', { class: 'eyebrow' }, 'Next stop'), h('div', { style: { fontSize: '26px', fontWeight: 700, margin: '4px 0' } }, orderTitle(nx).toUpperCase()), h('div', null, c && c.addr ? addrLine(c) : areaOf(nx.partyId)), h('div', { class: 'mt8', style: { fontSize: '22px', fontWeight: 700 } }, rs(orderTotals(nx).total)),
       h('div', { class: 'gap mt16' }, Btn('OPEN ORDER', { kind: 'primary', onClick: () => nav.go('dl.detail', { oid: nx.id }) }), c && c.addr ? Btn(mapsUrlLabel(c), { kind: 'ghost', cls: 'sm', icon: 'nav', onClick: () => openMaps(c), aria: 'Open maps' }) : null))));
   } else body.append(h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { style: { fontSize: '22px', fontWeight: 700 } }, 'All stops done ✓'), h('div', { class: 'mt8 mute' }, 'Go back to the godown for the return check.'))));
   if (later.length) { body.append(Sec('Then')); body.append(Pane(later.map(o => Row({ title: orderTitle(o), sub: areaOf(o.partyId), right: rs(orderTotals(o).total), onClick: () => nav.go('dl.detail', { oid: o.id }) })))); }
@@ -2074,7 +2190,7 @@ route('dl.detail', (p, E) => {
   const rows = Object.keys(o.alloc).filter(pid => o.alloc[pid] > 0).map(pid => ({ pid, base: o.alloc[pid], units: o.lines.find(l => l.pid === pid) && o.lines.find(l => l.pid === pid).base === o.alloc[pid] ? o.lines.find(l => l.pid === pid).units : {}, rate: o.prices[pid], amt: o.alloc[pid] * o.prices[pid] }));
   const tt = totalsOf(rows.map(r => ({ pid: r.pid, base: r.base, units: r.units })), o.prices);
   const body = h('div', { class: 'gap' },
-    h('div', { class: 'pane' }, h('div', { class: 'pad', style: { textAlign: 'center' } }, h('div', { style: { fontSize: '24px', fontWeight: 700 } }, orderTitle(o).toUpperCase() + ' ORDER'), c && c.addr && c.addr.area ? h('div', { style: { opacity: .75 } }, addrLine(c)) : null, c && c.phone ? h('div', { style: { opacity: .75 } }, '☎ ' + c.phone) : null)),
+    h('div', { class: 'dochead' }, h('div', { class: 'eyebrow' }, 'Deliver to · ' + o.no), h('div', { class: 'big mt8' }, orderTitle(o)), c && c.addr && c.addr.area ? h('div', { class: 'meta mt8' }, addrLine(c)) : null, c && c.phone ? h('div', { class: 'meta' }, '☎ ' + c.phone) : null),
     linesPane(tt.rows, tt, { totalLabel: 'Amount' }),
     c && c.addr && mapsUrl(c) ? Btn(mapsUrlLabel(c), { kind: 'ghost', cls: 'sm', icon: 'nav', onClick: () => openMaps(c) }) : null);
   return { title: 'Delivery', sub: t.no + ' · ' + vehOf(t.vehicleId).reg, body, help: ['Confirm what the shop accepted.', 'If the shop takes everything, tap CONFIRM DELIVERY. If not, choose “not fully delivered” — the app works out what is left on the pickup.'],
@@ -2112,7 +2228,7 @@ route('dl.partial', (p, E) => {
 route('dl.challan', (p, E) => {
   const o = orderOf(p.oid), dc = chalOf(o.dcId), sale = o.saleId ? saleOf(o.saleId) : null;
   const lines = Object.keys(dc.delivered || {}).filter(pid => dc.delivered[pid] > 0);
-  const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { style: { opacity: .7, fontSize: '14px' } }, orderTitle(o).toUpperCase() + ' ORDER'), h('div', { class: 'big' }, dc.no), h('div', { class: 'mt8' }, Chip(dc.status === 'DELIVERED' ? 'DELIVERED' : dc.status === 'PARTIAL' ? 'PARTLY DELIVERED' : dc.status, dc.status === 'DELIVERED' ? 'ok' : 'warn')))),
+  const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, orderTitle(o).toUpperCase() + ' ORDER'), h('div', { class: 'big' }, dc.no), h('div', { class: 'mt8' }, Chip(dc.status === 'DELIVERED' ? 'DELIVERED' : dc.status === 'PARTIAL' ? 'PARTLY DELIVERED' : dc.status, dc.status === 'DELIVERED' ? 'ok' : 'warn')))),
     Pane(lines.map(pid => Row({ title: prodLabel(prod(pid)), sub: dc.delivered[pid] < o.alloc[pid] ? 'Ordered for this shop: ' + qtyText(prod(pid), o.alloc[pid]) : 'In full', right: qtyText(prod(pid), dc.delivered[pid]) }))),
     sale ? h('div', { class: 'card' }, KV('Bill ' + sale.no, rs(saleTotal(sale)))) : null,
     h('div', { class: 'mute center', style: { fontSize: '14px' } }, 'The challan is the goods paper (what moved). The bill is the money charge. Print the challan for the shop to sign.'));
@@ -2161,7 +2277,7 @@ route('ss.review', (p, E) => {
   const d = sideDraft(); if (!d || !d.lines.length) return { title: 'Sell', body: Empty('Nothing to review') };
   const prices = {}; d.lines.forEach(l => prices[l.pid] = prod(l.pid).sell); const tot = totalsOf(d.lines, prices);
   const name = d.buyer.partyId ? partyName(d.buyer.partyId) : d.buyer.name;
-  const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center', style: { fontSize: '22px', fontWeight: 700 } }, name.toUpperCase() + ' — SALE')), linesPane(tot.rows, tot, {}),
+  const body = h('div', { class: 'gap' }, docTitle('Sale from the pickup to', name), linesPane(tot.rows, tot, {}),
     h('div', { class: 'card' }, h('b', null, 'Standard price'), h('div', { class: 'mute', style: { fontSize: '14px' } }, 'Goods sold from a pickup use the current Sell-to-Shop price. The price cannot be changed or discounted here.')));
   return { title: 'Review sale', sub: tripOf(d.tid).no, step: { label: 'SELLING FROM PICKUP', n: 4, of: 4 }, body, help: 'Confirming makes a new bill and challan for this sale. The goods leave the pickup — the godown stock is not touched again.',
     foot: [Btn('CONFIRM SALE', { kind: 'primary', onClick: () => { const r = sideSale(d.tid, d.buyer, d.lines, d.fromOrderId, d.tok); delete S.drafts.side; nav.popTo('pk.road'); nav.go('col.home', { sid: r.sale.id }); toast('Sale recorded — ' + r.dc.no); } })] };
@@ -2182,7 +2298,7 @@ function denomCounter(d, onChange, label) {
       h('input', { type: 'text', inputmode: 'numeric', pattern: '[0-9]*', maxlength: 4, value: d[k] ? String(d[k]) : '', placeholder: '0', 'aria-label': '₹' + k + ' notes', onInput: ev => { const v = ev.target.value.replace(/\D/g, ''); ev.target.value = v; d[k] = parseInt(v, 10) || 0; upd(); } }), rowAmt[k]); });
   const coins = h('div', { class: 'denom' }, h('div', { class: 'note nc' }, 'Coins'), h('span', { class: 'x' }, '₹'),
     h('input', { type: 'text', inputmode: 'decimal', maxlength: 8, value: d.coins ? String(d.coins / 100) : '', placeholder: '0', 'aria-label': 'Coins and small change in rupees', style: { width: '90px' }, onInput: ev => { const v = ev.target.value.replace(/[^\d.]/g, ''); ev.target.value = v; d.coins = parseRs(v || '0') || 0; upd(); } }), h('span', { class: 'amt mute' }, 'small change'));
-  const box = h('div', null, h('div', { class: 'card' }, rows, coins), h('div', { class: 'center mt16' }, h('div', { class: 'eyebrow' }, label || 'Total counted'), tot));
+  const box = h('div', null, h('div', { class: 'pane' }, rows, coins), h('div', { class: 'center mt16' }, h('div', { class: 'eyebrow' }, label || 'Total counted'), tot));
   upd(); return box;
 }
 
@@ -2212,13 +2328,13 @@ route('col.home', (p, E) => {
     h('div', { class: 'eyebrow' }, c.label), c.due > 0 ? h('div', { class: 'huge mt8' }, (partial ? 'COLLECT REMAINING ' : c.agent ? 'DUE ' : 'COLLECT ') + rs(c.due)) : h('div', { class: 'huge mt8 green' }, 'ALL PAID ✓'),
     partial ? h('div', { class: 'mute mt8' }, 'Paid so far ' + rs(c.paid) + (c.sale ? ' of ' + rs(saleTotal(c.sale)) : '')) : null,
     c.sale && c.sale.discount ? h('div', { class: 'mute mt8' }, 'Includes ' + pctText(c.sale.discount.bp) + ' Owner-approved discount') : null,
-    c.agent ? h('div', { class: 'card mt16', style: { textAlign: 'left', fontSize: '14px' } }, 'Money submitted by an Agent counts against the due only after the office verifies it.') : null));
+    c.agent ? h('div', { class: 'aside mt16', style: { textAlign: 'left' } }, 'Money submitted by an Agent counts against the due only after the office verifies it.') : null));
   const foot = [];
   if (c.due > 0) {
     const go = (r) => () => { const d = colDraft(p.sid || p.pid); nav.go(r, p); };
     const pair = (a, b) => h('div', { class: 'pair' }, a, b);
     const bCash = m.CASH ? Btn('CASH', { kind: 'dark', onClick: go('col.cash') }) : null, bOn = (m.UPI || m.BANK) ? Btn('ONLINE', { kind: 'dark', onClick: go('col.online') }) : null;
-    const bChq = m.CHEQUE ? Btn('CHEQUE', { kind: 'dark', onClick: go('col.cheque') }) : null, bDue = !c.agent && c.sale ? Btn('MARK DUE', { kind: 'danger', onClick: () => nav.go('col.due', p) }) : null;
+    const bChq = m.CHEQUE ? Btn('CHEQUE', { kind: 'dark', onClick: go('col.cheque') }) : null, bDue = !c.agent && c.sale ? Btn('MARK DUE', { kind: 'neg', onClick: () => nav.go('col.due', p) }) : null;
     [[bCash, bOn], [bChq, bDue]].forEach(pr => { const k = pr.filter(Boolean); if (k.length === 2) foot.push(pair(k[0], k[1])); else if (k.length === 1) foot.push(k[0]); });
     if (c.sale && !c.sale.discount && !c.sale.cashAndCarry && c.paid === 0) foot.push(Btn('GIVE DISCOUNT', { kind: 'link', onClick: () => nav.go('disc', { sid: c.sale.id }) }));
   } else foot.push(Btn('DONE', { kind: 'primary', onClick: () => nav.replace('col.done', p) }));
@@ -2244,8 +2360,8 @@ function onlineScreen(kind) {
     const c = colCtx(p), st = E.st; if (!st.init) { st.init = 1; st.amt = String(c.due / 100).replace(/\.0+$/, ''); st.ref = ''; }
     const bk = S.settings.bank, up = S.settings.upi;
     const info = kind === 'BANK'
-      ? h('div', { class: 'pane' }, h('div', { class: 'pad' }, h('div', { class: 'eyebrow', style: { color: 'rgba(255,255,255,.6)' } }, 'Agency bank details (demo)'), KV('Account name', bk.holder), KV('Account number', bk.acNo), KV('IFSC', bk.ifsc), KV('Bank', bk.name + ', ' + bk.branch)))
-      : h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow', style: { color: 'rgba(255,255,255,.6)' } }, 'Agency UPI (demo)'), h('div', { style: { fontSize: '24px', fontWeight: 700, margin: '6px 0' } }, up.id), h('div', null, '☎ UPI phone ' + up.phone), h('div', { class: 'mt8', style: { fontSize: '13px', opacity: .7 } }, 'Demonstration only — no real payment request is created.')));
+      ? h('div', { class: 'pane ink' }, h('div', { class: 'pad' }, h('div', { class: 'eyebrow' }, 'Agency bank details (demo)'), KV('Account name', bk.holder), KV('Account number', bk.acNo), KV('IFSC', bk.ifsc), KV('Bank', bk.name + ', ' + bk.branch)))
+      : h('div', { class: 'pane ink' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'Agency UPI (demo)'), h('div', { style: { fontSize: '24px', fontWeight: 700, margin: '6px 0' } }, up.id), h('div', null, '☎ UPI phone ' + up.phone), h('div', { class: 'mt8', style: { fontSize: '13px', opacity: .7 } }, 'Demonstration only — no real payment request is created.')));
     const amtI = h('input', { class: 'input', id: 'amt', inputmode: 'decimal', value: st.amt, 'aria-label': 'Amount received', onInput: ev => { st.amt = ev.target.value; chk(); } });
     const refI = h('input', { class: 'input', id: 'ref', value: st.ref, placeholder: kind === 'BANK' ? 'Bank reference / UTR' : 'UPI transaction ID', maxlength: 40, 'aria-label': 'Payment reference', onInput: ev => { st.ref = ev.target.value; chk(); } });
     const btn = Btn('CONFIRM — ' + (kind === 'BANK' ? 'BANK' : 'UPI') + ' PAYMENT', { kind: 'primary', disabled: true, onClick: () => { const dr = colDraft(p.sid || p.pid); const pay = recordPayment({ partyId: c.pid, saleId: p.sid, method: kind, amount: parseRs(st.amt), collectorId: null, tripId: c.trip ? c.trip.id : null, details: { ref: st.ref.trim() }, token: dr.tok }); afterPayment(p, pay); } });
@@ -2283,7 +2399,7 @@ route('col.done', (p, E) => {
     if (trip) { const fg = freeGoods(trip); if (fromOrder && fromOrder.status === 'PARTIAL' && Object.keys(fg).length && !fromOrder.leftAsked) { fromOrder.leftAsked = true; nav.reset([['today'], ['pk.road', { tid: trip.id }], ['pk.left', { tid: trip.id, from: fromOrder.id }]]); } else nav.reset([['today'], ['pk.road', { tid: trip.id }]]); }
     else nav.reset([['today']]);
   };
-  const body = h('div', { class: 'gap' }, h('div', { class: 'center' }, h('div', { style: { width: '72px', height: '72px', borderRadius: '50%', background: 'var(--green)', color: '#fff', display: 'grid', placeItems: 'center', margin: '12px auto' } }, ic('check')), h('div', { class: 'big' }, c.due > 0 ? 'Saved' : 'All paid'), h('div', { class: 'mute mt8' }, c.label)), lines,
+  const body = h('div', { class: 'gap' }, h('div', { class: 'center' }, h('div', { class: 'donemark' }, ic('check')), h('div', { class: 'big' }, c.due > 0 ? 'Saved' : 'All paid'), h('div', { class: 'mute mt8' }, c.label)), lines,
     pay && pay.stage === 'PENDING' && (c.agent || pay.method !== 'CHEQUE') ? Btn('VERIFY NOW', { kind: 'ghost', onClick: () => nav.go('cash.verify', { id: pay.id }) }) : null);
   return { title: 'Collection', sub: c.label, body, foot: [Btn(trip ? (askLeft ? 'WHAT TO DO WITH REMAINING GOODS?' : nextStop_ ? 'NEXT STOP' : 'BACK TO PICKUP') : 'DONE', { kind: 'primary', onClick: goNext }), c.pid ? Btn('OPEN ' + partyName(c.pid).toUpperCase() + ' KHATA', { kind: 'link', onClick: () => nav.reset([['khata'], ['kh.person', { pid: c.pid }]]) }) : null], back: false };
 });
@@ -2309,55 +2425,180 @@ route('disc', (p, E) => {
 });
 
 /* =====================================================================
-   KHATA — one account list, one person screen, one simple history
+   KHATA — one account directory, one person screen as a receipt conversation, one full history
    ===================================================================== */
-const balSpan = (b, dark) => { const i = balInfo(b); return h('span', { style: { color: b < 0 ? (dark ? '#ff9e97' : 'var(--red)') : b > 0 ? (dark ? '#8be0b0' : 'var(--green)') : 'inherit' } }, (b < 0 ? 'OWES ' : b > 0 ? 'TO RECEIVE ' : 'CLEAR ') + (b ? rs(Math.abs(b)) : '')); };
+/* ---- Khata presentation helpers. RENDERING ONLY: every amount comes from the event ledger (kbal / kcats / kentries),
+   and the sign rule is the ledger's own — negative = the person owes the agency. Nothing here posts or edits an entry. ---- */
 const allParties = () => S.customers.filter(c => c.type !== 'OCCASIONAL' || kentries(c.id).length).concat(S.staff.filter(s => s.active));
 const netBal = id => kbal(id);
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+function fmtDayLong(d) {
+  const k = ymd(d), now = new Date();
+  return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear() + (k === ymd(now) ? ' · Today' : k === ymd(addDays(now, -1)) ? ' · Yesterday' : '');
+}
+const balShort = b => b < 0 ? 'Owes agency' : b > 0 ? 'Agency owes' : 'Clear';
+const dirLabel = (pid, b) => b < 0 ? partyName(pid) + ' owes the agency' : b > 0 ? 'Agency owes ' + partyName(pid) : 'All clear — nothing owed either way';
+const payDesc = y => [PAY_LABEL[y.method], y.collectorId && staffOf(y.collectorId) ? 'collected by ' + staffOf(y.collectorId).name : null, y.details.ref ? 'ref ' + y.details.ref : null, y.method === 'CHEQUE' && y.details.no ? 'cheque ' + y.details.no : null].filter(Boolean).join(' · ');
+function payStatus(y) {
+  if (!y) return null;
+  if (y.stage === 'VERIFIED' || y.stage === 'CLEARED') return { text: STAGE_LABEL[y.stage], tone: 'ok', icon: 'check' };
+  if (y.stage === 'FLAGGED' || y.stage === 'BOUNCED') return { text: STAGE_LABEL[y.stage], tone: 'bad' };
+  return { text: STAGE_LABEL[y.stage], tone: 'wait' };
+}
+const khUI = () => (UI.kh && UI.kh.S === S) ? UI.kh : (UI.kh = { S, seen: {}, bal: {} });   // per-session memory for the "new receipt" + balance animations
+
+/* What one ledger entry MEANS, for display.
+   LEFT  = a record the agency issues: bill, wages / commission / unloading earned, credit, adjustment, cash a driver now holds.
+   RIGHT = money that moved to settle it: payment received, cash handed over, wages / commission paid, advance given, offset.
+   The side comes from the entry's source (ref type + category), never from its sign. */
+function receiptOf(e) {
+  const ref = e.ref || {}, t = ref.type, pos = e.amt > 0;
+  const pay = t === 'PAY' ? payOf(ref.id) : null, sale = t === 'SALE' ? saleOf(ref.id) : null;
+  const R = (side, kind, what, more) => Object.assign({ e, side, kind, what, ref: null, desc: e.desc, pay, sale, link: null }, more || {});
+  const bill = sale ? { ref: sale.no, link: ['BILL', sale.id] } : {}, pref = pay ? { ref: pay.no } : {};
+  if (t === 'SALE' && e.cat === 'COMMISSION') return R('left', 'Commission', 'Credited', Object.assign({ desc: sale ? pctText(sale.commission ? sale.commission.bp : sale.commBp) + ' of bill ' + sale.no : e.desc }, bill));
+  if (t === 'SALE') return pos ? R('left', 'Agency', 'Discount', Object.assign({ desc: 'Owner-approved discount' }, bill)) : R('left', 'Agency', 'Bill', Object.assign({ desc: sale ? (SRC[sale.source] || 'Bill') + ' · ' + plural(sale.lines.length, 'product') : e.desc }, bill));
+  if (t === 'PAY' && e.cat === 'COLLECTION') return R('left', 'Collection', 'Cash held', pref);
+  if (t === 'PAY') return pos ? R('right', 'Payment', 'Received', Object.assign({ desc: pay ? payDesc(pay) : e.desc }, pref)) : R('left', 'Payment', 'Reversed', pref);
+  if (t === 'HANDOVER') { const ho = byId(S.handovers, ref.id); return R('right', 'Collection', 'Handed over', { ref: ho ? ho.no : null }); }
+  if (t === 'OPENING') return e.cat === 'ADVANCE' ? R('right', 'Advance', 'Given earlier') : R('left', 'Agency', 'Brought forward');
+  if (t === 'ATT') return R('left', 'Wages', pos ? 'Earned' : 'Corrected');
+  if (t === 'JOB') { const j = byId(S.jobs, ref.id); return R('left', 'Unloading', 'Earned', { ref: j ? j.ref : null }); }
+  if (t === 'ADVANCE') return R('right', 'Advance', 'Given');
+  if (t === 'OFFSET') return R('right', KCAT[e.cat], e.cat === 'ADVANCE' ? 'Cleared' : 'Offset');
+  if (t === 'PAYOUT') return R('right', KCAT[e.cat], 'Paid');
+  if (t === 'RETURN') { const rt = byId(S.returns, ref.id), r0 = { ref: rt ? rt.no : null };
+    return e.cat === 'REFUND' ? (pos ? R('left', 'Refund', 'Approved', r0) : R('right', 'Refund', 'Paid', r0)) : R('left', 'Agency', 'Return credit', r0); }
+  return R('left', KCAT[e.cat] || 'Entry', 'Recorded');
+}
+function receiptStatus(x) {
+  if (!x.posted) return x.pending ? { text: 'Pending', tone: 'wait' } : payStatus(x.pay);
+  if (x.pay && x.e.cat === 'SALES') return payStatus(x.pay);
+  if (x.e.ref && x.e.ref.type === 'HANDOVER') return { text: 'Verified', tone: 'ok', icon: 'check' };
+  if (x.what === 'Bill' && x.sale) { const d = saleDue(x.sale); return d > 0 ? { text: 'Due ' + rs(d), tone: 'bad' } : { text: 'Paid', tone: 'ok', icon: 'check' }; }
+  return null;
+}
+/* the conversation, oldest first. Running balance = ledger entries added up in that same order (integer paise, never display values).
+   Payments that are NOT in the ledger (waiting, bounced, flagged before counting) are shown too — clearly outside the balance. */
+function khItems(pid) {
+  const posted = kentries(pid).slice().sort((a, b) => a.at - b.at || a.seq - b.seq);
+  let run = 0;
+  const items = posted.map((e, i) => { const before = run; run += e.amt; return Object.assign(receiptOf(e), { at: e.at, ord: i, posted: true, before, after: run }); });
+  const inLedger = new Set(posted.filter(e => e.ref && e.ref.type === 'PAY').map(e => e.ref.id));
+  S.payments.filter(y => y.partyId === pid && !inLedger.has(y.id)).forEach((y, i) => items.push({ side: 'right', kind: 'Payment', what: y.stage === 'PENDING' ? 'Submitted' : 'Not counted', ref: y.no, desc: payDesc(y), pay: y, sale: null, link: null,
+    at: y.at, ord: 1e9 + i, posted: false, pending: y.stage === 'PENDING', void: y.stage !== 'PENDING', amt: y.amount }));
+  items.sort((a, b) => a.at - b.at || a.ord - b.ord);
+  return { items, balance: run };
+}
+function receiptEl(pid, x, seen) {
+  const st = receiptStatus(x), amt = x.posted ? rs(x.e.amt, { plus: true }) : rs(x.amt);
+  const fresh = x.posted && seen != null && x.e.seq > seen;
+  return h('div', { class: 'rc-item ' + x.side },
+    h('button', { class: 'rc' + (x.pending ? ' pending' : '') + (x.void ? ' void' : '') + (fresh ? ' fresh' : ''), type: 'button', 'aria-label': x.kind + ' ' + x.what + (x.ref ? ' ' + x.ref : '') + ', ' + amt + ', ' + fmtDT(x.at) + (st ? ', ' + st.text : '') + (x.posted ? '' : ', not in the balance'), onClick: act(() => receiptSheet(pid, x)) },
+      h('div', { class: 'rc-top' }, h('span', null, x.kind + ' · ' + x.what), x.ref ? h('span', { class: 'rc-ref' }, x.ref) : null),
+      h('div', { class: 'rc-amt' }, amt),
+      x.desc ? h('div', { class: 'rc-desc' }, x.desc) : null,
+      x.posted ? null : h('div', { class: 'rc-note' }, x.pending ? 'Not in the balance until the office verifies it.' : 'Not counted — no effect on the balance.'),
+      h('div', { class: 'rc-foot' }, h('span', null, fmtD(x.at) + ' · ' + fmtT(x.at)), st ? h('span', { class: 'rc-st ' + st.tone }, st.icon ? ic(st.icon) : null, st.text) : null)));
+}
+/* shared by kh.person (latest entries) and kh.history (everything) */
+function receiptConversation(pid, o) {
+  o = o || {};
+  const { items, balance } = khItems(pid), K = khUI(), seen = K.seen[pid];
+  const shown = o.limit && items.length > o.limit ? items.slice(items.length - o.limit) : items, hidden = items.slice(0, items.length - shown.length);
+  const wrap = h('div', { class: 'rc-conv' });
+  if (items.length) wrap.append(h('div', { class: 'rc-legend', 'aria-hidden': 'true' }, h('span', null, 'Records'), h('span', null, 'Settlements')));
+  if (hidden.length) wrap.append(h('button', { class: 'rc-earlier', type: 'button', onClick: act(() => nav.go('kh.history', { pid })) },
+    h('span', null, plural(hidden.length, 'earlier entry', 'earlier entries') + ' · brought forward ', h('b', null, rs(hidden.reduce((s, x) => s + (x.posted ? x.e.amt : 0), 0), { plus: true }))), ic('next')));
+  let day = null;
+  shown.forEach(x => {
+    if (ymd(x.at) !== day) { day = ymd(x.at); wrap.append(h('h3', { class: 'rc-day' }, fmtDayLong(x.at))); }
+    wrap.append(receiptEl(pid, x, seen));
+    if (x.posted && x.side === 'right') wrap.append(h('div', { class: 'rc-bal' }, 'Balance after', h('b', { class: x.after < 0 ? 'red' : '' }, rs(x.after, { plus: true }))));
+  });
+  if (!items.length) wrap.append(Empty('No entries yet. Bills, payments, wages and commission appear here as receipts.'));
+  else wrap.append(h('div', { class: 'rc-end' }, h('span', null, 'Balance remaining'), h('b', { class: balance < 0 ? 'red' : '' }, rs(balance, { plus: true }))), h('div', { class: 'rc-end-sub' }, dirLabel(pid, balance)));
+  K.seen[pid] = items.reduce((m, x) => x.posted ? Math.max(m, x.e.seq) : m, seen || 0);
+  return wrap;
+}
+function countUp(el, from, to) {                   // a confirmed balance change eases into its new value (skipped for reduced motion)
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const t0 = performance.now(), dur = 560;
+  const step = now => { const k = Math.min(1, (now - t0) / dur), q = 1 - Math.pow(1 - k, 3);
+    if (k < 1 && el.isConnected) { el.textContent = rs(Math.round(from + (to - from) * q), { plus: true }); requestAnimationFrame(step); } else el.textContent = rs(to, { plus: true }); };
+  el.textContent = rs(from, { plus: true }); requestAnimationFrame(step);
+}
+function khBalance(pid, E) {
+  const b = kbal(pid), cats = kcats(pid), K = khUI(), prev = K.bal[pid], open = !!E.st.brk;
+  K.bal[pid] = b;
+  const amt = h('span', { class: 'amt' + (b < 0 ? ' red' : '') }, rs(b, { plus: true }));
+  if (prev != null && prev !== b) countUp(amt, prev, b);
+  const btn = h('button', { class: 'kh-bal', type: 'button', 'aria-expanded': String(open), onClick: () => { E.st.brk = !E.st.brk; nav.refresh(); } },
+    h('span', { class: 'eyebrow' }, 'Balance'), amt, h('span', { class: 'dir' }, dirLabel(pid, b)), h('span', { class: 'hint' }, ic('next'), open ? 'Hide the breakdown' : 'What makes up this balance?'));
+  const keys = Object.keys(cats);
+  const brk = open ? h('div', { class: 'kh-brk' }, keys.length ? keys.map(k => KV(KCAT[k], rs(cats[k], { plus: true }))) : h('div', { class: 'mute' }, 'Nothing recorded yet.'), KV('Balance', rs(b, { plus: true }), 'tot')) : null;
+  const mine = S.payments.filter(y => y.partyId === pid && y.stage === 'PENDING'), out = mine.filter(y => !y.counted), inb = mine.filter(y => y.counted), sum = l => rs(l.reduce((s, y) => s + y.amount, 0));
+  return h('div', null, btn, brk,
+    out.length ? h('div', { class: 'kh-pend' }, h('b', null, sum(out) + ' submitted'), ' — waiting for the office to verify. It is not in this balance yet.') : null,
+    inb.length ? h('div', { class: 'aside', style: { marginBottom: '16px' } }, h('b', null, sum(inb) + ' paid online'), ' is already in this balance. The office still has to confirm it in the bank.') : null);
+}
+function receiptSheet(pid, x) {
+  const e = x.e, y = x.pay, s = x.sale, st = receiptStatus(x);
+  const bills = y ? y.alloc.filter(a => a.saleId && saleOf(a.saleId)).map(a => saleOf(a.saleId).no) : [];
+  const kv = [
+    KV('Type', x.kind + ' · ' + x.what), KV('Date', fmtDY(x.at) + ', ' + fmtT(x.at)), KV('Account', partyName(pid) + ' · ' + partyKind(pid)),
+    x.ref ? KV('Reference', x.ref) : null, x.posted ? KV('Khata category', KCAT[e.cat]) : null,
+    s ? KV('Source', SRC[s.source] || s.source) : null, s && s.orderId && orderOf(s.orderId) ? KV('Order', orderOf(s.orderId).no) : null, s && s.dcId && chalOf(s.dcId) ? KV('Challan', chalOf(s.dcId).no) : null,
+    y ? KV('Method', PAY_LABEL[y.method]) : null, y && y.details.ref ? KV('Payment reference', y.details.ref) : null,
+    y && y.method === 'CHEQUE' ? KV('Cheque', [y.details.no, y.details.bank, y.details.date].filter(Boolean).join(' · ')) : null,
+    y && y.collectorId && staffOf(y.collectorId) ? KV('Collected by', staffOf(y.collectorId).name) : null,
+    y ? KV('Recorded', fmtDT(y.at)) : null, y ? KV('Status', STAGE_LABEL[y.stage]) : null,
+    y && y.verifiedAt ? KV('Verified', fmtDT(y.verifiedAt) + (y.verifiedBy ? ' · ' + y.verifiedBy : '')) : null, y && y.flagNote ? KV('Problem', y.flagNote) : null,
+    bills.length ? KV('For bill', bills.join(', ')) : null, x.posted ? KV('Ledger note', e.desc) : null,
+    x.posted ? KV('Balance before', rs(x.before, { plus: true })) : null,
+    x.posted ? KV('Balance after', h('span', { class: x.after < 0 ? 'red' : '' }, rs(x.after, { plus: true })), 'tot') : KV('Balance effect', x.pending ? 'None yet' : 'None', 'tot')];
+  const explain = !x.posted ? (x.pending ? 'Submitted, but not in the Khata yet. The balance changes only when the office ' + (y.method === 'CHEQUE' ? 'marks the cheque cleared.' : 'verifies it.') : 'This payment was not counted, so it never changed the balance.')
+    : y && y.stage === 'PENDING' ? 'Already counted in the balance. The office still has to see this money in the bank.'
+    : y && y.stage === 'WITH_COLLECTOR' ? 'The customer paid the driver. The driver holds this cash until the Manager counts it at pickup return.' : null;
+  const acts = [];
+  if (x.link) acts.push(Btn('VIEW BILL', { kind: 'primary', icon: 'print', onClick: () => { closeSheet(); nav.go('print', { docs: [x.link], start: 0 }); } }));
+  if (y && y.stage === 'PENDING') acts.push(Btn('OPEN PAYMENT CHECK', { kind: acts.length ? 'ghost' : 'primary', onClick: () => { closeSheet(); nav.go('cash.verify', { id: y.id }); } }));
+  acts.push(sheetClose('CLOSE'));
+  openSheet({ title: x.kind + ' · ' + x.what, sub: [x.ref, fmtD(x.at)].filter(Boolean).join(' · '), actions: acts,
+    body: h('div', null, h('div', { class: 'rd-amt' + (x.void ? ' mute' : '') }, x.posted ? rs(e.amt, { plus: true }) : rs(x.amt)),
+      st ? h('div', { class: 'rd-st' }, Chip(st.text, st.tone === 'ok' ? 'ok' : st.tone === 'bad' ? 'bad' : 'warn')) : null, explain ? h('div', { class: 'aside mt16' }, explain) : null, h('div', { class: 'rd-kv' }, kv)) });
+}
+
 route('khata', (p, E) => {
   const has = new Set(khataParties());
   const body = h('div', null, pickList(E, { placeholder: 'Search person or shop', empty: 'No one found.',
     items: () => { const q = (E.st.q || '').trim(); const all = allParties(); const list = q ? all : all.filter(x => has.has(x.id)); return list.slice().sort((a, b) => { const A = netBal(a.id), B = netBal(b.id); const ra = A < 0 ? 0 : A > 0 ? 1 : 2, rb = B < 0 ? 0 : B > 0 ? 1 : 2; return ra - rb || Math.abs(B) - Math.abs(A); }); },
     text: x => [x.shop, x.name, x.position, x.type].join(' '),
-    render: x => Row({ title: x.shop || x.name, sub: partyKind(x.id) + (x.shop ? ' · ' + x.name : ''), right: balSpan(netBal(x.id), true), onClick: () => nav.go('kh.person', { pid: x.id }) }) }));
-  return { title: 'Khata', sub: 'Who owes whom', body, hdr: undefined };
+    render: x => { const b = netBal(x.id); return Row({ title: x.shop || x.name, sub: partyKind(x.id) + (x.shop ? ' · ' + x.name : ''), right: h('span', { class: b < 0 ? 'red' : '' }, rs(b, { plus: true })), rightSub: balShort(b), onClick: () => nav.go('kh.person', { pid: x.id }) }); } }));
+  return { title: 'Khata', sub: 'Who owes whom', body };
 });
-const pendingFor = pid => S.payments.filter(y => y.partyId === pid && y.stage === 'PENDING');
 route('kh.person', (p, E) => {
-  const pid = p.pid, pa = party(pid), b = netBal(pid), info = balInfo(b), cats = kcats(pid), isS = isStaffId(pid), agent = isAgent(pid);
-  const ents = kentries(pid).slice().reverse();
-  const body = h('div', { class: 'gap' },
-    h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { style: { opacity: .7, fontSize: '14px' } }, partyKind(pid)), h('div', { class: 'huge' }, rs(Math.abs(b))), h('div', { class: 'mt8', style: { fontWeight: 700, color: b < 0 ? '#ff9e97' : b > 0 ? '#8be0b0' : '#fff' } }, b === 0 ? 'ALL CLEAR' : '— ' + info.text))),
-    Object.keys(cats).length > 1 ? h('div', { class: 'card', style: { fontSize: '14px' } }, Object.keys(cats).map(k => KV(KCAT[k], rs(cats[k], { plus: true })))) : null,
-    pendingFor(pid).length ? h('div', { class: 'card', style: { fontSize: '14px' } }, h('b', null, rs(pendingFor(pid).reduce((s, y) => s + y.amount, 0)) + ' submitted'), ' — waiting for the office to verify. The balance changes when it is verified.') : null,
-    Sec('Transaction history'),
-    ents.length ? Pane(ents.slice(0, 6).map(e => entryRow(e))) : Pane(Empty('No transactions yet.')),
-    ents.length > 6 ? Btn('VIEW ALL HISTORY', { kind: 'link', onClick: () => nav.go('kh.history', { pid }) }) : null);
-  const foot = [], links = [];
-  const owes = b < 0, due = partyDueIncl(pid);
-  if (!isS) {
-    if (owes || due > 0) foot.push(Btn('RECORD PAYMENT', { kind: 'primary', onClick: () => nav.go('col.home', { pid }) }));
-    links.push(Btn('VIEW STATEMENT', { kind: 'ghost', onClick: () => nav.go('statement', { pid }) }));
-  } else {
-    if (agent && due > 0) foot.push(Btn('RECORD PAYMENT', { kind: 'primary', onClick: () => nav.go('col.home', { pid }) }));
+  const pid = p.pid, pa = party(pid), b = netBal(pid), isS = isStaffId(pid), agent = isAgent(pid), due = partyDueIncl(pid);
+  const body = h('div', null, khBalance(pid, E), receiptConversation(pid, { limit: 10 }));
+  /* one primary money action · other money actions as quiet outlines · navigation as text links */
+  const prim = [], money = [], links = [];
+  if (!isS) { if (b < 0 || due > 0) prim.push(['RECORD PAYMENT', () => nav.go('col.home', { pid })]); links.push(['STATEMENT', () => nav.go('statement', { pid })]); }
+  else {
+    if (agent && due > 0) prim.push(['RECORD PAYMENT', () => nav.go('col.home', { pid })]);
     const comm = kbal(pid, 'COMMISSION');
-    if (comm > 0) foot.push(Btn('PAY COMMISSION ' + rs(comm), { kind: 'primary', onClick: () => nav.go('kh.pay', { pid, cat: 'COMMISSION' }) }));
-    else if (b > 0) foot.push(Btn('SETTLE DUE ' + rs(b), { kind: 'primary', onClick: () => nav.go('kh.pay', { pid }) }));
-    if (!agent) foot.push(Btn('RECORD ADVANCE', { kind: foot.length ? 'ghost' : 'dark', onClick: () => nav.go('kh.advance', { pid }) }));
-    if (agent) links.push(Btn('VIEW SALES', { kind: 'ghost', onClick: () => nav.go('kh.sales', { pid }) }));
+    if (comm > 0) prim.push(['PAY COMMISSION ' + rs(comm), () => nav.go('kh.pay', { pid, cat: 'COMMISSION' })]);
+    else if (b > 0) prim.push(['SETTLE DUE ' + rs(b), () => nav.go('kh.pay', { pid })]);
+    if (agent) links.push(['VIEW SALES', () => nav.go('kh.sales', { pid })]); else money.push(['RECORD ADVANCE', () => nav.go('kh.advance', { pid })]);
   }
-  if (!isS) links.push(Btn('OPEN CUSTOMER', { kind: 'link', onClick: () => nav.go('customer.profile', { pid }) })); else links.push(Btn('OPEN STAFF', { kind: 'link', onClick: () => nav.go('sf.person', { sid: pid }) }));
-  return { title: pa ? (pa.shop || pa.name) : 'Khata', sub: partyKind(pid), body, foot: foot.concat(links.slice(0, 2)), help: ['Negative means the person owes the agency. Positive means the agency owes the person.', 'The balance is always added up from the transactions below — it is never typed in by hand.'] };
+  links.push([isS ? 'STAFF PROFILE' : 'CUSTOMER PROFILE', () => isS ? nav.go('sf.person', { sid: pid }) : nav.go('customer.profile', { pid })]);
+  const foot = [], quiet = prim.slice(1).concat(money);
+  if (prim[0]) foot.push(Btn(prim[0][0], { kind: 'primary', onClick: prim[0][1] }));
+  if (quiet.length) foot.push(h('div', { class: 'btnrow' }, quiet.map(a => Btn(a[0], { kind: 'ghost', onClick: a[1] }))));
+  foot.push(h('div', { class: 'linkrow' }, links.map(a => Btn(a[0], { kind: 'link', onClick: a[1] }))));
+  return { title: pa ? (pa.shop || pa.name) : 'Khata', sub: partyKind(pid), big: true, body, foot, help: ['Left receipts are records the agency issues: bills, wages or commission earned, credits. Right receipts are money that moved to settle them: payments, wages paid, advances.', 'A minus balance means the person owes the agency; a plus balance means the agency owes the person. It is always added up from these entries — never typed in.', 'Dashed receipts are payments that are not in the balance yet. Tap any receipt to see its details and the balance after it.'] };
 });
-function entryRow(e) {
-  const stage = e.ref && e.ref.type === 'PAY' ? payOf(e.ref.id) : null;
-  return Row({ title: e.desc, sub: fmtDT(e.at) + ' · ' + KCAT[e.cat], right: h('span', { style: { color: e.amt < 0 ? '#ff9e97' : '#8be0b0' } }, rs(e.amt, { plus: true })), rightSub: stage ? STAGE_LABEL[stage.stage] : null });
-}
-route('kh.history', (p, E) => {
-  const pid = p.pid; let run = 0;
-  const asc = kentries(pid).map(e => { run += e.amt; return { e, run }; }).reverse();
-  return { title: 'History', sub: partyName(pid), body: h('div', { class: 'gap' }, h('div', { class: 'mute center', style: { fontSize: '14px' } }, 'Newest first. Nothing here can be edited — mistakes are fixed with a new correcting entry.'), asc.length ? Pane(asc.map(x => Row({ title: x.e.desc, sub: fmtDT(x.e.at) + ' · ' + KCAT[x.e.cat] + ' · balance ' + rs(x.run), right: h('span', { style: { color: x.e.amt < 0 ? '#ff9e97' : '#8be0b0' } }, rs(x.e.amt, { plus: true })), rightSub: x.e.ref && x.e.ref.type === 'PAY' && payOf(x.e.ref.id) ? STAGE_LABEL[payOf(x.e.ref.id).stage] : null }))) : Pane(Empty('No transactions.'))) };
-});
+route('kh.history', (p, E) => ({ title: 'Full history', sub: partyName(p.pid) + ' · ' + partyKind(p.pid), body: h('div', null, h('div', { class: 'aside', style: { marginBottom: '20px' } }, 'Every entry, oldest first. Nothing here can be edited — mistakes are fixed with a new correcting entry. Tap a receipt for its details.'), receiptConversation(p.pid)),
+  foot: [Btn('VIEW STATEMENT', { kind: 'ghost', icon: 'print', onClick: () => nav.go('statement', { pid: p.pid }) })] }));
 route('kh.sales', (p, E) => {
   const ss = S.sales.filter(s => s.partyId === p.pid).sort((a, b) => b.at - a.at);
   return { title: 'Sales', sub: partyName(p.pid), body: ss.length ? Pane(ss.map(s => Row({ title: 'Bill ' + s.no + ' · ' + rs(saleTotal(s)), sub: fmtD(s.at) + ' · ' + (SRC[s.source] || s.source), right: saleDue(s) > 0 ? rs(saleDue(s)) : 'PAID', rightSub: saleDue(s) > 0 ? 'still due' : '', onClick: () => nav.go('print', { docs: [['BILL', s.id]], start: 0 }) }))) : Pane(Empty('No sales yet.')) };
@@ -2380,7 +2621,7 @@ route('kh.pay', (p, E) => {
     opts.length > 1 ? Seg(opts.map(k => [k, KCAT[k] + ' ' + rs(kbal(pid, k))]), st.cat, v => { st.cat = v; st.amtTxt = null; nav.refresh(); }) : null,
     Field('Amount to pay now (₹)', inp), h('div', null, h('div', { class: 'lbl' }, 'Pay from'), Seg([['CASH', 'Cash ' + rs(cbal('CASH'))], ['BANK', 'Bank ' + rs(cbal('BANK'))]], st.acct, v => { st.acct = v; })),
     canOff ? Toggle('Also clear advance ' + rs(adv), 'Takes it out of the wages — no extra cash is paid', st.offset, v => { st.offset = v; nav.refresh(); }) : null,
-    h('div', { class: 'card', style: { fontSize: '14px' } }, 'This is an actual payment: Cash/Bank goes down and the Khata goes down together, once.'));
+    h('div', { class: 'aside' }, 'This is an actual payment: Cash/Bank goes down and the Khata goes down together, once.'));
   return { title: st.cat === 'COMMISSION' ? 'Pay commission' : 'Settle due', sub: partyName(pid), body, foot: [btn], help: 'Earned money is not paid money. Paying now records the real outflow in CashBook and settles the same amount in Khata.' };
 });
 route('kh.advance', (p, E) => {
@@ -2390,7 +2631,7 @@ route('kh.advance', (p, E) => {
   const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'eyebrow' }, partyName(pid)), h('div', { class: 'big mt8' }, 'Advance')),
     Field('Amount (₹)', h('input', { class: 'input', id: 'amt', inputmode: 'decimal', value: st.amt, placeholder: '500', 'aria-label': 'Advance amount', 'data-autofocus': '1', onInput: ev => { st.amt = ev.target.value; chk(); } })), Field('Note (optional)', h('input', { class: 'input', value: st.note, maxlength: 60, onInput: ev => { st.note = ev.target.value; } })),
     h('div', null, h('div', { class: 'lbl' }, 'Pay from'), Seg([['CASH', 'Cash ' + rs(cbal('CASH'))], ['BANK', 'Bank ' + rs(cbal('BANK'))]], st.acct, v => { st.acct = v; })),
-    h('div', { class: 'card', style: { fontSize: '14px' } }, 'An advance is money given before it is earned. It is recorded as a separate “Advance” — it is never silently deducted from wages.'));
+    h('div', { class: 'aside' }, 'An advance is money given before it is earned. It is recorded as a separate “Advance” — it is never silently deducted from wages.'));
   chk(); return { title: 'Record advance', sub: partyName(pid), body, foot: [btn] };
 });
 
@@ -2402,10 +2643,10 @@ const custReturns = pid => S.returns.filter(r => r.partyId === pid).sort((a, b) 
 route('customer.profile', (p, E) => {
   const pid = p.pid, c = party(pid), b = netBal(pid), tiles = [['orders', 'Recent orders', custOrders(pid).length], ['deliveries', 'Deliveries', custDeliveries(pid).length], ['payments', 'Payments', custPays(pid).length], ['returns', 'Returns', custReturns(pid).length], ['khata', 'Khata history', kentries(pid).length]];
   const body = h('div', { class: 'gap' },
-    h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { style: { opacity: .7, fontSize: '14px' } }, 'CURRENT DUE'), h('div', { class: 'huge' }, rs(Math.max(0, -b))), h('div', { class: 'mt8', style: { fontWeight: 700, color: b < 0 ? '#ff9e97' : b > 0 ? '#8be0b0' : '#fff' } }, b < 0 ? 'OWES AGENCY' : b > 0 ? 'AGENCY HAS TO PAY ' + rs(b) : 'ALL CLEAR'))),
-    h('div', { class: 'card' }, h('b', null, c.name), c.phone ? h('div', null, '☎ ' + c.phone) : null, c.addr ? h('div', { class: 'mute', style: { fontSize: '14px' } }, addrLine(c) || 'No address saved') : null, c.addr ? h('div', { class: 'mute', style: { fontSize: '13px' } }, locStatus(c)) : null, c.addr && mapsUrl(c) ? h('div', { class: 'mt8' }, Btn('OPEN MAPS', { kind: 'ghost', cls: 'sm', icon: 'nav', onClick: () => openMaps(c) })) : null),
+    h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'CURRENT DUE'), h('div', { class: 'huge mt8' + (b < 0 ? ' red' : '') }, rs(Math.max(0, -b))), h('div', { class: 'eyebrow mt8', style: { color: 'var(--ink)' } }, b < 0 ? 'OWES AGENCY' : b > 0 ? 'AGENCY HAS TO PAY ' + rs(b) : 'ALL CLEAR'))),
+    h('div', { class: 'card' }, h('b', { style: { fontWeight: 600 } }, c.name), c.phone ? h('div', null, '☎ ' + c.phone) : null, c.addr ? h('div', { class: 'mute', style: { fontSize: '14px' } }, addrLine(c) || 'No address saved') : null, c.addr ? h('div', { class: 'mute', style: { fontSize: '13px' } }, locStatus(c)) : null, c.addr && mapsUrl(c) ? h('div', { class: 'mt8' }, Btn('OPEN MAPS', { kind: 'ghost', cls: 'sm', icon: 'nav', onClick: () => openMaps(c) })) : null),
     h('div', { class: 'tiles' }, tiles.map(t => h('button', { class: 'tile', type: 'button', onClick: act(() => t[0] === 'khata' ? nav.go('kh.history', { pid }) : nav.go('customer.section', { pid, sec: t[0] })) }, h('b', null, t[2]), h('span', null, t[1])))));
-  return { title: c.shop || c.name, sub: partyKind(pid) + (c.addr && c.addr.area ? ' · ' + c.addr.area : ''), body, foot: [Btn('VIEW STATEMENT', { kind: 'dark', icon: 'print', onClick: () => nav.go('statement', { pid }) }), b < 0 ? Btn('RECORD PAYMENT', { kind: 'primary', onClick: () => nav.go('col.home', { pid }) }) : null] };
+  return { title: c.shop || c.name, sub: partyKind(pid) + (c.addr && c.addr.area ? ' · ' + c.addr.area : ''), big: true, body, foot: [b < 0 ? Btn('RECORD PAYMENT', { kind: 'primary', onClick: () => nav.go('col.home', { pid }) }) : null, Btn('VIEW STATEMENT', { kind: 'ghost', icon: 'print', onClick: () => nav.go('statement', { pid }) })] };
 });
 route('customer.section', (p, E) => {
   const pid = p.pid, sec = p.sec, titles = { orders: 'Recent orders', deliveries: 'Deliveries', payments: 'Payments', returns: 'Returns' }; let rows = [], empty = 'Nothing here yet.';
@@ -2421,7 +2662,7 @@ route('cash.pend', (p, E) => {
   const pend = pendingPayments(), drv = cashWithDrivers();
   const byDriver = {}; drv.forEach(y => { (byDriver[y.collectorId] = byDriver[y.collectorId] || []).push(y); });
   const body = h('div', { class: 'gap' },
-    h('div', { class: 'card', style: { fontSize: '14px' } }, h('b', null, 'Three steps for money collected on the road: '), 'collected by the driver → handed to the Manager → verified by the office. Only verified money counts in the cash book.'),
+    h('div', { class: 'aside' }, h('b', null, 'Three steps for money collected on the road: '), 'collected by the driver → handed to the Manager → verified by the office. Only verified money counts in the cash book.'),
     Sec('Waiting for the office to check'), pend.length ? Pane(pend.map(y => Row({ title: (y.partyId ? partyName(y.partyId) : 'Walk-in') + ' · ' + rs(y.amount), sub: PAY_LABEL[y.method] + (y.details.ref ? ' · ref ' + y.details.ref : '') + (y.details.no ? ' · cheque ' + y.details.no : '') + ' · ' + fmtD(y.at), chip: y.method === 'CHEQUE' ? 'CHEQUE' : isAgent(y.partyId) ? 'AGENT' : null, onClick: () => nav.go('cash.verify', { id: y.id }) }))) : Pane(Empty('Nothing is waiting. ✓')),
     Object.keys(byDriver).length ? Sec('Cash still with drivers') : null,
     Object.keys(byDriver).length ? Pane(Object.keys(byDriver).map(sid => { const sum = byDriver[sid].reduce((s, y) => s + y.amount, 0); const t = byDriver[sid][0].tripId ? tripOf(byDriver[sid][0].tripId) : null;
@@ -2432,11 +2673,11 @@ route('cash.verify', (p, E) => {
   const y = payOf(p.id); if (!y) return { title: 'Payment', body: Empty('Not found') };
   const cheque = y.method === 'CHEQUE', open = y.stage === 'PENDING';
   const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad' }, h('div', { class: 'center' }, h('div', { class: 'huge' }, rs(y.amount)), h('div', { class: 'mt8' }, Chip(STAGE_LABEL[y.stage], stageTone(y.stage)))), h('div', { class: 'mt16' }, KV('From', y.partyId ? partyName(y.partyId) : 'Walk-in customer'), KV('Method', PAY_LABEL[y.method]), y.details.ref ? KV('Reference', y.details.ref) : null, cheque ? KV('Cheque', y.details.no + ' · ' + y.details.bank) : null, cheque ? KV('Cheque date', y.details.date) : null, KV('Recorded', fmtDT(y.at)), y.alloc.filter(a => a.saleId).length ? KV('For bill', y.alloc.filter(a => a.saleId).map(a => saleOf(a.saleId).no).join(', ')) : null))),
-    open ? h('div', { class: 'card', style: { fontSize: '14px' } }, cheque ? 'Mark it cleared only when the bank has actually cleared the cheque. Until then the due stays open.' : 'Verify only when you have seen this money in the bank or counted it. Verifying adds it to ' + (y.method === 'CASH' ? 'Cash' : 'Bank') + (y.partyId && isAgent(y.partyId) ? ' and reduces the Agent’s balance.' : '.')) : y.flagNote ? h('div', { class: 'card' }, h('b', null, 'Problem: '), y.flagNote) : null);
+    open ? h('div', { class: 'aside' }, cheque ? 'Mark it cleared only when the bank has actually cleared the cheque. Until then the due stays open.' : 'Verify only when you have seen this money in the bank or counted it. Verifying adds it to ' + (y.method === 'CASH' ? 'Cash' : 'Bank') + (y.partyId && isAgent(y.partyId) ? ' and reduces the Agent’s balance.' : '.')) : y.flagNote ? h('div', { class: 'card' }, h('b', null, 'Problem: '), y.flagNote) : null);
   const foot = [];
   if (open) {
     foot.push(Btn(cheque ? 'MARK CLEARED' : 'VERIFY — MONEY RECEIVED', { kind: 'primary', onClick: () => { if (cheque) clearCheque(y.id, true); else verifyPayment(y.id, 'vf-' + y.id); nav.back(); toast(cheque ? 'Cheque cleared' : 'Verified — ' + rs(y.amount) + ' counted'); } }));
-    foot.push(Btn(cheque ? 'CHEQUE BOUNCED' : 'FLAG A PROBLEM', { kind: 'danger', onClick: () => { if (cheque) { clearCheque(y.id, false); nav.back(); toast('Marked bounced', true); return; } let why = ''; openSheet({ title: 'What is the problem?', body: Field('Reason', h('input', { class: 'input', maxlength: 80, placeholder: 'e.g. amount not in bank', 'data-autofocus': '1', onInput: ev => { why = ev.target.value; } })), actions: [Btn('FLAG PAYMENT', { kind: 'danger', onClick: () => { flagPayment(y.id, why); closeSheet(); nav.back(); toast('Flagged — the customer’s due is restored'); } }), sheetClose('CANCEL')] }); } }));
+    foot.push(Btn(cheque ? 'CHEQUE BOUNCED' : 'FLAG A PROBLEM', { kind: 'neg', onClick: () => { if (cheque) { clearCheque(y.id, false); nav.back(); toast('Marked bounced', true); return; } let why = ''; openSheet({ title: 'What is the problem?', body: Field('Reason', h('input', { class: 'input', maxlength: 80, placeholder: 'e.g. amount not in bank', 'data-autofocus': '1', onInput: ev => { why = ev.target.value; } })), actions: [Btn('FLAG PAYMENT', { kind: 'danger', onClick: () => { flagPayment(y.id, why); closeSheet(); nav.back(); toast('Flagged — the customer’s due is restored'); } }), sheetClose('CANCEL')] }); } }));
   }
   return { title: 'Check payment', sub: y.no, body, foot, help: 'Pending money is only a claim. After you verify it, it counts as real agency money and the Khata is updated.' };
 });
@@ -2463,8 +2704,8 @@ route('tr.goods', (p, E) => {
   const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Pickup return'), h('div', { class: 'big mt8' }, 'Count what came back'), h('div', { class: 'hint' }, 'Goods still on ' + vehOf(t.vehicleId).reg + '. Good goods go back to sellable stock. Damaged and expired goods are kept apart. Anything missing is recorded as SHORT.')),
     pids.length ? Pane(pids.map(pid => { const pr = prod(pid), g = d.goods[pid];
       return h('div', { class: 'row' }, h('div', { class: 'l' }, h('div', { class: 't' }, prodLabel(pr)), h('div', { class: 's' }, 'On pickup ' + qtyText(pr, t.custody[pid])),
-        h('div', { class: 's', style: { color: '#fff', marginTop: '4px' } }, [g.good ? 'Good ' + qtyText(pr, g.good) : null, g.damaged ? 'Damaged ' + qtyText(pr, g.damaged) : null, g.expired ? 'Expired ' + qtyText(pr, g.expired) : null, g.short ? 'SHORT ' + qtyText(pr, g.short) : null].filter(Boolean).join(' · '))),
-        h('button', { class: 'btn black sm', type: 'button', onClick: act(() => edit(pid)) }, 'CHANGE')); })) : Pane(h('div', { class: 'empty' }, 'Nothing is left on the pickup. All goods were delivered or sold. ✓')));
+        h('div', { class: 's', style: { color: 'var(--ink)', marginTop: '4px' } }, [g.good ? 'Good ' + qtyText(pr, g.good) : null, g.damaged ? 'Damaged ' + qtyText(pr, g.damaged) : null, g.expired ? 'Expired ' + qtyText(pr, g.expired) : null, g.short ? 'SHORT ' + qtyText(pr, g.short) : null].filter(Boolean).join(' · '))),
+        h('button', { class: 'btn ghost sm', type: 'button', onClick: act(() => edit(pid)) }, 'CHANGE')); })) : Pane(h('div', { class: 'empty' }, 'Nothing is left on the pickup. All goods were delivered or sold. ✓')));
   return { title: 'Pickup return', sub: t.no + ' · ' + vehOf(t.vehicleId).reg, step: { label: 'PICKUP RETURN', n: 1, of: TR_STEPS }, body, foot: [Btn('CONTINUE', { kind: 'primary', onClick: () => nav.go('tr.money', { tid: t.id }) })], help: ['The goods still inside the pickup must be counted and classified before the trip can close.', 'Good goods return to saleable godown stock once. Damaged or expired goods never go into sellable stock.'] };
 });
 route('tr.money', (p, E) => {
@@ -2481,8 +2722,8 @@ route('tr.money', (p, E) => {
   const body = h('div', { class: 'gap' },
     h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Pickup return'), h('div', { class: 'big mt8' }, 'Hand over money'), h('div', { class: 'hint' }, staffOf(t.driverId).name + ' gives the cash to the Manager, who counts it.')),
     Object.keys(byCust).length ? Pane(Object.keys(byCust).map(k => Row({ title: k, sub: byCust[k].map(y => PAY_LABEL[y.method] + (y.method === 'CASH' ? '' : ' · office check')).join(', '), right: rs(byCust[k].reduce((s, y) => s + y.amount, 0)) }))) : Pane(Empty('No money was collected on this trip.')),
-    other.length ? h('div', { class: 'card', style: { fontSize: '14px' } }, rs(other.reduce((s, y) => s + y.amount, 0)) + ' was paid online or by cheque. That does not go in the cash handover — the office checks it separately.') : null,
-    noCash ? null : h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { style: { opacity: .7, fontSize: '14px' } }, 'CASH THE DRIVER SHOULD HAND OVER'), h('div', { class: 'huge' }, rs(expected)))),
+    other.length ? h('div', { class: 'aside' }, rs(other.reduce((s, y) => s + y.amount, 0)) + ' was paid online or by cheque. That does not go in the cash handover — the office checks it separately.') : null,
+    noCash ? null : h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'CASH THE DRIVER SHOULD HAND OVER'), h('div', { class: 'huge' }, rs(expected)))),
     noCash ? null : h('div', null, h('div', { class: 'sec' }, h('span', null, 'Manager counts the cash')), denomCounter(d.cash, refresh, 'Counted by Manager'), diffEl, noteBox),
     h0 && h0.status === 'COUNTED' ? h('div', { class: 'card' }, '✓ Counted ' + rs(h0.counted) + (h0.diff ? ' (' + (h0.diff < 0 ? 'short ' : 'extra ') + rs(Math.abs(h0.diff)) + ')' : '') + '. It is verified when you close the pickup.') : null);
   return { title: 'Hand over money', sub: t.no, step: { label: 'PICKUP RETURN', n: 2, of: TR_STEPS }, body, help: ['The cash is “handed to the Manager” when counted here, and “verified by the office” when the pickup is closed.', 'If the count is different, write why. A shortage stays on the driver’s Khata until explained — it is never erased.'],
@@ -2497,7 +2738,7 @@ route('tr.match', (p, E) => {
     return h('div', { class: 'ol' + (m && m.state === 'CHECKED' ? ' strike' : '') }, h('div', { class: 'nm' }, h('span', null, (m && m.state === 'CHECKED' ? '✓ ' : '') + orderTitle(o)), h('span', null, sale ? rs(saleTotal(sale)) : '—')),
       h('div', { style: { fontSize: '14px', opacity: .8, marginTop: '4px' } }, st.text + (sale ? ' · paid ' + rs(salePaid(sale, true)) + (saleDue(sale) > 0 ? ' · due ' + rs(saleDue(sale)) : '') : '')),
       m && m.state !== 'CHECKED' ? h('div', { style: { marginTop: '6px' } }, Chip(m.state === 'MISMATCH' ? 'MISMATCH' : 'NEEDS REVIEW', 'bad'), ' ', m.note) : null,
-      h('div', { class: 'btnrow', style: { paddingTop: '10px' } }, Btn('CHECKED', { kind: m && m.state === 'CHECKED' ? 'primary' : 'black', cls: 'sm', onClick: () => mark(o, 'CHECKED') }), Btn('MISMATCH', { kind: m && m.state === 'MISMATCH' ? 'danger' : 'black', cls: 'sm', onClick: () => mark(o, 'MISMATCH') }), Btn('REVIEW', { kind: m && m.state === 'REVIEW' ? 'danger' : 'black', cls: 'sm', onClick: () => mark(o, 'REVIEW') }))); });
+      h('div', { class: 'btnrow', style: { paddingTop: '10px' } }, Btn('CHECKED', { kind: m && m.state === 'CHECKED' ? 'primary' : 'ghost', cls: 'sm', onClick: () => mark(o, 'CHECKED') }), Btn('MISMATCH', { kind: m && m.state === 'MISMATCH' ? 'danger' : 'ghost', cls: 'sm', onClick: () => mark(o, 'MISMATCH') }), Btn('REVIEW', { kind: m && m.state === 'REVIEW' ? 'danger' : 'ghost', cls: 'sm', onClick: () => mark(o, 'REVIEW') }))); });
   const done = os.every(o => t.matches[o.id]);
   return { title: 'Match orders', sub: t.no, step: { label: 'PICKUP RETURN', n: 3, of: TR_STEPS }, body: h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Check each order'), h('div', { class: 'hint' }, 'Tick an order off when its goods, bill and money all agree.')), Pane(rows)),
     foot: [Btn(done ? 'CONTINUE' : 'MARK EVERY ORDER FIRST', { kind: 'primary', disabled: !done, onClick: () => nav.go('tr.confirm', { tid: t.id }) })], help: 'CHECKED orders are crossed off. A mismatch or review needs a note — the pickup can still close, but the difference stays on record.' };
@@ -2518,7 +2759,7 @@ route('tr.confirm', (p, E) => {
 });
 route('tr.done', (p, E) => {
   const t = tripOf(p.tid), sm = t.closeSummary;
-  return { title: 'Pickup closed', sub: t.no, back: false, body: h('div', { class: 'gap' }, h('div', { class: 'center' }, h('div', { style: { width: '72px', height: '72px', borderRadius: '50%', background: 'var(--green)', color: '#fff', display: 'grid', placeItems: 'center', margin: '12px auto' } }, ic('check')), h('div', { class: 'big' }, 'All accounted for')),
+  return { title: 'Pickup closed', sub: t.no, back: false, body: h('div', { class: 'gap' }, h('div', { class: 'center' }, h('div', { class: 'donemark' }, ic('check')), h('div', { class: 'big' }, 'All accounted for')),
     h('div', { class: 'card' }, KV('Cash verified', rs(sm.cashVerified)), KV('Online / cheque to check', rs(sm.online)), KV('Outstanding dues', rs(sm.dues))), t.shortages.length ? h('div', { class: 'card' }, h('b', { class: 'red' }, 'Shortage on record: '), t.shortages.map(x => qtyText(prod(x.pid), x.base) + ' ' + prod(x.pid).name).join(', ')) : null),
     foot: [Btn('DONE', { kind: 'primary', onClick: () => nav.reset([['today']]) }), Btn('PRINT TRIP SUMMARY', { kind: 'ghost', icon: 'print', onClick: () => nav.go('print', { docs: [['MANIFEST', t.id]], start: 0 }) })] };
 });
@@ -2537,9 +2778,9 @@ route('st.list', (p, E) => {
 });
 route('st.product', (p, E) => {
   const pr = prod(p.pid), s = stockStatus(pr.id), mv = S.moves.filter(m => m.pid === pr.id).slice(-4).reverse(), hold = holdOf(pr.id);
-  const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { style: { opacity: .7, fontSize: '14px' } }, 'AVAILABLE IN GODOWN'), h('div', { class: 'big' }, qtyText(pr, avail(pr.id))), h('div', { style: { opacity: .75 } }, '= ' + INR.format(avail(pr.id)) + ' ' + pr.base.toLowerCase() + 's'), h('div', { class: 'mt8' }, Chip(stLabel(s), s === 'OK' ? 'ok' : s === 'LOW' ? '' : 'bad')))),
-    hold || S.retail[pr.id] ? h('div', { class: 'card', style: { fontSize: '14px' } }, hold ? h('div', null, h('b', null, 'Held (not sellable): '), qtyText(pr, hold) + ' — ' + Array.from(new Set(S.hold.filter(x => x.pid === pr.id).map(x => x.kind.toLowerCase()))).join(', ')) : null, S.retail[pr.id] ? h('div', null, h('b', null, 'At retail counter: '), qtyText(pr, S.retail[pr.id])) : null) : null,
-    h('div', { class: 'card', style: { fontSize: '14px' } }, h('b', null, 'How it is counted: '), pr.levels.map(l => '1 ' + l.u + ' = ' + l.n + ' ' + pr.base.toLowerCase() + 's').join(' · ')),
+  const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'AVAILABLE IN GODOWN'), h('div', { class: 'big' }, qtyText(pr, avail(pr.id))), h('div', { class: 'mute' }, '= ' + INR.format(avail(pr.id)) + ' ' + pr.base.toLowerCase() + 's'), h('div', { class: 'mt8' }, Chip(stLabel(s), s === 'OK' ? 'ok' : s === 'LOW' ? '' : 'bad')))),
+    hold || S.retail[pr.id] ? h('div', { class: 'aside' }, hold ? h('div', null, h('b', null, 'Held (not sellable): '), qtyText(pr, hold) + ' — ' + Array.from(new Set(S.hold.filter(x => x.pid === pr.id).map(x => x.kind.toLowerCase()))).join(', ')) : null, S.retail[pr.id] ? h('div', null, h('b', null, 'At retail counter: '), qtyText(pr, S.retail[pr.id])) : null) : null,
+    h('div', { class: 'aside' }, h('b', null, 'How it is counted: '), pr.levels.map(l => '1 ' + l.u + ' = ' + l.n + ' ' + pr.base.toLowerCase() + 's').join(' · ')),
     Sec('Recent movement'), mv.length ? Pane(mv.map(m => Row({ title: m.reason, sub: fmtDT(m.at) + (m.ref ? ' · ' + m.ref : ''), right: (m.delta > 0 ? '+' : '−') + qtyText(pr, Math.abs(m.delta)) }))) : Pane(Empty('No movement yet.')));
   return { title: pr.name, sub: 'MRP ₹' + pr.mrp / 100 + ' · selling ₹' + (pr.sell / 100) + ' per ' + pr.base.toLowerCase(), body, foot: [Btn('RECEIVE STOCK', { kind: 'primary', onClick: () => nav.go('st.receive') }), Btn('COUNT STOCK', { kind: 'dark', onClick: () => nav.go('st.count', { pid: pr.id }) }), Btn('VIEW HISTORY', { kind: 'link', onClick: () => nav.go('st.hist', { pid: pr.id }) })] };
 });
@@ -2556,7 +2797,7 @@ route('st.receive', (p, E) => {
 route('st.recv', (p, E) => {
   const inv = byId(S.invoices, p.id);
   const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, inv.no), h('div', { class: 'hint' }, 'This is what the invoice says should have arrived.')),
-    Pane(inv.lines.map(l => Row({ title: prodLabel(prod(l.pid)), sub: 'Expected on invoice', right: qtyText(prod(l.pid), invBase(l)) }))), h('div', { class: 'card', style: { fontSize: '14px' } }, 'Stock does NOT change from this page. Next you count what really arrived.'));
+    Pane(inv.lines.map(l => Row({ title: prodLabel(prod(l.pid)), sub: 'Expected on invoice', right: qtyText(prod(l.pid), invBase(l)) }))), h('div', { class: 'aside' }, 'Stock does NOT change from this page. Next you count what really arrived.'));
   return { title: 'Review invoice', sub: inv.no, step: { label: 'RECEIVING STOCK', n: 2, of: 4 }, body, foot: [Btn('START COUNTING', { kind: 'primary', onClick: () => nav.go('st.recv.count', { id: inv.id }) })] };
 });
 const recvDraft = id => { const a = S.drafts.recv = S.drafts.recv || {}; return a[id] || (a[id] = { actual: {}, note: '', tok: nid('tok') }); };
@@ -2567,7 +2808,7 @@ route('st.recv.count', (p, E) => {
     openSheet({ title: pr.name, sub: 'Count what really arrived.', body: h('div', null, unitsEditor(pr, u, { onChange: upd }), info), actions: [Btn('SAVE COUNT', { kind: 'primary', onClick: () => { d.actual[l.pid] = toBase(pr, u); closeSheet(); nav.refresh(); } }), sheetClose('CANCEL')] }); upd(toBase(pr, u)); };
   const rows = inv.lines.map(l => { const pr = prod(l.pid), a = d.actual[l.pid], ok = a != null, diff = ok && a !== invBase(l);
     return h('div', { class: 'row' }, h('button', { class: 'check' + (ok ? ' on' : ''), type: 'button', 'aria-label': (ok ? 'Unmark ' : 'Mark as counted ') + pr.name, onClick: act(() => { if (ok) delete d.actual[l.pid]; else d.actual[l.pid] = invBase(l); nav.refresh(); }) }, ok ? ic('check') : null),
-      h('div', { class: 'l' }, h('div', { class: 't' }, prodLabel(pr)), h('div', { class: 's' }, 'Invoice ' + qtyText(pr, invBase(l)) + (diff ? ' · counted ' + qtyText(pr, a) : ''), diff ? [' ', Chip(a < invBase(l) ? 'SHORT' : 'EXTRA', 'bad')] : null)), h('button', { class: 'btn black sm', type: 'button', onClick: act(() => change(l)) }, 'CHANGE')); });
+      h('div', { class: 'l' }, h('div', { class: 't' }, prodLabel(pr)), h('div', { class: 's' }, 'Invoice ' + qtyText(pr, invBase(l)) + (diff ? ' · counted ' + qtyText(pr, a) : ''), diff ? [' ', Chip(a < invBase(l) ? 'SHORT' : 'EXTRA', 'bad')] : null)), h('button', { class: 'btn ghost sm', type: 'button', onClick: act(() => change(l)) }, 'CHANGE')); });
   const all = inv.lines.every(l => d.actual[l.pid] != null);
   return { title: 'Count received goods', sub: inv.no, step: { label: 'RECEIVING STOCK', n: 3, of: 4 }, body: h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'What really arrived?'), h('div', { class: 'hint' }, 'Tick a line if the count matches the invoice, or tap CHANGE to enter what you counted.')), Pane(rows)),
     foot: [Btn(all ? 'SHOW DIFFERENCES' : 'COUNT EVERY LINE FIRST', { kind: 'primary', disabled: !all, onClick: () => nav.go('st.recv.confirm', { id: inv.id }) })] };
@@ -2578,7 +2819,7 @@ route('st.recv.confirm', (p, E) => {
   const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, diffs.length ? 'Differences found' : 'Everything matches')),
     Pane(inv.lines.map(l => { const pr = prod(l.pid), a = d.actual[l.pid], df = a - invBase(l); return Row({ title: prodLabel(pr), sub: 'Invoice ' + qtyText(pr, invBase(l)), right: qtyText(pr, a), rightSub: df === 0 ? '✓ matches' : (df < 0 ? 'SHORT ' : 'EXTRA ') + qtyText(pr, Math.abs(df)) }); })),
     diffs.length ? Field('Explain the difference', h('input', { class: 'input', maxlength: 100, value: d.note, placeholder: 'e.g. 1 BOX damaged in transit', onInput: ev => { d.note = ev.target.value; btn.disabled = d.note.trim().length < 3; } })) : null,
-    h('div', { class: 'card', style: { fontSize: '14px' } }, 'Confirming adds the counted goods to the godown stock — once. The invoice cannot be received a second time.'));
+    h('div', { class: 'aside' }, 'Confirming adds the counted goods to the godown stock — once. The invoice cannot be received a second time.'));
   return { title: 'Confirm receipt', sub: inv.no, step: { label: 'RECEIVING STOCK', n: 4, of: 4 }, body, foot: [btn], help: 'Only the physically counted quantity is added to stock — not the invoice quantity.' };
 });
 /* ---- count stock ---- */
@@ -2595,7 +2836,7 @@ route('st.count.fix', (p, E) => {
   const btn = Btn(diff === 0 ? 'CONFIRM — IT MATCHES' : 'RECORD CORRECTION', { kind: 'primary', disabled: diff !== 0 && !st.reason, onClick: () => { applyCount(pr.id, p.counted, st.reason, st.note, st.tok); nav.popTo('st.product'); nav.refresh(); toast(diff === 0 ? 'Count matches' : 'Stock corrected'); } });
   const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad' }, KV('System says', qtyText(pr, avail(pr.id))), KV('You counted', qtyText(pr, p.counted)), KV(diff === 0 ? 'Difference' : diff < 0 ? 'Missing' : 'Extra', diff === 0 ? '✓ none' : qtyText(pr, Math.abs(diff)), 'tot'))),
     diff !== 0 ? h('div', { class: 'gap' }, Field('Why is it different?', h('select', { class: 'select', 'aria-label': 'Reason', onChange: ev => { st.reason = ev.target.value; btn.disabled = !st.reason; } }, h('option', { value: '' }, 'Choose a reason'), COUNT_REASONS.map(r => h('option', { value: r }, r)))), Field('Note (optional)', h('input', { class: 'input', maxlength: 80, onInput: ev => { st.note = ev.target.value; } })),
-      h('div', { class: 'card', style: { fontSize: '14px' } }, 'The correction is added as a new stock movement. The earlier history is kept — nothing is overwritten.')) : h('div', { class: 'card' }, 'The shelf count agrees with the system. Nothing needs to change.'));
+      h('div', { class: 'aside' }, 'The correction is added as a new stock movement. The earlier history is kept — nothing is overwritten.')) : h('div', { class: 'card' }, 'The shelf count agrees with the system. Nothing needs to change.'));
   return { title: 'Check difference', sub: pr.name, step: { label: 'COUNTING STOCK', n: 2, of: 2 }, body, foot: [btn] };
 });
 
@@ -2609,11 +2850,11 @@ route('sf.list', (p, E) => {
 });
 route('sf.person', (p, E) => {
   const s = staffOf(p.sid), b = netBal(s.id);
-  const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'big' }, s.name), h('div', { class: 'mt8' }, Chip(posLabel[s.position].toUpperCase()), s.driver ? [' ', Chip('DRIVER-ELIGIBLE')] : null))),
-    h('div', { class: 'card' }, KV('Attendance today', attChip(s) || 'Not marked'), KV('Current duty', currentDuty(s)), KV('Earning', earningText(s)), KV('Khata', b === 0 ? 'Clear' : (b < 0 ? 'Owes ' : 'To receive ') + rs(Math.abs(b)))),
-    h('div', { class: 'tiles' }, h('button', { class: 'tile', style: { background: '#000', color: '#fff' }, type: 'button', onClick: act(() => nav.go('sf.att', { sid: s.id })) }, h('b', null, 'MARK ATTENDANCE')), h('button', { class: 'tile', style: { background: '#000', color: '#fff' }, type: 'button', onClick: act(() => nav.go('sf.duty', { sid: s.id })) }, h('b', null, 'ASSIGN DUTY')),
-      h('button', { class: 'tile', style: { background: '#000', color: '#fff' }, type: 'button', onClick: act(() => nav.go('sf.earn', { sid: s.id })) }, h('b', null, 'CHANGE EARNING MODEL')), h('button', { class: 'tile', style: { background: '#000', color: '#fff' }, type: 'button', onClick: act(() => nav.go('kh.person', { pid: s.id })) }, h('b', null, 'VIEW KHATA'))));
-  return { title: s.name, sub: posLabel[s.position], body };
+  const body = h('div', { class: 'gap' }, s.driver ? h('div', null, Chip('Driver-eligible')) : null,
+    h('div', { class: 'pane' }, h('div', { class: 'pad', style: { paddingTop: '8px', paddingBottom: 0 } }, KV('Attendance today', attChip(s) || 'Not marked'), KV('Current duty', currentDuty(s)), KV('Earning', earningText(s)), KV('Khata', b === 0 ? 'Clear' : (b < 0 ? 'Owes ' : 'To receive ') + rs(Math.abs(b))))),
+    Sec('Actions'), Pane([Row({ title: 'Mark attendance', onClick: () => nav.go('sf.att', { sid: s.id }) }), Row({ title: 'Assign duty', sub: currentDuty(s), onClick: () => nav.go('sf.duty', { sid: s.id }) }),
+      Row({ title: 'Change earning model', sub: earningText(s), onClick: () => nav.go('sf.earn', { sid: s.id }) }), Row({ title: 'View Khata', right: h('span', { class: b < 0 ? 'red' : '' }, rs(b, { plus: true })), rightSub: balShort(b), onClick: () => nav.go('kh.person', { pid: s.id }) })]));
+  return { title: s.name, sub: posLabel[s.position], big: true, body };
 });
 route('sf.att', (p, E) => {
   const dstr = E.st.date || todayStr(), d = parseYmd(dstr), isToday = dstr === todayStr();
@@ -2622,21 +2863,21 @@ route('sf.att', (p, E) => {
   const set = (s, st) => { markAttendance(s.id, dstr, st); nav.refresh(); toast(s.name + ' ' + (st === 'PRESENT' ? 'present' : 'absent') + (s.model.salary.on && s.model.salary.method === 'DAILY' && st === 'PRESENT' ? ' — ' + rs(s.att[dstr].rate) + ' earned' : '')); };
   const row = s => { const a = s.att[dstr];
     return h('div', { class: 'row' }, h('div', { class: 'l' }, h('div', { class: 't' }, s.name), h('div', { class: 's' }, posLabel[s.position] + (a && a.hist.length > 1 ? ' · corrected' : ''))),
-      h('div', { style: { display: 'flex', gap: '8px' } }, h('button', { class: 'btn sm ' + (a && a.status === 'PRESENT' ? 'primary' : 'black'), type: 'button', style: { minWidth: '88px' }, 'aria-pressed': String(!!a && a.status === 'PRESENT'), onClick: act(() => set(s, 'PRESENT')) }, 'PRESENT'),
-        h('button', { class: 'btn sm ' + (a && a.status === 'ABSENT' ? 'danger' : 'black'), type: 'button', style: { minWidth: '88px' }, 'aria-pressed': String(!!a && a.status === 'ABSENT'), onClick: act(() => set(s, 'ABSENT')) }, 'ABSENT'))); };
+      h('div', { style: { display: 'flex', gap: '8px' } }, h('button', { class: 'btn sm ' + (a && a.status === 'PRESENT' ? 'primary' : 'ghost'), type: 'button', style: { minWidth: '88px' }, 'aria-pressed': String(!!a && a.status === 'PRESENT'), onClick: act(() => set(s, 'PRESENT')) }, 'PRESENT'),
+        h('button', { class: 'btn sm ' + (a && a.status === 'ABSENT' ? 'black' : 'ghost'), type: 'button', style: { minWidth: '88px' }, 'aria-pressed': String(!!a && a.status === 'ABSENT'), onClick: act(() => set(s, 'ABSENT')) }, 'ABSENT'))); };
   const grp = (t, list) => list.length ? h('div', null, Sec(t + ' (' + list.length + ')'), Pane(list.map(row))) : null;
-  const body = h('div', null, h('div', { class: 'flowbar' }, h('button', { class: 'btn black sm', type: 'button', style: { minWidth: '52px', padding: 0 }, 'aria-label': 'Previous day', onClick: () => move(-1) }, ic('back')), h('span', { style: { textAlign: 'center' } }, weekday(d) + ', ' + fmtDY(d), h('small', null, isToday ? 'Today' : 'Past day — changes are recorded as corrections')), h('button', { class: 'btn black sm', type: 'button', style: { minWidth: '52px', padding: 0 }, disabled: isToday, 'aria-label': 'Next day', onClick: () => move(1) }, ic('next'))),
+  const body = h('div', null, h('div', { class: 'flowbar' }, h('button', { class: 'btn ghost sm', type: 'button', style: { minWidth: '52px', padding: 0 }, 'aria-label': 'Previous day', onClick: () => move(-1) }, ic('back')), h('span', { style: { textAlign: 'center' } }, weekday(d) + ', ' + fmtDY(d), h('small', null, isToday ? 'Today' : 'Past day — changes are recorded as corrections')), h('button', { class: 'btn ghost sm', type: 'button', style: { minWidth: '52px', padding: 0 }, disabled: isToday, 'aria-label': 'Next day', onClick: () => move(1) }, ic('next'))),
     grp('Not marked', un), grp('Present', pr), grp('Absent', ab), h('div', { class: 'mute mt16 center', style: { fontSize: '14px' } }, 'Daily-wage staff earn their day’s wage when marked present. Earned is not paid — it appears in their Khata.'));
   return { title: 'Attendance', sub: staff.length + ' staff', body, help: 'Mark each person present or absent. A day’s wage is added to their Khata when they are present. Changing an old mark adds a correction — the first mark stays in history.' };
 });
 route('sf.duty', (p, E) => {
   const s = staffOf(p.sid), st = E.st; if (!st.t) { st.t = s.duty ? s.duty.type : 'NONE'; st.note = s.duty ? s.duty.note : ''; }
   const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'eyebrow' }, s.name + ' · ' + posLabel[s.position]), h('div', { class: 'big mt8' }, 'Assign duty')),
-    h('div', { class: 'card', style: { fontSize: '14px' } }, 'Current: ' + currentDuty(s)),
+    h('div', { class: 'aside' }, 'Current: ' + currentDuty(s)),
     Seg(Object.keys(DUTIES).map(k => [k, DUTIES[k]]), st.t, v => { st.t = v; nav.refresh(); }),
     st.t === 'DRIVER' && !s.driver ? h('div', { class: 'errtxt' }, s.name + ' is not driver-eligible. Turn it on in Settings → Staff.') : null,
     Field('Note (optional)', h('input', { class: 'input', maxlength: 60, value: st.note, onInput: ev => { st.note = ev.target.value; } })),
-    h('div', { class: 'card', style: { fontSize: '14px' } }, 'A duty is temporary work. It never changes ' + s.name + '’s position or pay.'));
+    h('div', { class: 'aside' }, 'A duty is temporary work. It never changes ' + s.name + '’s position or pay.'));
   return { title: 'Assign duty', sub: s.name, body, foot: [Btn('ASSIGN DUTY', { kind: 'primary', onClick: () => { setDuty(s.id, st.t, st.note); nav.back(); toast(s.name + ': ' + DUTIES[st.t]); } })] };
 });
 route('sf.earn', (p, E) => {
@@ -2661,20 +2902,20 @@ route('sf.unload', (p, E) => {
     h('div', { class: 'card' }, Toggle('Off-duty job', 'Outside normal duty hours — extra charge applies', st.off, v => { st.off = v; nav.refresh(); })),
     Field('Who receives the amount? (one person)', h('select', { class: 'select', onChange: ev => { st.coord = ev.target.value; } }, h('option', { value: '' }, 'Choose coordinator'), S.staff.filter(s => s.active).map(s => h('option', { value: s.id, selected: st.coord === s.id }, s.name)))),
     Field('How many workers? (information only)', h('input', { class: 'input', inputmode: 'numeric', value: String(st.workers), onInput: ev => { st.workers = parseInt(ev.target.value.replace(/\D/g, ''), 10) || 1; } })),
-    h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { style: { opacity: .7, fontSize: '14px' } }, 'PAYABLE FOR THIS JOB'), h('div', { class: 'huge' }, st.off ? rs(fee) : rs(0)), h('div', { class: 'mt8', style: { fontSize: '14px', opacity: .8 } }, st.off ? 'One fee for the whole job, paid to one coordinator — not ' + rs(fee) + ' × ' + st.workers + ' workers.' : 'On-duty unloading has no extra charge.'))));
+    h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'PAYABLE FOR THIS JOB'), h('div', { class: 'huge' }, st.off ? rs(fee) : rs(0)), h('div', { class: 'mt8', style: { fontSize: '14px', opacity: .8 } }, st.off ? 'One fee for the whole job, paid to one coordinator — not ' + rs(fee) + ' × ' + st.workers + ' workers.' : 'On-duty unloading has no extra charge.'))));
   return { title: 'Unloading job', body, foot: [Btn(st.off ? 'RECORD JOB — ' + rs(fee) + ' PAYABLE' : 'RECORD JOB — NO EXTRA CHARGE', { kind: 'primary', onClick: () => { const j = unloadingJob({ ref: st.ref, coordinatorId: st.coord, offDuty: st.off, workers: st.workers, time: st.time }); nav.back(); toast(j.fee ? rs(j.fee) + ' added to ' + staffOf(j.coordinatorId).name + '’s Khata' : 'Recorded — no extra charge'); } })], help: 'The amount is earned, not paid. It appears in the coordinator’s Khata; pay it from Khata → Settle due.' };
 });
 
 /* ===================== CASH / DAY CLOSE ===================== */
 route('cash.home', (p, E) => {
   const pend = pendingPayments().length, f = dayFigures();
-  const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad' }, h('div', { class: 'tiles' }, h('div', null, h('div', { style: { opacity: .7, fontSize: '13px' } }, 'CASH'), h('div', { class: 'big' }, rs(cbal('CASH')))), h('div', null, h('div', { style: { opacity: .7, fontSize: '13px' } }, 'BANK'), h('div', { class: 'big' }, rs(cbal('BANK'))))), h('div', { style: { opacity: .7, fontSize: '13px', marginTop: '8px' } }, 'Day ' + S.day.no + ' · only verified money is counted here'))),
-    Pane([Row({ title: 'MONEY RECEIVED', sub: 'Verified receipts today', right: rs(f.received), onClick: () => nav.go('cash.in') }), Row({ title: 'MONEY PAID', sub: 'Expenses, staff, refunds', right: rs(f.paid), onClick: () => nav.go('cash.out') }),
-      Row({ title: 'PENDING VERIFICATION', sub: 'Not counted until checked', right: pend ? Chip(String(pend), 'bad') : '✓', onClick: () => nav.go('cash.pend') }), Row({ title: 'MOVE CASH ↔ BANK', sub: 'Same money, different place', onClick: () => nav.go('cash.xfer') }),
-      Row({ title: 'COUNT CASH', sub: 'Count the physical notes', onClick: () => nav.go('cash.count') }), Row({ title: 'CLOSE DAY', sub: S.count && S.count.dayNo === S.day.no ? 'Counted ' + rs(S.count.counted) : 'Count first, then close', onClick: () => nav.go('cash.close') })]));
+  const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad' }, h('div', { class: 'tiles' }, h('div', null, h('div', { class: 'eyebrow' }, 'CASH'), h('div', { class: 'big' }, rs(cbal('CASH')))), h('div', null, h('div', { class: 'eyebrow' }, 'BANK'), h('div', { class: 'big' }, rs(cbal('BANK'))))), h('div', { style: { opacity: .7, fontSize: '13px', marginTop: '8px' } }, 'Day ' + S.day.no + ' · only verified money is counted here'))),
+    Pane([Row({ title: 'Money received', sub: 'Verified receipts today', right: rs(f.received), onClick: () => nav.go('cash.in') }), Row({ title: 'Money paid', sub: 'Expenses, staff, refunds', right: rs(f.paid), onClick: () => nav.go('cash.out') }),
+      Row({ title: 'Pending verification', sub: 'Not counted until checked', right: pend ? Chip(String(pend), 'bad') : '✓', onClick: () => nav.go('cash.pend') }), Row({ title: 'Move cash ↔ bank', sub: 'Same money, different place', onClick: () => nav.go('cash.xfer') }),
+      Row({ title: 'Count cash', sub: 'Count the physical notes', onClick: () => nav.go('cash.count') }), Row({ title: 'Close day', sub: S.count && S.count.dayNo === S.day.no ? 'Counted ' + rs(S.count.counted) : 'Count first, then close', onClick: () => nav.go('cash.close') })]));
   return { title: 'Cash / Day close', sub: 'Day ' + S.day.no + ' · ' + fmtD(parseYmd(S.day.date)), body };
 });
-const cashRows = list => list.length ? Pane(list.map(e => Row({ title: e.desc, sub: fmtT(e.at) + ' · ' + e.cat + ' · ' + (e.acct === 'CASH' ? 'Cash' : 'Bank'), right: h('span', { style: { color: e.amt < 0 ? '#ff9e97' : '#8be0b0' } }, rs(e.amt, { plus: true })) }))) : Pane(Empty('Nothing yet today.'));
+const cashRows = list => list.length ? Pane(list.map(e => Row({ title: e.desc, sub: fmtT(e.at) + ' · ' + e.cat + ' · ' + (e.acct === 'CASH' ? 'Cash' : 'Bank'), right: rs(e.amt, { plus: true }) }))) : Pane(Empty('Nothing yet today.'));
 route('cash.in', (p, E) => ({ title: 'Money received', sub: 'Day ' + S.day.no, body: cashRows(S.cash.filter(e => e.dayNo === S.day.no && e.kind === 'RECEIPT').slice().reverse()),
   foot: [Btn('RECEIVE A PAYMENT', { kind: 'primary', onClick: () => nav.go('cash.rcv') }), Btn('PENDING VERIFICATION', { kind: 'dark', onClick: () => nav.go('cash.pend') })], help: 'Receipts appear here only after the money is verified. Money collected on the road or paid online waits in “pending verification” first.' }));
 route('cash.rcv', (p, E) => ({ title: 'Receive a payment', body: h('div', null, h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Who is paying?')), pickList(E, { placeholder: 'Search person or shop', empty: 'No one found.', items: () => allParties().filter(x => partyDueIncl(x.id) > 0), text: x => [x.shop, x.name].join(' '), render: x => Row({ title: x.shop || x.name, sub: partyKind(x.id), right: 'OWES ' + rs(partyDueIncl(x.id)), onClick: () => nav.go('col.home', { pid: x.id }) }) })) }));
@@ -2692,11 +2933,11 @@ route('cash.exp.amt', (p, E) => { const d = S.drafts.exp; const btn = Btn('CONTI
   return { title: 'Add expense', sub: d.cat, step: { label: 'NEW EXPENSE', n: 2, of: 4 }, body: h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'How much?'), h('input', { class: 'a', id: 'oq', inputmode: 'decimal', placeholder: '₹ amount', value: d.amt, maxlength: 10, 'data-autofocus': '1', 'data-enter': '1', 'aria-label': 'Amount', onInput: ev => { d.amt = ev.target.value.replace(/[^\d.]/g, ''); ev.target.value = d.amt; btn.disabled = !(parseRs(d.amt) > 0); } })), Field('Note (optional)', h('input', { class: 'input', maxlength: 80, placeholder: 'e.g. diesel for RJ35-4821', value: d.note, onInput: ev => { d.note = ev.target.value; } }))), foot: [btn], center: true }; });
 route('cash.exp.approve', (p, E) => { const x = byId(S.expenses, p.id);
   if (x.status !== 'PENDING') return { title: 'Expense', body: Empty('Already ' + x.status.toLowerCase()), foot: [Btn('CONTINUE', { kind: 'primary', onClick: () => nav.replace('cash.exp.pay', { id: x.id }) })] };
-  return { title: 'Approve expense', sub: x.no, step: { label: 'NEW EXPENSE', n: 3, of: 4 }, body: h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { style: { opacity: .7 } }, x.cat), h('div', { class: 'huge' }, rs(x.amount)), x.note ? h('div', { class: 'mt8' }, x.note) : null)),
+  return { title: 'Approve expense', sub: x.no, step: { label: 'NEW EXPENSE', n: 3, of: 4 }, body: h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, x.cat), h('div', { class: 'huge' }, rs(x.amount)), x.note ? h('div', { class: 'mt8' }, x.note) : null)),
     authBox('OWNER APPROVAL REQUIRED', 'A Manager can note an expense but cannot approve it. Approval is a future permission boundary — simulated here without a login.', 'SIMULATE OWNER APPROVAL', () => { approveExpense(x.id); nav.replace('cash.exp.pay', { id: x.id }); toast('Approved')})) }; });
 route('cash.exp.pay', (p, E) => { const x = byId(S.expenses, p.id), st = E.st; if (!st.init) { st.init = 1; st.acct = 'CASH'; st.tok = nid('tok'); }
   if (x.status === 'PAID') return { title: 'Expense', body: Empty('Already paid.') };
-  return { title: 'Pay expense', sub: x.no, step: { label: 'NEW EXPENSE', n: 4, of: 4 }, body: h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { style: { opacity: .7 } }, x.cat + ' · approved'), h('div', { class: 'huge' }, rs(x.amount)))), h('div', null, h('div', { class: 'lbl' }, 'Pay from'), Seg([['CASH', 'Cash ' + rs(cbal('CASH'))], ['BANK', 'Bank ' + rs(cbal('BANK'))]], st.acct, v => { st.acct = v; })), h('div', { class: 'card', style: { fontSize: '14px' } }, 'Approving did not move any money. Paying now takes it out of the account you choose.')),
+  return { title: 'Pay expense', sub: x.no, step: { label: 'NEW EXPENSE', n: 4, of: 4 }, body: h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, x.cat + ' · approved'), h('div', { class: 'huge' }, rs(x.amount)))), h('div', null, h('div', { class: 'lbl' }, 'Pay from'), Seg([['CASH', 'Cash ' + rs(cbal('CASH'))], ['BANK', 'Bank ' + rs(cbal('BANK'))]], st.acct, v => { st.acct = v; })), h('div', { class: 'aside' }, 'Approving did not move any money. Paying now takes it out of the account you choose.')),
     foot: [Btn('PAY ' + rs(x.amount), { kind: 'primary', onClick: () => { payExpense(x.id, st.acct, st.tok); nav.reset([['more'], ['cash.home']]); toast('Paid ' + rs(x.amount) + ' — ' + x.cat); } })] }; });
 route('cash.xfer', (p, E) => { const st = E.st; if (!st.init) { st.init = 1; st.from = 'CASH'; st.amt = ''; st.tok = nid('tok'); }
   const btn = Btn('MOVE MONEY', { kind: 'primary', disabled: true, onClick: () => { transferMoney(st.from, parseRs(st.amt), st.tok); nav.back(); toast(rs(parseRs(st.amt)) + ' moved — total money unchanged'); } });
@@ -2704,7 +2945,7 @@ route('cash.xfer', (p, E) => { const st = E.st; if (!st.init) { st.init = 1; st.
   const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'big' }, 'Move money')), Seg([['CASH', 'Cash → Bank'], ['BANK', 'Bank → Cash']], st.from, v => { st.from = v; chk(); nav.refresh(); }),
     h('div', { class: 'card' }, KV('Cash', rs(cbal('CASH'))), KV('Bank', rs(cbal('BANK'))), KV('Total money', rs(cbal('CASH') + cbal('BANK')), 'tot')),
     Field('Amount (₹)', h('input', { class: 'input', id: 'amt', inputmode: 'decimal', value: st.amt, placeholder: '5000', 'data-autofocus': '1', onInput: ev => { st.amt = ev.target.value.replace(/[^\d.]/g, ''); ev.target.value = st.amt; chk(); } })),
-    h('div', { class: 'card', style: { fontSize: '14px' } }, 'This only changes where the money is. It is not income and not an expense, so the total stays the same.'));
+    h('div', { class: 'aside' }, 'This only changes where the money is. It is not income and not an expense, so the total stays the same.'));
   chk(); return { title: 'Move cash ↔ bank', body, foot: [btn] }; });
 route('cash.count', (p, E) => { const st = E.st; if (!st.d) st.d = S.count && S.count.dayNo === S.day.no && S.count.denoms ? Object.assign({}, S.count.denoms) : {};
   const btn = Btn('RECORD COUNT', { kind: 'primary', disabled: true, onClick: () => { recordCount(denomTotal(st.d), Object.assign({}, st.d)); nav.replace('cash.close'); } });
@@ -2714,8 +2955,8 @@ route('cash.close', (p, E) => {
   const f = dayFigures(), cnt = S.count && S.count.dayNo === S.day.no ? S.count : null, diff = countDiff(), pend = pendingPayments().length;
   const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad' }, KV('Opening cash', rs(f.opening)), KV('Cash received', '+' + rs(f.received)), KV('Cash paid', '−' + rs(f.paid)), KV('Cash moved to/from bank', rs(f.moved, { plus: true })), f.adj ? KV('Difference recorded earlier', rs(f.adj, { plus: true })) : null, KV('Expected cash', rs(f.books), 'tot'))),
     cnt ? h('div', { class: 'card' }, KV('Physically counted', rs(cnt.counted)), KV('Difference', diff === 0 ? h('b', { class: 'green' }, '✓ none') : h('b', { class: 'red' }, (diff < 0 ? 'SHORT ' : 'EXTRA ') + rs(Math.abs(diff))))) : h('div', { class: 'card' }, 'Count the physical cash to see if it matches.'),
-    diff != null && diff !== 0 ? h('div', { class: 'card', style: { borderColor: 'var(--red)', fontSize: '14px' } }, 'The count and the books do not agree. Recount, or write down why — the difference is never hidden.') : null,
-    pend ? h('div', { class: 'card', style: { fontSize: '14px' } }, plural(pend, 'payment') + ' still waiting for verification. They are not in this cash figure and will carry to the next day.') : null);
+    diff != null && diff !== 0 ? h('div', { class: 'aside bad' }, 'The count and the books do not agree. Recount, or write down why — the difference is never hidden.') : null,
+    pend ? h('div', { class: 'aside' }, plural(pend, 'payment') + ' still waiting for verification. They are not in this cash figure and will carry to the next day.') : null);
   const foot = [];
   if (!cnt) foot.push(Btn('COUNT CASH', { kind: 'primary', onClick: () => nav.go('cash.count') }));
   else if (diff !== 0) { foot.push(Btn('EXPLAIN THE DIFFERENCE', { kind: 'primary', onClick: () => nav.go('cash.fix') })); foot.push(Btn('RECOUNT', { kind: 'ghost', onClick: () => nav.go('cash.count') })); }
@@ -2725,9 +2966,9 @@ route('cash.close', (p, E) => {
 route('cash.fix', (p, E) => { const d = countDiff(); if (d == null || d === 0) return { title: 'Difference', body: Empty('There is no difference to explain.'), foot: [Btn('BACK', { kind: 'primary', onClick: () => nav.back() })] };
   const st = E.st; if (st.note == null) st.note = '';
   const btn = Btn('RECORD THIS DIFFERENCE', { kind: 'primary', disabled: st.note.trim().length < 3, onClick: () => { recordAdjustment(st.note); nav.back(); nav.refresh(); toast('Difference recorded'); } });
-  return { title: 'Explain difference', body: h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { style: { opacity: .7 } }, d < 0 ? 'CASH IS SHORT BY' : 'CASH IS EXTRA BY'), h('div', { class: 'huge' }, rs(Math.abs(d))))),
+  return { title: 'Explain difference', body: h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, d < 0 ? 'CASH IS SHORT BY' : 'CASH IS EXTRA BY'), h('div', { class: 'huge' }, rs(Math.abs(d))))),
     Field('What happened?', h('input', { class: 'input', maxlength: 100, placeholder: 'e.g. change given back twice', value: st.note, 'data-autofocus': '1', onInput: ev => { st.note = ev.target.value; btn.disabled = st.note.trim().length < 3; } })),
-    h('div', { class: 'card', style: { fontSize: '14px' } }, 'This adds a separate “count difference” entry. It does not change any earlier transaction, and it is not taken from any staff Khata.')), foot: [btn, Btn('GO BACK AND RECOUNT', { kind: 'ghost', onClick: () => nav.replace('cash.count') })] }; });
+    h('div', { class: 'aside' }, 'This adds a separate “count difference” entry. It does not change any earlier transaction, and it is not taken from any staff Khata.')), foot: [btn, Btn('GO BACK AND RECOUNT', { kind: 'ghost', onClick: () => nav.replace('cash.count') })] }; });
 
 /* ---------- 64-screens-sell.js ---------- */
 /* ---------------------------------------------------------------------
@@ -2745,7 +2986,7 @@ route('gs.how', (p, E) => {
 route('gs.confirm', (p, E) => {
   const c = cartOf('godown'), prices = currentPrices(), tot = totalsOf(c.lines, prices), mode = c.extra.mode || 'SELF', st = E.st; if (st.veh == null) st.veh = c.extra.veh || '';
   const needsOk = needsApprovalParty(c.partyId);
-  const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center', style: { fontSize: '22px', fontWeight: 700 } }, partyName(c.partyId).toUpperCase() + ' — GODOWN SALE')), linesPane(tot.rows, tot, {}),
+  const body = h('div', { class: 'gap' }, docTitle('Godown sale to', partyName(c.partyId)), linesPane(tot.rows, tot, {}),
     h('div', { class: 'card' }, KV('Goods leave by', mode === 'SELF' ? 'Self pickup' : 'Customer vehicle')),
     mode === 'CUSTOMER_VEHICLE' ? Field('Vehicle number (optional)', h('input', { class: 'input', maxlength: 14, placeholder: 'e.g. RJ14-1234', value: st.veh, onInput: ev => { st.veh = ev.target.value; c.extra.veh = st.veh; } })) : null,
     needsOk ? (c.extra.mgr ? h('div', { class: 'card' }, '✓ Manager approval recorded') : authBox('MANAGER APPROVAL', partyKind(c.partyId) + ' stock needs Manager approval before it is handed over. (Approval is not the same as the goods leaving.)', 'CONFIRM APPROVAL', () => { c.extra.mgr = true; approve('MANAGER_STOCK', 'Manager approved godown stock for ' + partyName(c.partyId)); nav.refresh(); })) : null);
@@ -2771,8 +3012,8 @@ route('ia.rates', (p, E) => {
 });
 route('ia.confirm', (p, E) => {
   const c = cartOf('ia'), rates = cartRates(c), tot = totalsOf(c.lines, rates), special = c.lines.some(l => rates[l.pid] !== prod(l.pid).sell);
-  const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center', style: { fontSize: '22px', fontWeight: 700 } }, partyName(c.partyId).toUpperCase() + ' — INTER-AGENCY')), linesPane(tot.rows, tot, {}),
-    h('div', { class: 'card', style: { fontSize: '14px' } }, special ? h('span', null, h('b', null, 'Special rate (Owner authorised). '), 'This is a negotiated price category. It is not recorded as a discount.') : 'Normal Sell-to-Shop prices.'));
+  const body = h('div', { class: 'gap' }, docTitle('Inter-agency sale to', partyName(c.partyId)), linesPane(tot.rows, tot, {}),
+    h('div', { class: 'aside' }, special ? h('span', null, h('b', null, 'Special rate (Owner authorised). '), 'This is a negotiated price category. It is not recorded as a discount.') : 'Normal Sell-to-Shop prices.'));
   return { title: 'Confirm sale', sub: partyName(c.partyId), step: { label: 'INTER-AGENCY SALE', n: 6, of: 6 }, body, help: 'Confirming hands the goods over from the godown (once) and creates a bill and challan. Next: collect the money or mark it due.',
     foot: [Btn('CONFIRM — GOODS HANDED OVER', { kind: 'primary', onClick: () => { const r = directSale({ kind: 'INTER', partyId: c.partyId, lines: c.lines.map(l => ({ pid: l.pid, base: l.base, rate: rates[l.pid], units: l.units })), mode: 'SELF', token: c.tok }); delete S.drafts.ia; nav.reset([['more'], ['col.home', { sid: r.sale.id }]]); toast('Sale confirmed — ' + r.sale.no); } })] };
 });
@@ -2798,8 +3039,8 @@ route('rl.pay', (p, E) => {
   const refBox = h('div'), btn = Btn('MONEY RECEIVED — CONFIRM', { kind: 'primary', onClick: () => { if (d.method === 'UPI' && (d.ref || '').trim().length < 4) fail('Enter the UPI reference.'); const s = retailSale({ pid: d.pid, base: d.base, method: d.method, ref: d.ref, token: d.tok }); delete S.drafts.retail; nav.reset([['more']]); toast('Sold ' + qtyText(pr, d.base) + ' — ' + rs(total) + (d.method === 'UPI' ? ' (UPI waiting for check)' : ' cash')); } });
   const draw = () => { setKids(refBox, d.method === 'UPI' ? Field('UPI reference', h('input', { class: 'input', value: d.ref, placeholder: 'UPI transaction ID', maxlength: 30, onInput: ev => { d.ref = ev.target.value; } })) : null); };
   draw();
-  const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { style: { opacity: .7 } }, qtyText(pr, d.base) + ' ' + pr.name), h('div', { class: 'huge' }, rs(total)))), Seg([['CASH', 'Cash'], ['UPI', 'UPI']], d.method, v => { d.method = v; draw(); }), refBox,
-    h('div', { class: 'card', style: { fontSize: '14px' } }, 'Counter stock goes down. The godown is not touched again.'));
+  const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, qtyText(pr, d.base) + ' ' + pr.name), h('div', { class: 'huge' }, rs(total)))), Seg([['CASH', 'Cash'], ['UPI', 'UPI']], d.method, v => { d.method = v; draw(); }), refBox,
+    h('div', { class: 'aside' }, 'Counter stock goes down. The godown is not touched again.'));
   return { title: 'Collect money', sub: pr.name, step: { label: 'RETAIL SALE', n: 3, of: 3 }, body, foot: [btn] };
 });
 route('rl.alloc', (p, E) => {
@@ -2818,7 +3059,7 @@ route('rtn.start', (p, E) => {
     Btn('A CUSTOMER RETURNED EXPIRED GOODS', { kind: 'dark', onClick: () => { S.drafts.cr = { kind: 'EXPIRED', partyId: null, pid: null, base: 0, note: '', tok: nid('tok') }; nav.go('cr.cust'); } }),
     Btn('A CUSTOMER RETURNED DAMAGED GOODS', { kind: 'dark', onClick: () => { S.drafts.cr = { kind: 'DAMAGED', partyId: null, pid: null, base: 0, note: '', tok: nid('tok') }; nav.go('cr.cust'); } }),
     Btn('MONEY BACK FOR A RETURN' + (pend.length ? ' (' + pend.length + ')' : ''), { kind: 'dark', onClick: () => nav.go('cr.pending') }),
-    h('div', { class: 'card', style: { fontSize: '14px' } }, h('b', null, 'Goods a shop refused on delivery, or goods that came back unsold on a pickup, '), 'are handled inside the pickup (On the road → delivery, and Pickup return). They are not mixed up with customer returns.'),
+    h('div', { class: 'aside' }, h('b', null, 'Goods a shop refused on delivery, or goods that came back unsold on a pickup, '), 'are handled inside the pickup (On the road → delivery, and Pickup return). They are not mixed up with customer returns.'),
     Btn('OPEN PICKUPS', { kind: 'link', onClick: () => nav.go('pk.list') })), help: 'A physical return is not automatically a refund. First the goods are received (and kept out of sellable stock); money is a separate, approved decision.' };
 });
 const crd = () => S.drafts.cr;
@@ -2834,7 +3075,7 @@ route('cr.qty', (p, E) => { const d = crd(); if (!d || !d.pid) return { title: '
 route('cr.confirm', (p, E) => { const d = crd(); if (!d || !d.base) return { title: 'Return', body: Empty('Nothing to confirm') };
   const pr = prod(d.pid);
   return { title: 'Confirm return', sub: partyName(d.partyId), step: { label: 'CUSTOMER RETURN', n: 4, of: 4 }, body: h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad' }, KV('Customer', partyName(d.partyId)), KV('Product', prodLabel(pr)), KV('Quantity', qtyText(pr, d.base)), KV('Condition', cap(d.kind)))),
-    h('div', { class: 'card', style: { fontSize: '14px' } }, h('b', null, 'These goods will be kept apart. '), cap(d.kind) + ' goods never go into sellable stock. No money is paid or credited yet — you decide that next.')),
+    h('div', { class: 'aside' }, h('b', null, 'These goods will be kept apart. '), cap(d.kind) + ' goods never go into sellable stock. No money is paid or credited yet — you decide that next.')),
     help: 'Receiving the return only records the goods. Credit or refund is a separate approved decision.',
     foot: [Btn('RECEIVE THESE GOODS', { kind: 'primary', onClick: () => { const r = customerReturn({ partyId: d.partyId, pid: d.pid, base: d.base, kind: d.kind, note: d.note, token: d.tok }); delete S.drafts.cr; nav.reset([['more'], ['cr.credit', { rid: r.id }]]); toast('Goods received — kept out of sellable stock'); } })] }; });
 route('cr.credit', (p, E) => {
@@ -2883,11 +3124,11 @@ route('more', (p, E) => {
 
 /* ===================== SETTINGS ===================== */
 route('set.home', (p, E) => {
-  const big = (t, r) => h('button', { class: 'row', type: 'button', style: { color: 'var(--ink)', borderBottom: '1px solid var(--line)', minHeight: '76px', padding: '10px 4px' }, onClick: act(() => nav.go(r)) }, h('div', { class: 'l' }, h('div', { style: { fontSize: '30px', fontWeight: 800 } }, t)), ic('next', 'chev'));
+  const big = (t, r) => h('button', { class: 'row', type: 'button', style: { color: 'var(--ink)', borderBottom: '1px solid var(--line)', minHeight: '76px', padding: '10px 4px' }, onClick: act(() => nav.go(r)) }, h('div', { class: 'l' }, h('div', { style: { fontSize: '26px', fontWeight: 500, letterSpacing: '-.02em' } }, t)), ic('next', 'chev'));
   return { title: 'Settings', body: h('div', null, big('STAFF', 'set.staff'), big('AREA', 'set.area'), big('STOCK', 'set.stock'), big('PICKUP', 'set.pickup'), Sec('Additional'), Pane([Row({ title: 'Payments, expenses & agency', sub: 'Payment methods · expense types · agency details · print', onClick: () => nav.go('set.more') })])) };
 });
 route('set.staff', (p, E) => ({ title: 'Staff settings', body: h('div', { class: 'gap' }, Pane(S.staff.map(s => Row({ title: s.name, sub: posLabel[s.position] + (s.driver ? ' · can drive' : '') + (s.areas.length ? ' · ' + s.areas.join(', ') : '') + (!s.active ? ' · not active' : ''), cls: s.active ? '' : 'off', onClick: () => nav.go('set.staff.edit', { sid: s.id }) }))),
-  h('div', { class: 'card', style: { fontSize: '14px' } }, h('b', null, 'Photos & ID documents: '), 'staff photo and Aadhaar upload (Cloudinary) are future integrations. This demo stores no photos and no personal documents.')),
+  h('div', { class: 'aside' }, h('b', null, 'Photos & ID documents: '), 'staff photo and Aadhaar upload (Cloudinary) are future integrations. This demo stores no photos and no personal documents.')),
   foot: [Btn('ADD STAFF', { kind: 'primary', onClick: () => editSheet({ title: 'Add staff', save: 'ADD', fields: [{ key: 'name', label: 'Name', placeholder: 'Name', maxlength: 30 }, { key: 'position', label: 'Position', type: 'select', value: 'HELPER', options: Object.keys(posLabel).filter(k => k !== 'CEO').map(k => [k, posLabel[k]]) }], onSave: v => { const s = addStaff({ name: v.name, position: v.position }); toast(s.name + ' added'); } }) })] }));
 route('set.staff.edit', (p, E) => {
   const s = staffOf(p.sid), agentish = ['AGENT', 'PERSONAL_AGENT'].includes(s.position);
@@ -2896,7 +3137,7 @@ route('set.staff.edit', (p, E) => {
       Toggle('Active', 'Inactive people cannot be picked for work; history is kept', s.active, v => { if (!v && busyStaff(s.id)) { fail(s.name + ' is on a pickup right now.'); } s.active = v; log('STAFF', s.name + (v ? ' reactivated' : ' set inactive')); nav.refresh(); })),
     agentish ? h('div', null, Sec('Works only in these areas'), h('div', { class: 'card' }, S.areas.map(a => Toggle(a.name, null, s.areas.includes(a.name), v => { s.areas = v ? s.areas.concat([a.name]) : s.areas.filter(x => x !== a.name); })))) : null,
     h('div', { class: 'card' }, KV('Earning', earningText(s)), h('div', { class: 'mt8' }, Btn('CHANGE EARNING MODEL', { kind: 'dark', cls: 'sm', onClick: () => nav.go('sf.earn', { sid: s.id }) }))),
-    h('div', { class: 'card', style: { fontSize: '14px' } }, 'A Personal Agent gets a basic salary and may earn commission later. An independent Agent works only in the given areas and earns commission. The lowest staff level can update deliveries and payments.'));
+    h('div', { class: 'aside' }, 'A Personal Agent gets a basic salary and may earn commission later. An independent Agent works only in the given areas and earns commission. The lowest staff level can update deliveries and payments.'));
   return { title: s.name, sub: 'Staff settings', body, foot: [Btn('CHANGE POSITION', { kind: 'dark', onClick: () => editSheet({ title: 'Position — ' + s.name, sub: 'Earlier earnings and history are kept. Pay and duty are set separately.', fields: [{ key: 'pos', label: 'New position', type: 'select', value: s.position, options: Object.keys(posLabel).map(k => [k, posLabel[k]]) }], onSave: v => { if (v.pos === s.position) return; if (busyStaff(s.id)) fail(s.name + ' is on a pickup right now.'); changePosition(s.id, v.pos, 'Position changed in Settings'); toast(s.name + ' is now ' + posLabel[v.pos]); } }) }),
     Btn('RENAME', { kind: 'ghost', onClick: () => editSheet({ title: 'Rename', fields: [{ key: 'name', label: 'Name', value: s.name, maxlength: 30 }], onSave: v => { if (v.name.trim().length < 2) fail('Enter a name.'); s.name = v.name.trim(); } }) })] };
 });
@@ -2915,7 +3156,7 @@ route('set.prod', (p, E) => {
   const x = prod(p.pid);
   return { title: x.name, sub: 'Product settings', body: h('div', { class: 'gap' }, h('div', { class: 'card' }, KV('Printed MRP', '₹' + x.mrp / 100), KV('Sell-to-Shop (per ' + x.base.toLowerCase() + ')', rs(x.sell)), KV('Retail counter (per ' + x.base.toLowerCase() + ')', rs(x.retail)), KV('Packing', x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(', ') + ' ' + x.base.toLowerCase() + 's')),
     h('div', { class: 'card' }, Toggle('Active', 'Hidden products cannot be ordered', x.active, v => { x.active = v; })),
-    h('div', { class: 'card', style: { fontSize: '14px' } }, 'Stock is kept as one number in ' + x.base.toLowerCase() + 's. Changing a price affects new orders only — orders already taken keep their price.')),
+    h('div', { class: 'aside' }, 'Stock is kept as one number in ' + x.base.toLowerCase() + 's. Changing a price affects new orders only — orders already taken keep their price.')),
     foot: [Btn('CHANGE PACKAGING', { kind: 'dark', onClick: () => editSheet({ title: 'Packaging — ' + x.name, sub: 'Stock is kept as one number in ' + x.base.toLowerCase() + 's, so the stock quantity does not change.', fields: x.levels.map((l, i) => ({ key: 'l' + i, label: '1 ' + l.u + ' = how many ' + x.base.toLowerCase() + 's?', type: 'num', value: String(l.n) })), onSave: v => { const ns = x.levels.map((l, i) => parseInt(v['l' + i], 10)); if (ns.some(n => !(n > 0))) fail('Enter a number for every unit.'); for (let i = 1; i < ns.length; i++) if (ns[i] >= ns[i - 1]) fail('Each smaller unit must hold fewer ' + x.base.toLowerCase() + 's than the one above.'); x.levels.forEach((l, i) => { l.n = ns[i]; }); log('STOCK', x.name + ' packaging changed: ' + x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(', ') + ' (future entries only)'); toast('Packaging saved'); } }) }),
     Btn('CHANGE PRICES', { kind: 'primary', onClick: () => editSheet({ title: 'Prices — ' + x.name, fields: [{ key: 'sell', label: 'Sell-to-Shop price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.sell / 100) }, { key: 'retail', label: 'Retail counter price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.retail / 100) }], onSave: v => { const a = parseRs(v.sell), b = parseRs(v.retail); if (!(a > 0) || !(b > 0)) fail('Enter both prices.'); x.sell = a; x.retail = b; log('STOCK', x.name + ' prices changed: sell ' + rs(a) + ', retail ' + rs(b)); } }) })] };
 });
@@ -2973,7 +3214,7 @@ const SCENARIOS = [
       const x = addExpense({ cat: 'Diesel', amount: 200000, note: 'RJ35-4821', token: 'fx-l3' }); approveExpense(x.id); payExpense(x.id, 'CASH', 'fx-l4'); transferMoney('CASH', 500000, 'fx-l5');
       nav.reset([['more'], ['cash.home'], ['cash.count']], 'none'); } },
 ];
-route('scen', (p, E) => ({ title: 'Scenarios', sub: 'Jump straight to an example', body: h('div', { class: 'gap' }, h('div', { class: 'card', style: { fontSize: '14px' } }, 'Each scenario starts from the fictional starting data and puts you on its first screen. It replaces anything you have changed in this session.'),
+route('scen', (p, E) => ({ title: 'Scenarios', sub: 'Jump straight to an example', body: h('div', { class: 'gap' }, h('div', { class: 'aside' }, 'Each scenario starts from the fictional starting data and puts you on its first screen. It replaces anything you have changed in this session.'),
   Pane(SCENARIOS.map(s => Row({ title: s.code + '. ' + s.title, sub: s.text, onClick: () => confirmSheet({ title: 'Load scenario ' + s.code + '?', sub: s.title + ' — this resets the demo data first.', yes: 'LOAD IT', no: 'CANCEL', onYes: () => { try { s.run(); toast('Scenario ' + s.code + ' ready'); } catch (e) { handleErr(e); } } }) })))) }));
 
 /* ---------- 66-print.js ---------- */
@@ -3051,7 +3292,7 @@ route('print', (p, E) => {
     h('div', { class: 'mute center', style: { fontSize: '13px' } }, 'Browser print only. The 80 mm and 58 mm sizes are layouts for a thermal roll — no printer is connected from here. Choose “Save as PDF” in the print window to make a PDF.'));
   return { title: 'Print preview', sub: docName(cur), body, foot: [Btn('PRINT / SAVE AS PDF', { kind: 'primary', icon: 'print', onClick: () => printNow(doc, st.paper) })] };
 });
-route('statement', (p, E) => ({ title: 'Statement', sub: partyName(p.pid), body: h('div', { class: 'gap' }, h('div', { class: 'card', style: { fontSize: '14px' } }, 'Everything recorded for ' + partyName(p.pid) + ', in order. Print it or save it as a PDF through the browser’s print window.'), docStatement(p.pid, S.settings.paper || 'A4')),
+route('statement', (p, E) => ({ title: 'Statement', sub: partyName(p.pid), body: h('div', { class: 'gap' }, h('div', { class: 'aside' }, 'Everything recorded for ' + partyName(p.pid) + ', in order. Print it or save it as a PDF through the browser’s print window.'), docStatement(p.pid, S.settings.paper || 'A4')),
   foot: [Btn('PRINT / SAVE AS PDF', { kind: 'primary', icon: 'print', onClick: () => nav.go('print', { docs: [['STATEMENT', p.pid]], start: 0, autoprint: true }) })] }));
 
 /* ---------- 90-boot.js ---------- */
