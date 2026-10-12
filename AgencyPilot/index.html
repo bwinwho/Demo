@@ -149,6 +149,7 @@ button.row:active{background:var(--tint)}
 .row.off{opacity:.42}
 .row.new{background:linear-gradient(90deg,rgba(0,118,63,.09),rgba(0,118,63,0) 70%);box-shadow:inset 2px 0 0 var(--green);padding-left:var(--s3)}
 .empty{padding:var(--s6) 0;color:var(--mute)}
+.pane:empty{display:none}
 .chip{display:inline-block;padding:1px 6px;border:1px solid currentColor;border-radius:var(--r);font-size:10.5px;font-weight:600;letter-spacing:.09em;line-height:1.6;color:var(--ink2);text-transform:uppercase;vertical-align:middle;white-space:nowrap}
 .chip.ok{color:var(--green)}
 .chip.bad{color:var(--red)}
@@ -581,29 +582,33 @@ const FIX = {
 /* ---------------------------------------------------------------------
    3. APPLICATION STATE  — ONE in-memory object. Every screen derives from it.
    --------------------------------------------------------------------- */
-function newState() {
-  const today = new Date();
+/* example = true loads the fictional example lists (used only by the Scenarios code). The app itself starts EMPTY:
+   the owner adds products, shops, staff, vehicles, cameras and areas, and brings stock in through a purchase. */
+const EMPTY_LISTS = { products: [], areas: [], vehicles: [], cameras: [], customers: [], staff: [], invoices: [] };
+function newState(example) {
+  const today = new Date(), F = example ? FIX : EMPTY_LISTS;
   const st = {
-    seq: { c: FIX.customers.length, s: FIX.staff.length, p: FIX.products.length, v: FIX.vehicles.length, a: FIX.areas.length },     // new IDs start AFTER the hand-numbered fixture IDs
+    seq: { c: F.customers.length, s: F.staff.length, p: F.products.length, v: F.vehicles.length, a: F.areas.length },     // new IDs start AFTER any hand-numbered fixture IDs
     nums: { O: 1000, PK: 0, DC: 2000, B: 3000, R: 4000, H: 500, RS: 6000, X: 700, RT: 800, EX: 900, DAY: 0, J: 100 },
-    products: FIX.products.map(p => ({ id: p.id, name: p.name, mrp: p.mrp, base: p.base, levels: p.levels.map(l => ({ ...l })), sell: p.sell, retail: p.retail, nick: p.nick, active: true })),
+    products: F.products.map(p => ({ id: p.id, name: p.name, mrp: p.mrp, base: p.base, levels: p.levels.map(l => ({ ...l })), buy: p.buy || 0, sell: p.sell, retail: p.retail, nick: p.nick, active: true })),
     godown: {}, hold: [], retail: {}, moves: [],
-    areas: FIX.areas.map((n, i) => ({ id: 'a' + (i + 1), name: n })),
-    vehicles: FIX.vehicles.map(v => ({ ...v, active: true })),
-    cameras: FIX.cameras.map(c => ({ ...c, active: true })),
-    customers: FIX.customers.map(c => ({ ...c, addr: { ...c.addr }, createdAt: addDays(today, -30) })),
-    staff: FIX.staff.map(s => ({ ...s, model: JSON.parse(JSON.stringify(s.model)), areas: s.areas.slice(), active: true, att: {}, duty: null, hist: [{ at: addDays(today, -30), note: 'Joined — ' + s.position, model: JSON.parse(JSON.stringify(s.model)), position: s.position }] })),
+    areas: F.areas.map((n, i) => ({ id: 'a' + (i + 1), name: n })),
+    vehicles: F.vehicles.map(v => ({ ...v, active: true })),
+    cameras: F.cameras.map(c => ({ ...c, active: true })),
+    customers: F.customers.map(c => ({ ...c, addr: { ...c.addr }, createdAt: addDays(today, -30) })),
+    staff: F.staff.map(s => ({ ...s, model: JSON.parse(JSON.stringify(s.model)), areas: s.areas.slice(), active: true, att: {}, duty: null, hist: [{ at: addDays(today, -30), note: 'Joined — ' + s.position, model: JSON.parse(JSON.stringify(s.model)), position: s.position }] })),
     orders: [], trips: [], deliveries: [], challans: [], sales: [], payments: [], handovers: [],
     khata: [], kseq: 0, cash: [], events: [], approvals: [],
-    invoices: FIX.invoices.map(i => ({ id: i.id, no: i.no, date: addDays(today, -i.daysAgo), supplier: 'Balaji (demo supplier)', lines: i.lines.map(l => ({ pid: l[0], base: 0, boxes: l[1] })), status: 'OPEN' })),
+    invoices: F.invoices.map(i => ({ id: i.id, no: i.no, date: addDays(today, -i.daysAgo), supplier: 'Balaji (demo supplier)', lines: i.lines.map(l => ({ pid: l[0], base: 0, boxes: l[1] })), status: 'OPEN' })),
     expenses: [], returns: [], jobs: [],
     settings: FIX.settings(), expenseCats: FIX.expenseCats.slice(),
-    day: { no: 1, date: ymd(today), closed: false },
+    day: { no: 1, date: ymd(today), closed: false, openCash: 0, openBank: 0 },
     dayCloses: [], count: null,
     drafts: {}, tokens: new Set(), highlight: null,
   };
-  for (const p of FIX.products) st.godown[p.id] = 0;
-  for (const p of FIX.products) st.retail[p.id] = 0;
+  for (const p of F.products) st.godown[p.id] = 0;
+  for (const p of F.products) st.retail[p.id] = 0;
+  if (!example) st.settings.defaultCamera = '';
   return st;
 }
 let S = newState();
@@ -1207,7 +1212,7 @@ function closeTrip(tid, goods, token) {
    4d. Stock receiving & counting · Staff · Payouts · Expenses · Returns · Retail · Direct & inter-agency sales · Day close
    --------------------------------------------------------------------- */
 /* ---- stock receiving: viewing an invoice never changes stock; only the confirmed physical count does ---- */
-const invBase = l => l.boxes * prod(l.pid).levels[0].n;
+const invBase = l => l.base > 0 ? l.base : l.boxes * prod(l.pid).levels[0].n;      // purchases entered in the app carry an exact base quantity
 function receiveInvoice(invId, actual, note, token) {
   const inv = byId(S.invoices, invId); if (!inv) fail('Invoice not found.');
   if (inv.status !== 'OPEN') fail('This invoice was already received.');
@@ -1494,7 +1499,8 @@ function seedDemo() {
   S.events.length = 0; S.approvals.length = 0;
   log('SYSTEM', 'Fictional demo data loaded');
 }
-function resetDemo() { S = newState(); seedDemo(); }
+function resetDemo() { S = newState(false); }                     // the owner's clean start: nothing at all
+function loadExample() { S = newState(true); seedDemo(); }        // fictional example data — only the Scenarios use it
 
 /* ---------- 50-ui.js ---------- */
 /* ---------------------------------------------------------------------
@@ -1729,6 +1735,8 @@ const DRAFTS = {
   pk: { text: d => 'Preparing a pickup (' + d.orderIds.length + ' order' + (d.orderIds.length === 1 ? '' : 's') + ' selected)', on: d => d.orderIds.length, go: d => nav.go('pk.orders') },
   side: { text: d => 'Sale from pickup goods', on: d => d.buyer || d.lines.length, go: d => nav.go(d.lines.length ? 'ss.review' : d.buyer ? 'ss.items' : 'ss.who', {}) },
   retail: { text: d => 'Retail sale', on: d => d.pid, go: d => nav.go('rl.qty', {}) },
+  prod: { text: d => 'New product' + (d.name ? ': ' + d.name : ''), on: d => d.name, go: d => nav.go('pr.name') },
+  buy: { text: d => 'Purchase from ' + (d.supplier || 'a supplier'), on: d => d.lines.length, go: d => nav.go('st.buy.items') },
   cr: { text: d => 'Customer return' + (d.partyId ? ' from ' + partyName(d.partyId) : ''), on: d => d.partyId, go: d => nav.go(d.pid ? 'cr.qty' : 'cr.prod', {}) },
 };
 const activeDrafts = () => Object.keys(DRAFTS).filter(k => S.drafts[k] && DRAFTS[k].on(S.drafts[k]));
@@ -1899,7 +1907,7 @@ route('cart.prod', (p, E) => {
   const calc = cartCalc(c);
   const body = h('div', null,
     h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, c.editId ? 'CHANGE PRODUCTS' : 'WHAT PRODUCTS?')),
-    pickList(E, { placeholder: 'Search product (try "salt")', empty: 'No product found.', items: () => prods, text: x => prodLabel(x) + ' ' + x.nick + ' ' + (x.mrp / 100) + 'rs ₹' + (x.mrp / 100),
+    pickList(E, { placeholder: 'Search product', empty: S.products.length ? 'No product found.' : 'No products yet. Add them in More → Settings → Stock.', items: () => prods, text: x => prodLabel(x) + ' ' + x.nick + ' ' + (x.mrp / 100) + 'rs ₹' + (x.mrp / 100),
       render: x => { const l = c.lines.find(q => q.pid === x.id); const out = stockMode && avail(x.id) <= 0;
         return Row({ title: prodLabel(x), sub: stockMode ? 'In godown: ' + qtyText(x, avail(x.id)) : unitList(x).join(' · '), right: l ? '✓ ' + qtyText(x, l.base) : (out ? 'OUT' : null), cls: out ? 'off' : '', onClick: out ? null : () => nav.go('cart.qty', { mode, pid: x.id }) }); } }));
   const n = c.lines.length;
@@ -1999,7 +2007,7 @@ route('cust.addr', (p, E) => {
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
   }
   const inp = (key, ph, label) => h('input', { class: 'input', id: 'ad-' + key, placeholder: ph, value: a[key] || '', maxlength: 80, 'aria-label': label, onInput: ev => { a[key] = ev.target.value; } });
-  const sel = h('select', { class: 'select', id: 'ad-area', 'aria-label': 'Area', onChange: ev => { a.area = ev.target.value; } }, h('option', { value: '' }, 'Choose area'), S.areas.map(x => h('option', { value: x.name, selected: a.area === x.name }, x.name)));
+  const sel = h('div', { style: { marginTop: '8px' } }, h('input', { class: 'input', id: 'ad-area', list: 'ad-areas', maxlength: 30, placeholder: S.areas.length ? 'Choose, or type a new area' : 'e.g. Main Market', value: a.area || '', 'aria-label': 'Area', onInput: ev => { a.area = ev.target.value; } }), h('datalist', { id: 'ad-areas' }, S.areas.map(x => h('option', { value: x.name }))));
   const latI = h('input', { class: 'input', placeholder: 'Latitude', inputmode: 'decimal', value: a.lat != null ? a.lat : '', 'aria-label': 'Latitude' }), lngI = h('input', { class: 'input', placeholder: 'Longitude', inputmode: 'decimal', value: a.lng != null ? a.lng : '', 'aria-label': 'Longitude' });
   const manual = () => { const la = parseFloat(latI.value), ln = parseFloat(lngI.value); if (isFinite(la) && isFinite(ln) && la >= -90 && la <= 90 && ln >= -180 && ln <= 180) { a.lat = la; a.lng = ln; a.src = a.src === 'DEVICE' ? 'DEVICE' : 'MANUAL'; } else if (latI.value === '' && lngI.value === '') { if (a.src !== 'DEVICE') { a.lat = null; a.lng = null; a.src = null; } } };
   latI.addEventListener('input', manual); lngI.addEventListener('input', manual);
@@ -2011,6 +2019,7 @@ route('cust.addr', (p, E) => {
     h('details', { class: 'mt16' }, h('summary', { style: { minHeight: '48px', display: 'flex', alignItems: 'center', fontWeight: 600 } }, '＋ Enter coordinates by hand (optional)'), h('div', { class: 'gap' }, latI, lngI, h('div', { class: 'mute', style: { fontSize: '13px' } }, 'Coordinates typed by hand are saved but are not treated as verified.'))));
   return { title: 'Add New Customer', step: { label: 'ADDING CUSTOMER', n: 4, of: 4 }, body, foot: [Btn('ADD DONE', { kind: 'primary', onClick: () => {
     const c = addCustomer({ name: d.name, shop: d.shop, phone: d.phone, addr: a }); const then = d.then; delete S.drafts.cust;
+    const known = S.areas.find(x => x.name.toLowerCase() === c.addr.area.toLowerCase()); if (known) c.addr.area = known.name; else { S.areas.push({ id: nid('a'), name: c.addr.area }); log('CUSTOMER', 'New area added: ' + c.addr.area); }
     const mode = then || 'order'; const cart = cartOf(mode); cart.partyId = c.id;
     toast((c.shop || c.name) + ' added'); nav.popTo(mode === 'order' || mode === 'godown' ? 'cart.cust' : 'cart.cust'); nav.go('cart.prod', { mode });
   } })], help: ['Street, landmark, area and city are saved with the customer.', 'The address is only marked “location verified” if you capture it with the pin button on the shop’s doorstep.'] };
@@ -2050,14 +2059,14 @@ route('pk.orders', (p, E) => {
 /* ---- 2. pick pickup (vehicle) ---- */
 route('pk.vehicle', (p, E) => {
   const t = tripOf(p.tid);
-  const body = h('div', null, tripBar(t), h('div', { class: 'mt12' }, pickList(E, { placeholder: 'Search pickup', empty: 'No pickup found.', items: () => S.vehicles.filter(v => v.active), text: v => v.reg + ' ' + v.label,
+  const body = h('div', null, tripBar(t), h('div', { class: 'mt12' }, pickList(E, { placeholder: 'Search pickup', empty: S.vehicles.length ? 'No pickup found.' : 'No pickup vehicle yet. Add one in More → Settings → Pickup.', items: () => S.vehicles.filter(v => v.active), text: v => v.reg + ' ' + v.label,
     render: v => { const busy = busyVehicle(v.id, t.id), on = t.vehicleId === v.id; return Row({ title: v.reg, sub: v.label, chip: busy ? 'ON ANOTHER JOB' : on ? 'SELECTED' : null, tone: busy ? 'bad' : 'ok', cls: busy ? 'off' : '', onClick: busy ? null : () => { setTripPart(t.id, 'vehicleId', v.id); nav.go('pk.driver', { tid: t.id }); } }); } })));
   return { title: 'Pick Pickup', step: pkStep(t, 'vehicle'), body, help: 'Choose the vehicle that will carry these orders. A vehicle already on another job is greyed out.', foot: [t.vehicleId ? Btn('NEXT', { kind: 'primary', onClick: () => nav.go('pk.driver', { tid: t.id }) }) : null, cancelLink(t)] };
 });
 /* ---- 3. driver ---- */
 route('pk.driver', (p, E) => {
   const t = tripOf(p.tid);
-  const body = h('div', null, tripBar(t), h('div', { class: 'mt12' }, pickList(E, { placeholder: 'Search staff', empty: 'No driver-eligible staff found.', items: () => S.staff.filter(s => s.active && s.driver), text: s => s.name + ' ' + posLabel[s.position],
+  const body = h('div', null, tripBar(t), h('div', { class: 'mt12' }, pickList(E, { placeholder: 'Search staff', empty: 'No driver-eligible staff. In More → Settings → Staff, add a person and turn on “Can be assigned as driver”.', items: () => S.staff.filter(s => s.active && s.driver), text: s => s.name + ' ' + posLabel[s.position],
     render: s => { const busy = busyStaff(s.id, t.id), on = t.driverId === s.id; return Row({ title: s.name, sub: posLabel[s.position] + ' · driver duty only for this pickup', chip: busy ? 'ON ANOTHER PICKUP' : on ? 'SELECTED' : null, tone: busy ? 'bad' : 'ok', cls: busy ? 'off' : '', onClick: busy ? null : () => { setTripPart(t.id, 'driverId', s.id); nav.go('pk.helper', { tid: t.id }); } }); } })),
     h('div', { class: 'mute mt12', style: { fontSize: '14px' } }, 'Driver is a duty, not a job title — it does not change the person’s position. Eligibility is set in Settings → Staff.'));
   return { title: 'Pick Driver', step: pkStep(t, 'driver'), body, foot: [t.driverId ? Btn('NEXT', { kind: 'primary', onClick: () => nav.go('pk.helper', { tid: t.id }) }) : null] };
@@ -2113,7 +2122,7 @@ route('pk.camera', (p, E) => {
   const t = tripOf(p.tid);
   if (t.status === 'CANCELLED') return { title: 'Pickup', body: Empty('This pickup was cancelled.'), foot: [Btn('BACK TO TODAY', { kind: 'primary', onClick: () => nav.reset([['today']]) })] };
   const body = h('div', null, tripBar(t), h('div', { class: 'oq mt12', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Which camera is watching the loading?'), h('div', { class: 'hint' }, 'This is only a reference number to find the footage later.')),
-    Pane(S.cameras.filter(c => c.active).map(c => Row({ title: c.id, sub: c.desc, chip: c.id === t.cameraId ? 'SELECTED' : (c.id === S.settings.defaultCamera ? 'USUAL' : null), tone: 'ok', onClick: () => { setTripPart(t.id, 'cameraId', c.id); nav.go('pk.confirm', { tid: t.id }); } }))));
+    S.cameras.some(c => c.active) ? null : Pane(Empty('No camera yet. Add one in More → Settings → Pickup.')), Pane(S.cameras.filter(c => c.active).map(c => Row({ title: c.id, sub: c.desc, chip: c.id === t.cameraId ? 'SELECTED' : (c.id === S.settings.defaultCamera ? 'USUAL' : null), tone: 'ok', onClick: () => { setTripPart(t.id, 'cameraId', c.id); nav.go('pk.confirm', { tid: t.id }); } }))));
   return { title: 'Camera', step: pkStep(t, 'camera'), body, foot: [t.cameraId ? Btn('NEXT', { kind: 'primary', onClick: () => nav.go('pk.confirm', { tid: t.id }) }) : null] };
 });
 /* ---- 7. confirm loading ---- */
@@ -2571,7 +2580,7 @@ function receiptSheet(pid, x) {
 
 route('khata', (p, E) => {
   const has = new Set(khataParties());
-  const body = h('div', null, pickList(E, { placeholder: 'Search person or shop', empty: 'No one found.',
+  const body = h('div', null, pickList(E, { placeholder: 'Search person or shop', empty: S.khata.length ? 'No one found.' : 'Nothing in the Khata yet. Bills, payments and wages appear here.',
     items: () => { const q = (E.st.q || '').trim(); const all = allParties(); const list = q ? all : all.filter(x => has.has(x.id)); return list.slice().sort((a, b) => { const A = netBal(a.id), B = netBal(b.id); const ra = A < 0 ? 0 : A > 0 ? 1 : 2, rb = B < 0 ? 0 : B > 0 ? 1 : 2; return ra - rb || Math.abs(B) - Math.abs(A); }); },
     text: x => [x.shop, x.name, x.position, x.type].join(' '),
     render: x => { const b = netBal(x.id); return Row({ title: x.shop || x.name, sub: partyKind(x.id) + (x.shop ? ' · ' + x.name : ''), right: h('span', { class: b < 0 ? 'red' : '' }, rs(b, { plus: true })), rightSub: balShort(b), onClick: () => nav.go('kh.person', { pid: x.id }) }); } }));
@@ -2772,9 +2781,9 @@ const stTone = s => s === 'OK' ? 'ok' : s === 'LOW' ? 'warn' : 'bad';
 const stLabel = s => s === 'OK' ? 'IN STOCK' : s === 'LOW' ? 'LOW' : 'OUT';
 /* ===================== STOCK ===================== */
 route('st.list', (p, E) => {
-  const body = pickList(E, { placeholder: 'Search product', empty: 'No product found.', items: () => S.products.filter(x => x.active), text: x => prodLabel(x) + ' ' + x.nick,
+  const body = pickList(E, { placeholder: 'Search product', empty: S.products.length ? 'No product found.' : 'No products yet. Add a product, then receive stock for it.', items: () => S.products.filter(x => x.active), text: x => prodLabel(x) + ' ' + x.nick,
     render: x => { const s = stockStatus(x.id); return Row({ title: prodLabel(x), sub: qtyText(x, avail(x.id)), right: Chip(stLabel(s), s === 'OK' ? 'ok' : s === 'LOW' ? '' : 'bad'), onClick: () => nav.go('st.product', { pid: x.id }) }); } });
-  return { title: 'Stock', sub: 'What is in the godown', body, foot: [Btn('RECEIVE STOCK', { kind: 'primary', onClick: () => nav.go('st.receive') })] };
+  return { title: 'Stock', sub: 'What is in the godown', body, foot: S.products.length ? [Btn('RECEIVE STOCK', { kind: 'primary', onClick: () => nav.go('st.receive') }), Btn('ADD PRODUCT', { kind: 'ghost', onClick: () => startProduct('st.list') })] : [Btn('ADD PRODUCT', { kind: 'primary', onClick: () => startProduct('st.list') })] };
 });
 route('st.product', (p, E) => {
   const pr = prod(p.pid), s = stockStatus(pr.id), mv = S.moves.filter(m => m.pid === pr.id).slice(-4).reverse(), hold = holdOf(pr.id);
@@ -2782,7 +2791,7 @@ route('st.product', (p, E) => {
     hold || S.retail[pr.id] ? h('div', { class: 'aside' }, hold ? h('div', null, h('b', null, 'Held (not sellable): '), qtyText(pr, hold) + ' — ' + Array.from(new Set(S.hold.filter(x => x.pid === pr.id).map(x => x.kind.toLowerCase()))).join(', ')) : null, S.retail[pr.id] ? h('div', null, h('b', null, 'At retail counter: '), qtyText(pr, S.retail[pr.id])) : null) : null,
     h('div', { class: 'aside' }, h('b', null, 'How it is counted: '), pr.levels.map(l => '1 ' + l.u + ' = ' + l.n + ' ' + pr.base.toLowerCase() + 's').join(' · ')),
     Sec('Recent movement'), mv.length ? Pane(mv.map(m => Row({ title: m.reason, sub: fmtDT(m.at) + (m.ref ? ' · ' + m.ref : ''), right: (m.delta > 0 ? '+' : '−') + qtyText(pr, Math.abs(m.delta)) }))) : Pane(Empty('No movement yet.')));
-  return { title: pr.name, sub: 'MRP ₹' + pr.mrp / 100 + ' · selling ₹' + (pr.sell / 100) + ' per ' + pr.base.toLowerCase(), body, foot: [Btn('RECEIVE STOCK', { kind: 'primary', onClick: () => nav.go('st.receive') }), Btn('COUNT STOCK', { kind: 'dark', onClick: () => nav.go('st.count', { pid: pr.id }) }), Btn('VIEW HISTORY', { kind: 'link', onClick: () => nav.go('st.hist', { pid: pr.id }) })] };
+  return { title: pr.name, sub: 'MRP ' + rs(pr.mrp) + ' · buy ' + (pr.buy ? rs(pr.buy) : '—') + ' · sell ' + rs(pr.sell) + ' per ' + unitWord(pr.base, 1), body, foot: [Btn('RECEIVE STOCK', { kind: 'primary', onClick: () => nav.go('st.receive') }), Btn('COUNT STOCK', { kind: 'dark', onClick: () => nav.go('st.count', { pid: pr.id }) }), Btn('VIEW HISTORY', { kind: 'link', onClick: () => nav.go('st.hist', { pid: pr.id }) })] };
 });
 route('st.hist', (p, E) => {
   const pr = p.pid ? prod(p.pid) : null, mv = S.moves.filter(m => !pr || m.pid === pr.id).slice().reverse();
@@ -2790,9 +2799,73 @@ route('st.hist', (p, E) => {
 });
 /* ---- receive stock: invoice → review → count → differences → confirm ---- */
 route('st.receive', (p, E) => {
-  const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Which supplier invoice?')),
-    Pane(S.invoices.map(i => Row({ title: i.no, sub: fmtD(i.date) + ' · ' + plural(i.lines.length, 'product') + ' · ' + i.supplier, chip: i.status === 'RECEIVED' ? 'RECEIVED' : 'NEW', tone: i.status === 'RECEIVED' ? 'ok' : '', cls: i.status === 'RECEIVED' ? 'off' : '', onClick: i.status === 'OPEN' ? () => nav.go('st.recv', { id: i.id }) : null }))));
-  return { title: 'Receive stock', step: { label: 'RECEIVING STOCK', n: 1, of: 4 }, body, help: 'Pick the supplier invoice that arrived with the goods. Looking at an invoice does not add any stock.' };
+  const invs = S.invoices.slice().reverse();
+  const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, invs.length ? 'Which supplier invoice?' : 'No supplier invoices yet')),
+    invs.length ? Pane(invs.map(i => Row({ title: i.no, sub: fmtD(i.date) + ' · ' + plural(i.lines.length, 'product') + ' · ' + i.supplier, right: i.value ? rs(i.value) : null, chip: i.status === 'RECEIVED' ? 'RECEIVED' : 'TO COUNT', tone: i.status === 'RECEIVED' ? 'ok' : '', cls: i.status === 'RECEIVED' ? 'off' : '', onClick: i.status === 'OPEN' ? () => nav.go('st.recv', { id: i.id }) : null })))
+      : h('div', { class: 'aside' }, 'When goods arrive, enter the supplier invoice as a new purchase. Then count what really came — the counted quantity is added to stock.'));
+  return { title: 'Receive stock', body, foot: [Btn('NEW PURCHASE', { kind: 'primary', icon: 'plus', onClick: () => S.products.length ? startPurchase() : startProduct('st.receive') })],
+    help: 'Pick an invoice that still has to be counted, or enter a new purchase. Looking at an invoice does not add any stock.' };
+});
+/* ---- new purchase: supplier → products & quantities at buying price → review → (count → confirm, as for any invoice).
+   Entering the invoice never changes stock; only the confirmed physical count does. ---- */
+function createPurchase(d) {
+  if (tokUsed(d.tok)) fail('This purchase was already saved.');
+  const supplier = (d.supplier || '').trim(); if (supplier.length < 2) fail('Enter the supplier name.');
+  if (!d.lines.length) fail('Add at least one product.');
+  for (const l of d.lines) { if (!(l.base > 0)) fail('Enter a quantity for ' + prod(l.pid).name + '.'); if (!(l.rate > 0)) fail('Enter the buying price for ' + prod(l.pid).name + '.'); }
+  const no = (d.no || '').trim() || nextNo('PU', 'PUR');
+  if (S.invoices.some(i => i.no.toLowerCase() === no.toLowerCase())) fail('Invoice ' + no + ' was already entered.');
+  tokUse(d.tok);
+  const inv = { id: nid('inv'), no, date: new Date(), supplier, lines: d.lines.map(l => ({ pid: l.pid, base: l.base, boxes: 0, units: { ...l.units }, rate: l.rate })), status: 'OPEN', value: d.lines.reduce((s, l) => s + l.base * l.rate, 0) };
+  S.invoices.push(inv);
+  log('STOCK', 'Purchase invoice ' + no + ' from ' + supplier + ' entered — ' + rs(inv.value) + ' (stock changes only after the count)', { inv: inv.id });
+  return inv;
+}
+const BUY_STEP = n => ({ label: 'NEW PURCHASE', n, of: 4 });
+function startPurchase() { if (!S.drafts.buy) S.drafts.buy = { supplier: (S.invoices[S.invoices.length - 1] || {}).supplier || '', no: '', lines: [], tok: nid('tok') }; nav.go('st.buy'); }
+const buyRates = d => d.lines.reduce((m, l) => (m[l.pid] = l.rate, m), {});
+const buyTotal = d => d.lines.reduce((s, l) => s + l.base * l.rate, 0);
+route('st.buy', (p, E) => {
+  const d = S.drafts.buy; if (!d) return { title: 'New purchase', body: Empty('Nothing in progress') };
+  const btn = Btn('CONTINUE', { kind: 'primary', disabled: d.supplier.trim().length < 2, onClick: () => nav.go('st.buy.items') });
+  const body = h('div', null, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Who sent the goods?')),
+    Field('Supplier name', h('input', { class: 'input', id: 'sup', maxlength: 40, placeholder: 'e.g. Balaji Wafers', value: d.supplier, 'data-autofocus': '1', onInput: ev => { d.supplier = ev.target.value; btn.disabled = d.supplier.trim().length < 2; } })),
+    Field('Supplier invoice number (optional)', h('input', { class: 'input', id: 'invno', maxlength: 24, placeholder: 'Blank = numbered by the app', value: d.no, onInput: ev => { d.no = ev.target.value; } })));
+  return { title: 'New purchase', step: BUY_STEP(1), body, foot: [btn], help: 'Enter the supplier invoice that came with the goods. Stock goes up only after you count what really arrived.' };
+});
+route('st.buy.items', (p, E) => {
+  const d = S.drafts.buy; if (!d) return { title: 'New purchase', body: Empty('Nothing in progress') };
+  const prods = S.products.filter(x => x.active);
+  const body = h('div', null, h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Which products came?')),
+    prods.length ? pickList(E, { placeholder: 'Search product', empty: 'No product found.', items: () => prods, text: x => prodLabel(x) + ' ' + x.nick,
+      render: x => { const l = d.lines.find(q => q.pid === x.id); return Row({ title: prodLabel(x), sub: 'Buying ' + (x.buy ? rs(x.buy) + ' per ' + unitWord(x.base, 1) : 'price not set'), right: l ? '✓ ' + qtyText(x, l.base) : null, onClick: () => nav.go('st.buy.qty', { pid: x.id }) }); } })
+      : h('div', null, Pane(Empty('No products yet. Add the product first, then come back to the purchase.')), h('div', { class: 'mt16' }, Btn('ADD PRODUCT', { kind: 'dark', onClick: () => startProduct('st.buy.items') }))));
+  const foot = [];
+  if (d.lines.length) foot.push(h('div', { class: 'flowbar' }, h('span', null, plural(d.lines.length, 'product'), h('small', null, 'from ' + d.supplier)), h('b', null, rs(buyTotal(d)))));
+  foot.push(Btn('REVIEW PURCHASE', { kind: 'primary', disabled: !d.lines.length, onClick: () => nav.go('st.buy.review') }));
+  return { title: 'New purchase', sub: d.supplier, step: BUY_STEP(2), body, foot };
+});
+route('st.buy.qty', (p, E) => {
+  const d = S.drafts.buy, pr = prod(p.pid), line = d.lines.find(l => l.pid === pr.id), unit = unitWord(pr.base, 1);
+  if (!E.st.u) { E.st.u = Object.assign({}, line ? line.units : {}); E.st.rate = line ? String(line.rate / 100) : pr.buy ? String(pr.buy / 100) : ''; }
+  const tot = h('div', { class: 'big' }), sub = h('div', { class: 'mute' });
+  const upd = () => { const b = toBase(pr, E.st.u), r = parseRs(E.st.rate); tot.textContent = rs(b * (r || 0)); sub.textContent = b ? qtyText(pr, b) + ' = ' + baseText(pr, b) : 'Choose how many'; add.disabled = !(b > 0 && r > 0); };
+  const add = Btn(line ? 'UPDATE' : 'ADD TO PURCHASE', { kind: 'primary', disabled: true, onClick: () => { const l = mkLine(pr.id, E.st.u), r = parseRs(E.st.rate); if (!(l.base > 0)) fail('Choose how many.'); if (!(r > 0)) fail('Enter the buying price.'); l.rate = r; const i = d.lines.findIndex(q => q.pid === pr.id); if (i >= 0) d.lines[i] = l; else d.lines.push(l); nav.back(); toast(prodLabel(pr) + ' added'); } });
+  const body = h('div', null, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'How many arrived on the invoice?'), h('div', { class: 'big mt8' }, prodLabel(pr))),
+    h('div', { class: 'mt16' }, unitsEditor(pr, E.st.u, { onChange: upd })),
+    Field('Buying price per ' + unit + ' (₹)', h('input', { class: 'input', id: 'rate', inputmode: 'decimal', maxlength: 9, value: E.st.rate, placeholder: 'e.g. 4', onInput: ev => { ev.target.value = ev.target.value.replace(/[^\d.]/g, ''); E.st.rate = ev.target.value; upd(); } })),
+    h('div', { class: 'center mt16' }, tot, sub));
+  upd();
+  return { title: 'New purchase', sub: d.supplier, step: BUY_STEP(3), body, foot: [add, line ? Btn('REMOVE THIS PRODUCT', { kind: 'link', onClick: () => { d.lines = d.lines.filter(q => q.pid !== pr.id); nav.back(); toast('Removed'); } }) : null] };
+});
+route('st.buy.review', (p, E) => {
+  const d = S.drafts.buy; if (!d || !d.lines.length) return { title: 'New purchase', body: Empty('Nothing to review'), foot: [Btn('ADD PRODUCTS', { kind: 'primary', onClick: () => nav.back() })] };
+  const t = totalsOf(d.lines, buyRates(d));
+  const body = h('div', { class: 'gap' }, docTitle('Purchase from', d.supplier), h('div', { class: 'dochead' }, h('div', { class: 'meta' }, 'Invoice ' + (d.no.trim() || 'number given by the app') + ' · ' + fmtDY(new Date()))),
+    linesPane(t.rows, { items: t.items, waived: 0, total: t.items }, { edit: r => nav.go('st.buy.qty', { pid: r.pid }), totalLabel: 'Invoice value' }),
+    h('div', { class: 'aside' }, 'Saving records the invoice only. Next you count what really arrived — stock goes up by the counted quantity, once. Paying the supplier is not recorded in the CashBook here.'));
+  return { title: 'Review purchase', sub: d.supplier, step: BUY_STEP(4), body,
+    foot: [Btn('SAVE & COUNT THE GOODS', { kind: 'primary', onClick: () => { const inv = createPurchase(d); delete S.drafts.buy; nav.reset([['more'], ['st.list'], ['st.recv.count', { id: inv.id }]]); toast('Invoice ' + inv.no + ' saved — now count the goods'); } }), Btn('ADD MORE PRODUCTS', { kind: 'ghost', onClick: () => nav.back() })] };
 });
 route('st.recv', (p, E) => {
   const inv = byId(S.invoices, p.id);
@@ -2844,7 +2917,7 @@ route('st.count.fix', (p, E) => {
 const todayStr = () => ymd(new Date());
 const attChip = (s, d) => { const a = s.att[d || todayStr()]; return a ? Chip(a.status === 'PRESENT' ? 'PRESENT' : 'ABSENT', a.status === 'PRESENT' ? 'ok' : 'bad') : null; };
 route('sf.list', (p, E) => {
-  const body = pickList(E, { placeholder: 'Search staff', empty: 'No staff found.', items: () => S.staff.filter(s => s.active), text: s => s.name + ' ' + posLabel[s.position],
+  const body = pickList(E, { placeholder: 'Search staff', empty: S.staff.length ? 'No staff found.' : 'No staff yet. Add them in More → Settings → Staff.', items: () => S.staff.filter(s => s.active), text: s => s.name + ' ' + posLabel[s.position],
     render: s => Row({ title: s.name, sub: posLabel[s.position] + ' · ' + currentDuty(s), right: attChip(s) || h('span', { class: 'mute' }, '—'), onClick: () => nav.go('sf.person', { sid: s.id }) }) });
   return { title: 'Staff', sub: 'Today ' + fmtD(new Date()), body, foot: [Btn('MARK ATTENDANCE', { kind: 'primary', onClick: () => nav.go('sf.att', {}) }), Btn('UNLOADING JOB', { kind: 'dark', onClick: () => nav.go('sf.unload') })] };
 });
@@ -3116,8 +3189,8 @@ route('more', (p, E) => {
     sec('Sell', [Row({ title: 'Godown sale', sub: 'Customer comes to the godown', onClick: () => startCart('godown') }), Row({ title: 'Retail sale', sub: 'Single packets at the counter', onClick: () => { const d = S.drafts.retail; if (d && d.pid) openSheet({ title: 'Unfinished retail sale', sub: prod(d.pid).name, body: h('div'), actions: [Btn('RESUME IT', { kind: 'primary', onClick: () => { closeSheet(); nav.go('rl.qty'); } }), Btn('START NEW', { kind: 'ghost', onClick: () => { closeSheet(); delete S.drafts.retail; nav.go('rl.prod'); } }), sheetClose('CANCEL')] }); else nav.go('rl.prod'); } }), Row({ title: 'Inter-agency sale', sub: 'Another Balaji agency buys goods', onClick: () => startCart('ia') })]),
     sec('Operate', [Row({ title: 'Pickups', sub: 'Loading, on the road, returns', onClick: () => nav.go('pk.list') }), Row({ title: 'Stock', sub: 'Search, receive, count', onClick: () => nav.go('st.list') }), Row({ title: 'Staff', sub: 'Attendance, duty, earnings', onClick: () => nav.go('sf.list') }), Row({ title: 'Returns & expired goods', sub: 'What came back, and money for it', onClick: () => nav.go('rtn.start') })]),
     sec('Money', [Row({ title: 'Cash / Day close', sub: 'Cash ' + rs(cbal('CASH')) + ' · Bank ' + rs(cbal('BANK')), onClick: () => nav.go('cash.home') }), Row({ title: 'Pending verification', sub: 'Money waiting to be checked', right: pend ? Chip(String(pend), 'bad') : '✓', onClick: () => nav.go('cash.pend') })]),
-    sec('Setup & demo', [Row({ title: 'Settings', sub: 'Staff · Area · Stock · Pickup', onClick: () => nav.go('set.home') }), Row({ title: 'History', sub: 'Everything that happened', onClick: () => nav.go('hist') }), Row({ title: 'Scenarios', sub: 'Jump straight to an example', onClick: () => nav.go('scen') })]),
-    h('div', { class: 'center mt24' }, Btn('RESET DEMO', { kind: 'link', onClick: () => confirmSheet({ title: 'Reset the demo?', sub: 'All changes made in this session are removed and the fictional starting data comes back.', yes: 'YES, RESET', danger: true, no: 'KEEP MY CHANGES', onYes: () => { resetDemo(); nav.reset([['today']], 'none'); toast('Demo reset'); } }) })),
+    sec('Setup', [Row({ title: 'Settings', sub: 'Staff · Area · Stock · Pickup', onClick: () => nav.go('set.home') }), Row({ title: 'History', sub: 'Everything that happened', onClick: () => nav.go('hist') })]),
+    h('div', { class: 'center mt24' }, Btn('RESET DEMO', { kind: 'link', onClick: () => confirmSheet({ title: 'Reset the demo?', sub: 'Everything entered in this session is removed — products, customers, staff, stock, orders, Khata and cash. The app starts empty again.', yes: 'YES, RESET', danger: true, no: 'KEEP MY CHANGES', onYes: () => { resetDemo(); nav.reset([['today']], 'none'); toast('Demo reset — the app is empty'); } }) })),
     h('div', { class: 'center mute', style: { fontSize: '12px', marginBottom: '12px' } }, 'Agency Pilot V2 · prototype · nothing is saved'));
   return { title: 'More', body };
 });
@@ -3148,17 +3221,84 @@ route('set.area.one', (p, E) => {
   return { title: a.name, sub: 'Customers in this area', body: cs.length ? Pane(cs.map(c => Row({ title: c.shop || c.name, sub: 'Tap to move to another area', onClick: () => editSheet({ title: 'Move ' + (c.shop || c.name), fields: [{ key: 'area', label: 'New area', type: 'select', value: a.name, options: S.areas.map(x => [x.name, x.name]) }], onSave: v => { c.addr.area = v.area; toast('Moved to ' + v.area); } }) }))) : Pane(Empty('No customers here yet.')),
     foot: [Btn('RENAME AREA', { kind: 'ghost', onClick: () => editSheet({ title: 'Rename area', fields: [{ key: 'name', label: 'Area name', value: a.name }], onSave: v => { const n = v.name.trim(); if (n.length < 2) fail('Enter a name.'); const old = a.name; a.name = n; S.customers.forEach(c => { if (c.addr.area === old) c.addr.area = n; }); S.staff.forEach(s => { s.areas = s.areas.map(x => x === old ? n : x); }); } }) })] };
 });
-route('set.stock', (p, E) => ({ title: 'Stock settings', body: h('div', { class: 'gap' }, Pane(S.products.map(x => Row({ title: prodLabel(x), sub: x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(' · ') + ' ' + x.base.toLowerCase() + 's · sells ₹' + (x.sell / 100), cls: x.active ? '' : 'off', onClick: () => nav.go('set.prod', { pid: x.id }) }))), Pane([Row({ title: 'Movement reasons', sub: S.settings.reasons.length + ' reasons', onClick: () => nav.go('set.reasons') })])),
-  foot: [Btn('ADD PRODUCT', { kind: 'primary', onClick: () => editSheet({ title: 'Add product', save: 'ADD', fields: [{ key: 'name', label: 'Name', placeholder: 'e.g. Spicy Sticks' }, { key: 'mrp', label: 'Printed MRP (₹)', type: 'money', placeholder: '10' }, { key: 'base', label: 'Smallest unit', type: 'select', value: 'PACKET', options: [['PACKET', 'PACKET'], ['PCS', 'PCS']] }, { key: 'box', label: '1 BOX = how many smallest units?', type: 'num', placeholder: '100' }, { key: 'midName', label: 'Middle unit (optional)', type: 'select', value: '', options: [['', 'None'], ['LADI', 'LADI'], ['JAR', 'JAR']] }, { key: 'mid', label: '1 middle unit = how many? (if used)', type: 'num', placeholder: '10' }, { key: 'sell', label: 'Sell-to-Shop price per unit (₹)', type: 'money', placeholder: '9' }],
-    onSave: v => { const mrp = parseRs(v.mrp), sell = parseRs(v.sell), box = parseInt(v.box, 10), mid = parseInt(v.mid, 10); if (v.name.trim().length < 2) fail('Enter the product name.'); if (!(mrp > 0) || !(sell > 0)) fail('Enter MRP and selling price.'); if (!(box > 1)) fail('Enter how many units are in a BOX.'); const levels = [{ u: 'BOX', n: box }]; if (v.midName) { if (!(mid > 0 && mid < box)) fail('The middle unit must be smaller than a BOX.'); levels.push({ u: v.midName, n: mid }); }
-      const pr = { id: nid('p'), name: v.name.trim(), mrp, base: v.base, levels, sell, retail: mrp, nick: v.name.trim().toLowerCase(), active: true }; S.products.push(pr); S.godown[pr.id] = 0; S.retail[pr.id] = 0; log('STOCK', 'Product added: ' + pr.name + ' (stock starts at zero)'); toast(pr.name + ' added'); } }) })] }));
+route('set.stock', (p, E) => ({ title: 'Stock settings', body: h('div', { class: 'gap' }, S.products.length ? null : Pane(Empty('No products yet. Tap ADD PRODUCT to create the first one.')), Pane(S.products.map(x => Row({ title: prodLabel(x), sub: x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(' · ') + ' ' + x.base.toLowerCase() + 's · buys ' + (x.buy ? rs(x.buy) : '—') + ' · sells ' + rs(x.sell), cls: x.active ? '' : 'off', onClick: () => nav.go('set.prod', { pid: x.id }) }))), Pane([Row({ title: 'Movement reasons', sub: S.settings.reasons.length + ' reasons', onClick: () => nav.go('set.reasons') })])),
+  foot: [Btn('ADD PRODUCT', { kind: 'primary', onClick: () => startProduct('set.stock') })] }));
 route('set.prod', (p, E) => {
   const x = prod(p.pid);
-  return { title: x.name, sub: 'Product settings', body: h('div', { class: 'gap' }, h('div', { class: 'card' }, KV('Printed MRP', '₹' + x.mrp / 100), KV('Sell-to-Shop (per ' + x.base.toLowerCase() + ')', rs(x.sell)), KV('Retail counter (per ' + x.base.toLowerCase() + ')', rs(x.retail)), KV('Packing', x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(', ') + ' ' + x.base.toLowerCase() + 's')),
+  return { title: x.name, sub: 'Product settings', body: h('div', { class: 'gap' }, h('div', { class: 'card' }, KV('Printed MRP', rs(x.mrp)), KV('Buying price (per ' + x.base.toLowerCase() + ')', x.buy ? rs(x.buy) : 'Not set'), KV('Sell-to-Shop (per ' + x.base.toLowerCase() + ')', rs(x.sell)), KV('Retail counter (per ' + x.base.toLowerCase() + ')', rs(x.retail)), x.buy ? KV('Margin per BOX', h('span', { class: x.sell < x.buy ? 'red' : '' }, rs((x.sell - x.buy) * x.levels[0].n, { plus: true }))) : null, KV('Packing', x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(', ') + ' ' + x.base.toLowerCase() + 's')),
     h('div', { class: 'card' }, Toggle('Active', 'Hidden products cannot be ordered', x.active, v => { x.active = v; })),
     h('div', { class: 'aside' }, 'Stock is kept as one number in ' + x.base.toLowerCase() + 's. Changing a price affects new orders only — orders already taken keep their price.')),
     foot: [Btn('CHANGE PACKAGING', { kind: 'dark', onClick: () => editSheet({ title: 'Packaging — ' + x.name, sub: 'Stock is kept as one number in ' + x.base.toLowerCase() + 's, so the stock quantity does not change.', fields: x.levels.map((l, i) => ({ key: 'l' + i, label: '1 ' + l.u + ' = how many ' + x.base.toLowerCase() + 's?', type: 'num', value: String(l.n) })), onSave: v => { const ns = x.levels.map((l, i) => parseInt(v['l' + i], 10)); if (ns.some(n => !(n > 0))) fail('Enter a number for every unit.'); for (let i = 1; i < ns.length; i++) if (ns[i] >= ns[i - 1]) fail('Each smaller unit must hold fewer ' + x.base.toLowerCase() + 's than the one above.'); x.levels.forEach((l, i) => { l.n = ns[i]; }); log('STOCK', x.name + ' packaging changed: ' + x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(', ') + ' (future entries only)'); toast('Packaging saved'); } }) }),
-    Btn('CHANGE PRICES', { kind: 'primary', onClick: () => editSheet({ title: 'Prices — ' + x.name, fields: [{ key: 'sell', label: 'Sell-to-Shop price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.sell / 100) }, { key: 'retail', label: 'Retail counter price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.retail / 100) }], onSave: v => { const a = parseRs(v.sell), b = parseRs(v.retail); if (!(a > 0) || !(b > 0)) fail('Enter both prices.'); x.sell = a; x.retail = b; log('STOCK', x.name + ' prices changed: sell ' + rs(a) + ', retail ' + rs(b)); } }) })] };
+    Btn('CHANGE PRICES', { kind: 'primary', onClick: () => editSheet({ title: 'Prices — ' + x.name, fields: [{ key: 'mrp', label: 'Printed MRP per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.mrp / 100) }, { key: 'buy', label: 'Buying price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: x.buy ? String(x.buy / 100) : '' }, { key: 'sell', label: 'Sell-to-Shop price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.sell / 100) }, { key: 'retail', label: 'Retail counter price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.retail / 100) }], onSave: v => { const m = parseRs(v.mrp), u = parseRs(v.buy), a = parseRs(v.sell), b = parseRs(v.retail); if (!(m > 0) || !(u > 0) || !(a > 0) || !(b > 0)) fail('Enter all four prices.'); if (a > m || b > m) fail('A selling price cannot be more than the MRP (' + rs(m) + ').'); x.mrp = m; x.buy = u; x.sell = a; x.retail = b; log('STOCK', x.name + ' prices changed: MRP ' + rs(m) + ', buy ' + rs(u) + ', sell ' + rs(a) + ', retail ' + rs(b)); } }) })] };
+});
+/* ---- add a product: name → packing → prices. Every price is per smallest unit (packet / piece); BOX and LADI prices are worked out. ---- */
+const emptyProd = () => ({ name: '', base: 'PACKET', box: '', mid: 'LADI', midN: '', mrp: '', buy: '', sell: '', retail: '' });
+function startProduct(from) { const d = S.drafts.prod; if (!d || !d.name) S.drafts.prod = Object.assign(emptyProd(), { from }); else d.from = from; nav.go('pr.name'); }
+const prodDraft = () => S.drafts.prod || (S.drafts.prod = emptyProd());
+const unitWord = (base, n) => base === 'PCS' ? (n === 1 ? 'piece' : 'pieces') : (n === 1 ? 'packet' : 'packets');
+function packLevels(d) {
+  const box = parseInt(d.box, 10), mid = parseInt(d.midN, 10), u = unitWord(d.base, 2);
+  if (!(box > 1)) fail('Enter how many ' + u + ' are in 1 BOX.');
+  const levels = [{ u: 'BOX', n: box }];
+  if (d.mid) { if (!(mid > 1 && mid < box)) fail('1 ' + d.mid + ' must hold more than 1 and fewer ' + u + ' than a BOX (' + box + ').'); levels.push({ u: d.mid, n: mid }); }
+  return levels;
+}
+function addProduct(d) {
+  const name = (d.name || '').trim(); if (name.length < 2) fail('Enter the product name.');
+  if (S.products.some(p => p.name.toLowerCase() === name.toLowerCase())) fail('A product called ' + name + ' already exists.');
+  const levels = packLevels(d), mrp = parseRs(d.mrp), buy = parseRs(d.buy), sell = parseRs(d.sell), retail = (d.retail || '') === '' ? mrp : parseRs(d.retail);
+  if (!(mrp > 0)) fail('Enter the printed MRP.');
+  if (!(buy > 0)) fail('Enter the buying price.');
+  if (!(sell > 0)) fail('Enter the Sell-to-Shop price.');
+  if (!(retail > 0)) fail('Enter the retail counter price.');
+  if (sell > mrp || retail > mrp) fail('A selling price cannot be more than the MRP (' + rs(mrp) + ').');
+  const pr = { id: nid('p'), name, mrp, base: d.base, levels, buy, sell, retail, nick: name.toLowerCase(), active: true };
+  S.products.push(pr); S.godown[pr.id] = 0; S.retail[pr.id] = 0;
+  log('STOCK', 'Product added: ' + name + ' — buy ' + rs(buy) + ', sell ' + rs(sell) + ', MRP ' + rs(mrp) + ' per ' + unitWord(pr.base, 1) + ' (stock starts at zero)');
+  return pr;
+}
+const PR_STEP = n => ({ label: 'NEW PRODUCT', n, of: 3 });
+route('pr.name', (p, E) => {
+  const d = prodDraft();
+  const btn = Btn('CONTINUE', { kind: 'primary', disabled: d.name.trim().length < 2, onClick: () => { if (S.products.some(x => x.name.toLowerCase() === d.name.trim().toLowerCase())) fail('A product called ' + d.name.trim() + ' already exists.'); nav.go('pr.pack'); } });
+  const body = oneQuestion({ q: 'Product name', value: d.name, placeholder: 'e.g. Simply Salted', maxlength: 40, hint: 'The name shops and staff will search for.', onInput: v => { d.name = v; btn.disabled = v.trim().length < 2; } });
+  return { title: 'Add product', step: PR_STEP(1), body, foot: [btn], center: true };
+});
+route('pr.pack', (p, E) => {
+  const d = prodDraft(), u = unitWord(d.base, 2);
+  const info = h('div', { class: 'aside' });
+  const upd = () => { const box = parseInt(d.box, 10), mid = parseInt(d.midN, 10);
+    info.textContent = !(box > 1) ? 'Stock is always kept as one number of ' + u + '. BOX' + (d.mid ? ' and ' + d.mid : '') + ' are just ways of counting it.'
+      : '1 BOX = ' + box + ' ' + u + (d.mid && mid > 1 ? (box % mid === 0 ? ' = ' + box / mid + ' ' + d.mid : '') + ' · 1 ' + d.mid + ' = ' + mid + ' ' + u : ''); };
+  const num = (key, label, ph) => Field(label, h('input', { class: 'input', id: 'pk-' + key, inputmode: 'numeric', maxlength: 5, placeholder: ph, value: d[key], onInput: ev => { ev.target.value = ev.target.value.replace(/\D/g, ''); d[key] = ev.target.value; upd(); } }));
+  const body = h('div', null,
+    h('div', { class: 'oq' }, h('div', { class: 'q' }, 'How is it packed?')),
+    h('div', { class: 'lbl' }, 'Smallest unit — stock is counted in this'), Seg([['PACKET', 'PACKET'], ['PCS', 'PIECE (PCS)']], d.base, v => { d.base = v; nav.refresh(); }),
+    num('box', 'How many ' + u + ' in 1 BOX?', 'e.g. 192'),
+    h('div', { class: 'lbl' }, 'Middle unit'), Seg([['LADI', 'LADI'], ['JAR', 'JAR'], ['', 'NONE']], d.mid, v => { d.mid = v; nav.refresh(); }),
+    d.mid ? num('midN', 'How many ' + u + ' in 1 ' + d.mid + '?', 'e.g. 12') : null,
+    h('div', { class: 'mt24' }, info));
+  upd();
+  return { title: 'Add product', sub: d.name, step: PR_STEP(2), body, foot: [Btn('CONTINUE', { kind: 'primary', onClick: () => { packLevels(d); nav.go('pr.price'); } })],
+    help: 'Example: Simply Salted comes 192 packets to a BOX, and 12 packets to a LADI. Orders can then mix BOX, LADI and PACKET freely.' };
+});
+route('pr.price', (p, E) => {
+  const d = prodDraft(), levels = packLevels(d), unit = unitWord(d.base, 1);
+  const sum = h('div');
+  const upd = () => {
+    const mrp = parseRs(d.mrp), buy = parseRs(d.buy), sell = parseRs(d.sell), retail = (d.retail || '') === '' ? mrp : parseRs(d.retail), rows = [];
+    levels.forEach(l => { if (buy > 0 || sell > 0) rows.push(KV('1 ' + l.u + ' (' + l.n + ')', [buy > 0 ? 'buy ' + rs(buy * l.n) : null, sell > 0 ? 'sell ' + rs(sell * l.n) : null].filter(Boolean).join(' · '))); });
+    if (buy > 0 && sell > 0) rows.push(KV('Margin per BOX', h('span', { class: sell < buy ? 'red' : '' }, rs((sell - buy) * levels[0].n, { plus: true }) + ' (' + Math.round((sell - buy) * 1000 / buy) / 10 + '%)'), 'tot'));
+    const warn = mrp > 0 && (sell > mrp || retail > mrp) ? 'A selling price cannot be more than the MRP.' : buy > 0 && sell > 0 && sell < buy ? 'The Sell-to-Shop price is below the buying price — every sale would lose money.' : '';
+    setKids(sum, rows.length ? h('div', { class: 'pane' }, h('div', { class: 'pad', style: { paddingBottom: 0 } }, rows)) : null, warn ? h('div', { class: 'errtxt mt8' }, warn) : null);
+  };
+  const money = (key, label, ph) => Field(label, h('input', { class: 'input', id: 'pp-' + key, inputmode: 'decimal', maxlength: 9, placeholder: ph, value: d[key], onInput: ev => { ev.target.value = ev.target.value.replace(/[^\d.]/g, ''); d[key] = ev.target.value; upd(); } }));
+  const body = h('div', null, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Prices for one ' + unit), h('div', { class: 'hint' }, 'Enter each price for a single ' + unit + '. BOX' + (levels[1] ? ' and ' + levels[1].u : '') + ' prices are worked out below.')),
+    money('mrp', 'Printed MRP (₹)', 'e.g. 5'), money('buy', 'Buying price — what the agency pays (₹)', 'e.g. 4'), money('sell', 'Sell-to-Shop price (₹)', 'e.g. 4.50'), money('retail', 'Retail counter price (₹)', 'Blank = same as MRP'),
+    h('div', { class: 'mt24' }, sum));
+  upd();
+  return { title: 'Add product', sub: d.name, step: PR_STEP(3), body, help: ['MRP is the price printed on the packet. Buying price is what the agency pays the supplier. Sell-to-Shop is what shops pay the agency. Retail counter is for single packets sold at the godown.', 'Prices can be changed later in Settings → Stock. Orders already taken keep their price.'],
+    foot: [Btn('ADD PRODUCT', { kind: 'primary', onClick: () => { const pr = addProduct(d), from = d.from; delete S.drafts.prod; if (from) nav.popTo(from); else nav.reset([['more'], ['st.list']]); nav.go('st.product', { pid: pr.id }); toast(pr.name + ' added — stock is zero'); } })] };
 });
 route('set.reasons', (p, E) => ({ title: 'Movement reasons', body: Pane(S.settings.reasons.map(r => Row({ title: r }))), foot: [Btn('ADD REASON', { kind: 'primary', onClick: () => editSheet({ title: 'Add reason', save: 'ADD', fields: [{ key: 'r', label: 'Reason' }], onSave: v => { const r = v.r.trim(); if (r.length < 3) fail('Enter a reason.'); S.settings.reasons.push(r); } }) })] }));
 route('set.pickup', (p, E) => ({ title: 'Pickup settings', body: h('div', { class: 'gap' },
@@ -3191,25 +3331,25 @@ const fxOrder = (pid, lines) => createOrder(pid, lines.map(l => mkLine(l[0], l[1
 function fxTrip(orderIds, veh, drv, hlp) { const t = prepareTrip(orderIds); setTripPart(t.id, 'vehicleId', veh || 'v2'); setTripPart(t.id, 'driverId', drv || 's3'); if (hlp !== null) setTripPart(t.id, 'helperId', hlp || 's4'); setTripPart(t.id, 'cameraId', 'CN-02'); t.helperDone = true; t.counted = tripNeeds(t); confirmLoading(t.id); return t; }
 const waitingOf = pid => S.orders.find(o => o.partyId === pid && o.status === 'WAITING');
 const SCENARIOS = [
-  { code: 'A', title: 'Take a normal order', text: 'Find Ramesh → add Simply Salted → quantities → review → confirm.', run() { resetDemo(); nav.reset([['today'], ['cart.cust', { mode: 'order' }]], 'none'); } },
-  { code: 'B', title: 'Prepare a pickup', text: 'Three waiting orders → one pickup → driver & helper → verify load → camera → confirm.', run() { resetDemo(); const o = fxOrder('c1', [['p1', { BOX: 2, LADI: 3, PACKET: 5 }]]); S.drafts.pk = { orderIds: [o.id, waitingOf('c2').id, waitingOf('c3').id] }; nav.reset([['today'], ['pk.orders']], 'none'); } },
-  { code: 'C', title: 'Full delivery', text: 'Ramesh’s ₹1,912 order is on the road → confirm delivery → challan → collect.', run() { resetDemo(); const o = fxOrder('c1', [['p1', { BOX: 2, LADI: 3, PACKET: 5 }]]); const t = fxTrip([o.id]); startTrip(t.id); nav.reset([['today'], ['pk.road', { tid: t.id }], ['dl.detail', { oid: o.id }]], 'none'); } },
-  { code: 'D', title: 'Partial payment', text: '₹1,912 bill → ₹1,500 cash → ₹412 due → Khata updated.', run() { resetDemo(); const o = fxOrder('c1', [['p1', { BOX: 2, LADI: 3, PACKET: 5 }]]); const t = fxTrip([o.id]); startTrip(t.id); const r = deliver(o.id, Object.assign({}, o.alloc), null, 'fx-d'); nav.reset([['today'], ['pk.road', { tid: t.id }], ['col.home', { sid: r.sale.id }]], 'none'); } },
-  { code: 'E', title: 'Partial delivery & side sale', text: '10 BOX loaded → Ramesh accepts 8 → sell the other 2 to someone → pickup is empty.', run() { resetDemo(); const o = fxOrder('c1', [['p1', { BOX: 10 }]]); const t = fxTrip([o.id]); startTrip(t.id); nav.reset([['today'], ['pk.road', { tid: t.id }], ['dl.detail', { oid: o.id }]], 'none'); } },
+  { code: 'A', title: 'Take a normal order', text: 'Find Ramesh → add Simply Salted → quantities → review → confirm.', run() { loadExample(); nav.reset([['today'], ['cart.cust', { mode: 'order' }]], 'none'); } },
+  { code: 'B', title: 'Prepare a pickup', text: 'Three waiting orders → one pickup → driver & helper → verify load → camera → confirm.', run() { loadExample(); const o = fxOrder('c1', [['p1', { BOX: 2, LADI: 3, PACKET: 5 }]]); S.drafts.pk = { orderIds: [o.id, waitingOf('c2').id, waitingOf('c3').id] }; nav.reset([['today'], ['pk.orders']], 'none'); } },
+  { code: 'C', title: 'Full delivery', text: 'Ramesh’s ₹1,912 order is on the road → confirm delivery → challan → collect.', run() { loadExample(); const o = fxOrder('c1', [['p1', { BOX: 2, LADI: 3, PACKET: 5 }]]); const t = fxTrip([o.id]); startTrip(t.id); nav.reset([['today'], ['pk.road', { tid: t.id }], ['dl.detail', { oid: o.id }]], 'none'); } },
+  { code: 'D', title: 'Partial payment', text: '₹1,912 bill → ₹1,500 cash → ₹412 due → Khata updated.', run() { loadExample(); const o = fxOrder('c1', [['p1', { BOX: 2, LADI: 3, PACKET: 5 }]]); const t = fxTrip([o.id]); startTrip(t.id); const r = deliver(o.id, Object.assign({}, o.alloc), null, 'fx-d'); nav.reset([['today'], ['pk.road', { tid: t.id }], ['col.home', { sid: r.sale.id }]], 'none'); } },
+  { code: 'E', title: 'Partial delivery & side sale', text: '10 BOX loaded → Ramesh accepts 8 → sell the other 2 to someone → pickup is empty.', run() { loadExample(); const o = fxOrder('c1', [['p1', { BOX: 10 }]]); const t = fxTrip([o.id]); startTrip(t.id); nav.reset([['today'], ['pk.road', { tid: t.id }], ['dl.detail', { oid: o.id }]], 'none'); } },
   { code: 'F', title: 'Pickup return', text: 'Back from the road with leftover goods and cash → count → hand over → match orders → close.', run() {
-      resetDemo(); const a = fxOrder('c1', [['p1', { BOX: 10 }]]), b = fxOrder('c3', [['p2', { BOX: 3 }]]); const t = fxTrip([a.id, b.id]); startTrip(t.id);
+      loadExample(); const a = fxOrder('c1', [['p1', { BOX: 10 }]]), b = fxOrder('c3', [['p2', { BOX: 3 }]]); const t = fxTrip([a.id, b.id]); startTrip(t.id);
       const ra = deliver(a.id, { p1: 8 * 192 }, 'NOT_NEEDED', 'fx-f1'); recordPayment({ partyId: 'c1', saleId: ra.sale.id, method: 'CASH', amount: 500000, collectorId: t.driverId, tripId: t.id, details: {}, token: 'fx-f2' });
       const rb = deliver(b.id, Object.assign({}, b.alloc), null, 'fx-f3'); recordPayment({ partyId: 'c3', saleId: rb.sale.id, method: 'UPI', amount: saleTotal(rb.sale), collectorId: null, tripId: t.id, details: { ref: 'UPI-DEMO-4471' }, token: 'fx-f4' });
       arriveBack(t.id); nav.reset([['today'], ['tr.goods', { tid: t.id }]], 'none'); } },
   { code: 'G', title: 'Agent Khata', text: 'Rahul sold ₹10,000 → submits ₹4,000 + ₹3,500 + ₹2,500 → ₹100 commission earned → paid later.', run() {
-      resetDemo(); S.sales = S.sales.filter(s => s.partyId !== 's7'); S.payments = S.payments.filter(y => y.partyId !== 's7'); S.khata = S.khata.filter(k => k.pid !== 's7');
+      loadExample(); S.sales = S.sales.filter(s => s.partyId !== 's7'); S.payments = S.payments.filter(y => y.partyId !== 's7'); S.khata = S.khata.filter(k => k.pid !== 's7');
       createSale({ source: 'DIRECT', partyId: 's7', lines: [{ pid: 'p5', base: 1000, rate: 1000, units: { BOX: 10 } }] }); nav.reset([['khata'], ['kh.person', { pid: 's7' }]], 'none'); } },
-  { code: 'H', title: 'Godown direct sale', text: 'A customer walks in → products → quantities → total → self pickup → confirm → payment.', run() { resetDemo(); nav.reset([['more'], ['cart.cust', { mode: 'godown' }]], 'none'); } },
-  { code: 'I', title: 'Retail packet sale', text: 'One ₹5 packet sold from the approved retail counter stock.', run() { resetDemo(); nav.reset([['more'], ['rl.prod']], 'none'); } },
-  { code: 'J', title: 'Purchase stock receipt', text: 'Supplier invoice → review → count what arrived → confirm → stock increases.', run() { resetDemo(); nav.reset([['more'], ['st.receive']], 'none'); } },
-  { code: 'K', title: 'Staff earnings', text: 'Mark attendance → wages earned → advance → off-duty unloading ₹1,600 → pay.', run() { resetDemo(); nav.reset([['more'], ['sf.list'], ['sf.att', {}]], 'none'); } },
+  { code: 'H', title: 'Godown direct sale', text: 'A customer walks in → products → quantities → total → self pickup → confirm → payment.', run() { loadExample(); nav.reset([['more'], ['cart.cust', { mode: 'godown' }]], 'none'); } },
+  { code: 'I', title: 'Retail packet sale', text: 'One ₹5 packet sold from the approved retail counter stock.', run() { loadExample(); nav.reset([['more'], ['rl.prod']], 'none'); } },
+  { code: 'J', title: 'Purchase stock receipt', text: 'Supplier invoice → review → count what arrived → confirm → stock increases.', run() { loadExample(); nav.reset([['more'], ['st.receive']], 'none'); } },
+  { code: 'K', title: 'Staff earnings', text: 'Mark attendance → wages earned → advance → off-duty unloading ₹1,600 → pay.', run() { loadExample(); nav.reset([['more'], ['sf.list'], ['sf.att', {}]], 'none'); } },
   { code: 'L', title: 'Day close', text: 'Cash received, an expense and a bank transfer → count ₹10,800 vs ₹11,000 → explain → close.', run() {
-      resetDemo(); const r = directSale({ kind: 'DIRECT', partyId: 'c4', lines: [{ pid: 'p5', base: 800, rate: 1000, units: { BOX: 8 } }], mode: 'SELF', token: 'fx-l1' });
+      loadExample(); const r = directSale({ kind: 'DIRECT', partyId: 'c4', lines: [{ pid: 'p5', base: 800, rate: 1000, units: { BOX: 8 } }], mode: 'SELF', token: 'fx-l1' });
       recordPayment({ partyId: 'c4', saleId: r.sale.id, method: 'CASH', amount: 800000, collectorId: null, token: 'fx-l2' });
       const x = addExpense({ cat: 'Diesel', amount: 200000, note: 'RJ35-4821', token: 'fx-l3' }); approveExpense(x.id); payExpense(x.id, 'CASH', 'fx-l4'); transferMoney('CASH', 500000, 'fx-l5');
       nav.reset([['more'], ['cash.home'], ['cash.count']], 'none'); } },
