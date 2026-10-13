@@ -519,16 +519,16 @@ const FIX = {
   /* One canonical base unit per product (PACKET or PCS). Prices are integer paise PER BASE UNIT.
      sell = Sell-to-Shop price (what the agency charges shops) — NOT the same as the printed MRP. */
   products: [
-    { id: 'p1', name: 'Simply Salted', mrp: 500, base: 'PACKET', levels: [{ u: 'BOX', n: 192 }, { u: 'LADI', n: 12 }], sell: 450, retail: 500, nick: 'salt salted plain wafers', open: 3840 },
-    { id: 'p2', name: 'Masala Masti', mrp: 500, base: 'PACKET', levels: [{ u: 'BOX', n: 192 }, { u: 'LADI', n: 12 }], sell: 450, retail: 500, nick: 'masala masti spicy wafers', open: 2304 },
-    { id: 'p3', name: 'Tomato Twist', mrp: 500, base: 'PACKET', levels: [{ u: 'BOX', n: 192 }, { u: 'LADI', n: 12 }], sell: 450, retail: 500, nick: 'tomato twist wafers', open: 1536 },
-    { id: 'p4', name: 'Chaat Chaska', mrp: 1000, base: 'PACKET', levels: [{ u: 'BOX', n: 100 }, { u: 'LADI', n: 10 }], sell: 900, retail: 1000, nick: 'chaat chaska wafers', open: 1500 },
-    { id: 'p5', name: 'Crunchy Munch', mrp: 1200, base: 'PACKET', levels: [{ u: 'BOX', n: 100 }, { u: 'LADI', n: 10 }], sell: 1000, retail: 1200, nick: 'munch crunchy carton', open: 2000 },
-    { id: 'p6', name: 'Murmura Mix', mrp: 500, base: 'PACKET', levels: [{ u: 'BOX', n: 120 }], sell: 400, retail: 500, nick: 'murmura puffed rice mix', open: 1200 },
-    { id: 'p7', name: 'Aloo Bhujia', mrp: 1000, base: 'PACKET', levels: [{ u: 'BOX', n: 80 }, { u: 'LADI', n: 10 }], sell: 900, retail: 1000, nick: 'aloo bhujia namkeen', open: 640 },
-    { id: 'p8', name: 'Ratlami Sev', mrp: 1000, base: 'PACKET', levels: [{ u: 'BOX', n: 80 }, { u: 'LADI', n: 10 }], sell: 900, retail: 1000, nick: 'ratlami sev namkeen', open: 150 },
-    { id: 'p9', name: 'Mint Candy Jar', mrp: 100, base: 'PCS', levels: [{ u: 'BOX', n: 240 }, { u: 'JAR', n: 40 }], sell: 85, retail: 100, nick: 'mint candy jar', open: 1200 },
-    { id: 'p10', name: 'Fruity Jelly Jar', mrp: 200, base: 'PCS', levels: [{ u: 'BOX', n: 120 }, { u: 'JAR', n: 30 }], sell: 170, retail: 200, nick: 'fruity jelly jar', open: 0 },
+    { id: 'p1', buy: 400, name: 'Simply Salted', mrp: 500, base: 'PACKET', levels: [{ u: 'BOX', n: 192 }, { u: 'LADI', n: 12 }], sell: 450, retail: 500, nick: 'salt salted plain wafers', open: 3840 },
+    { id: 'p2', buy: 400, name: 'Masala Masti', mrp: 500, base: 'PACKET', levels: [{ u: 'BOX', n: 192 }, { u: 'LADI', n: 12 }], sell: 450, retail: 500, nick: 'masala masti spicy wafers', open: 2304 },
+    { id: 'p3', buy: 400, name: 'Tomato Twist', mrp: 500, base: 'PACKET', levels: [{ u: 'BOX', n: 192 }, { u: 'LADI', n: 12 }], sell: 450, retail: 500, nick: 'tomato twist wafers', open: 1536 },
+    { id: 'p4', buy: 800, name: 'Chaat Chaska', mrp: 1000, base: 'PACKET', levels: [{ u: 'BOX', n: 100 }, { u: 'LADI', n: 10 }], sell: 900, retail: 1000, nick: 'chaat chaska wafers', open: 1500 },
+    { id: 'p5', buy: 900, name: 'Crunchy Munch', mrp: 1200, base: 'PACKET', levels: [{ u: 'BOX', n: 100 }, { u: 'LADI', n: 10 }], sell: 1000, retail: 1200, nick: 'munch crunchy carton', open: 2000 },
+    { id: 'p6', buy: 350, name: 'Murmura Mix', mrp: 500, base: 'PACKET', levels: [{ u: 'BOX', n: 120 }], sell: 400, retail: 500, nick: 'murmura puffed rice mix', open: 1200 },
+    { id: 'p7', buy: 800, name: 'Aloo Bhujia', mrp: 1000, base: 'PACKET', levels: [{ u: 'BOX', n: 80 }, { u: 'LADI', n: 10 }], sell: 900, retail: 1000, nick: 'aloo bhujia namkeen', open: 640 },
+    { id: 'p8', buy: 800, name: 'Ratlami Sev', mrp: 1000, base: 'PACKET', levels: [{ u: 'BOX', n: 80 }, { u: 'LADI', n: 10 }], sell: 900, retail: 1000, nick: 'ratlami sev namkeen', open: 150 },
+    { id: 'p9', buy: 75, name: 'Mint Candy Jar', mrp: 100, base: 'PCS', levels: [{ u: 'BOX', n: 240 }, { u: 'JAR', n: 40 }], sell: 85, retail: 100, nick: 'mint candy jar', open: 1200 },
+    { id: 'p10', buy: 150, name: 'Fruity Jelly Jar', mrp: 200, base: 'PCS', levels: [{ u: 'BOX', n: 120 }, { u: 'JAR', n: 30 }], sell: 170, retail: 200, nick: 'fruity jelly jar', open: 0 },
   ],
   areas: ['Main Market', 'Station Road', 'Gandhi Nagar', 'Industrial Area', 'Old City', 'Sadar Bazar'],
   vehicles: [
@@ -3198,7 +3198,11 @@ route('more', (p, E) => {
 /* ===================== SETTINGS ===================== */
 route('set.home', (p, E) => {
   const big = (t, r) => h('button', { class: 'row', type: 'button', style: { color: 'var(--ink)', borderBottom: '1px solid var(--line)', minHeight: '76px', padding: '10px 4px' }, onClick: act(() => nav.go(r)) }, h('div', { class: 'l' }, h('div', { style: { fontSize: '26px', fontWeight: 500, letterSpacing: '-.02em' } }, t)), ic('next', 'chev'));
-  return { title: 'Settings', body: h('div', null, big('STAFF', 'set.staff'), big('AREA', 'set.area'), big('STOCK', 'set.stock'), big('PICKUP', 'set.pickup'), Sec('Additional'), Pane([Row({ title: 'Payments, expenses & agency', sub: 'Payment methods · expense types · agency details · print', onClick: () => nav.go('set.more') })])) };
+  return { title: 'Settings', body: h('div', null, big('STAFF', 'set.staff'), big('AREA', 'set.area'), big('STOCK', 'set.stock'), big('PICKUP', 'set.pickup'), Sec('Additional'), Pane([Row({ title: 'Payments, expenses & agency', sub: 'Payment methods · expense types · agency details · print', onClick: () => nav.go('set.more') })]),
+    Sec('Sample data for testing'), Pane([
+      Row({ title: 'Load sample data', sub: '10 products with stock, 8 customers, 9 staff, 3 pickup vehicles, orders waiting, a pickup on the road and some dues', onClick: () => confirmSheet({ title: 'Load sample data?', sub: 'Everything entered so far is replaced by the fictional sample agency. RESET DEMO in More makes the app empty again.', yes: 'LOAD SAMPLE DATA', no: 'CANCEL', onYes: () => { loadExample(); nav.reset([['today']], 'none'); toast('Sample data loaded'); } }) }),
+      Row({ title: 'Example scenarios', sub: 'Jump straight to one situation: delivery, partial payment, pickup return, Agent Khata, day close…', onClick: () => nav.go('scen') })]),
+    h('div', { class: 'aside mt16' }, 'The app normally starts empty. Sample data is fictional and is never mixed with what you enter — loading it replaces everything.')) };
 });
 route('set.staff', (p, E) => ({ title: 'Staff settings', body: h('div', { class: 'gap' }, Pane(S.staff.map(s => Row({ title: s.name, sub: posLabel[s.position] + (s.driver ? ' · can drive' : '') + (s.areas.length ? ' · ' + s.areas.join(', ') : '') + (!s.active ? ' · not active' : ''), cls: s.active ? '' : 'off', onClick: () => nav.go('set.staff.edit', { sid: s.id }) }))),
   h('div', { class: 'aside' }, h('b', null, 'Photos & ID documents: '), 'staff photo and Aadhaar upload (Cloudinary) are future integrations. This demo stores no photos and no personal documents.')),
