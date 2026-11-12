@@ -401,12 +401,48 @@ textarea.input{padding:12px 14px;min-height:96px}
 @media print{
   html,body{height:auto!important;overflow:visible!important;background:#fff!important}
   body{display:block!important}
-  #app,.toast,.sheetbg{display:none!important}
+  #app,.toast,.sheetbg,.fbring,.fbbar,.fbhl{display:none!important}
   #printRoot{display:block!important}
   #printRoot .paper{border:0;margin:0}
   #printRoot .paper.a4{max-width:none}
 }
 
+/* ---------- tester feedback: hold ring, pick bar, highlight ---------- */
+.fbring{position:fixed;z-index:95;width:84px;height:84px;margin:-42px 0 0 -42px;border-radius:50%;display:none;place-items:center;pointer-events:none;background:conic-gradient(var(--green) var(--p,0deg),rgba(17,17,16,.14) 0);box-shadow:0 6px 24px -8px rgba(0,0,0,.4)}
+.fbring i{position:absolute;inset:7px;border-radius:50%;background:var(--bg)}
+.fbring span{position:relative;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+.fbbar{position:fixed;z-index:96;top:0;left:50%;transform:translateX(-50%);width:min(430px,100%);background:var(--char);color:#fff;padding:calc(var(--s3) + env(safe-area-inset-top)) var(--s4) var(--s3);display:flex;flex-direction:column;gap:var(--s3);box-shadow:0 12px 30px -12px rgba(0,0,0,.5)}
+.fbbar .fbt b{display:block;font-size:16px}
+.fbbar .fbt span{display:block;font-size:13px;opacity:.75;margin-top:2px}
+.fbbar .fbbtns{display:flex;gap:var(--s3)}
+.fbbar.bottom{top:auto;bottom:0;padding:var(--s3) var(--s4) calc(var(--s3) + env(safe-area-inset-bottom));box-shadow:0 -12px 30px -12px rgba(0,0,0,.5)}
+.fbbar .btn.ghost{color:#fff;border-color:rgba(255,255,255,.4)}
+.fbbar .btn.dark{background:#fff;color:var(--ink)}
+.fbhl{position:fixed;z-index:60;border:2px solid var(--green);background:rgba(0,118,63,.10);pointer-events:none;border-radius:3px;display:none}
+.fbhl-on .sheetbg{background:rgba(17,17,16,.10)}
+#app{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+#app input,#app textarea,#app select{-webkit-user-select:text;user-select:text}
+/* ---------- staff document photos + full-screen viewer ---------- */
+.doctiles{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3)}
+.doctile{display:flex;flex-direction:column;gap:6px;text-align:left;color:var(--ink)}
+.dthumb{aspect-ratio:4/3;width:100%;border:1px dashed var(--line2);background:var(--paper) center/cover no-repeat;border-radius:var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--mute);font-size:11px;font-weight:600;letter-spacing:.1em;text-align:center;padding:6px}
+.dthumb svg{width:22px;height:22px}
+.dthumb.has{border:1px solid var(--ink)}
+.doctile .dl{font-size:13px;color:var(--ink2);line-height:1.25}
+.viewer{position:absolute;inset:0;z-index:70;background:#000;color:#fff;display:flex;flex-direction:column}
+.vtop{display:flex;align-items:center;gap:var(--s2);padding:calc(var(--s2) + env(safe-area-inset-top)) var(--s3) var(--s2) var(--s4)}
+.vt{flex:1;min-width:0;font-weight:600;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vstage{flex:1;min-height:0;overflow:hidden;display:grid;place-items:center;touch-action:none;cursor:grab}
+.vimg{max-width:100%;max-height:100%;object-fit:contain;transform-origin:center;will-change:transform;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.vbar{padding:var(--s3) var(--s4) calc(var(--s3) + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:var(--s3);background:#111}
+.vzoom{display:flex;align-items:center;justify-content:center;gap:var(--s3)}
+.vz{min-width:52px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums}
+.vbtn{min-width:48px;min-height:48px;padding:0 14px;border:1px solid rgba(255,255,255,.4);border-radius:var(--r);color:#fff;font-weight:600;font-size:15px;letter-spacing:.06em;display:grid;place-items:center}
+.vbtn svg{width:22px;height:22px}
+.vbtn.wide{flex:1}
+.vbtn.danger{border-color:#ff8a80;color:#ff8a80}
+.vact{display:flex;gap:var(--s3)}
+.vhint{text-align:center;font-size:12px;color:rgba(255,255,255,.6)}
 </style>
 </head>
 <body>
@@ -486,6 +522,13 @@ function parseRs(str) {                                    // "1,500" "1500.5" "
   if (!/^\d+(\.\d{1,2})?$/.test(s)) return null;
   const parts = s.split('.');
   return parseInt(parts[0], 10) * 100 + parseInt(((parts[1] || '') + '00').slice(0, 2), 10);
+}
+/* Phone numbers pasted from Contacts (iPhone / Samsung) look like "+91 98765 43210", "098765 43210", "+91-98765-43210" and can hide invisible
+   direction marks or Devanagari digits. Keep the 10 national digits, drop country code / trunk 0. */
+function cleanPhone(raw) {
+  let d = String(raw == null ? '' : raw).replace(/[\u0966-\u096F]/g, c => String(c.charCodeAt(0) - 0x0966)).replace(/[\u0660-\u0669]/g, c => String(c.charCodeAt(0) - 0x0660)).replace(/\D/g, '');
+  while (d.length > 10) { if (d.startsWith('00')) d = d.slice(2); else if (d.startsWith('0')) d = d.slice(1); else if (d.startsWith('91') && d.length >= 12) d = d.slice(2); else break; }
+  return d.slice(0, 10);
 }
 /* a per-unit BUYING price can have up to 4 decimals (Balaji's real cost is e.g. ₹4.1861 a packet). Result is paise, possibly fractional. */
 function parseRate(str) {
@@ -728,7 +771,7 @@ function addHold(pid, base, kind, source, note) {
 
 /* ---- Customers ---- */
 function addCustomer(d) {
-  const name = (d.name || '').trim(), shop = (d.shop || '').trim(), phone = (d.phone || '').replace(/\D/g, '');
+  const name = (d.name || '').trim(), shop = (d.shop || '').trim(), phone = cleanPhone(d.phone);
   if (name.length < 2) fail('Please enter the customer name.');
   if (name.length > 40 || shop.length > 50) fail('Name is too long.');
   if (phone.length !== 10) fail('Phone number must be 10 digits.');
@@ -744,7 +787,7 @@ function addCustomer(d) {
   S.customers.push(c); log('CUSTOMER', 'New customer added: ' + (shop || name)); return c;
 }
 function addOccasional(name, phone) {
-  name = (name || '').trim(); phone = (phone || '').replace(/\D/g, '');
+  name = (name || '').trim(); phone = cleanPhone(phone);
   if (name.length < 2) fail('Please enter the buyer name.');
   if (phone && phone.length !== 10) fail('Phone must be 10 digits (or leave it blank).');
   const c = { id: nid('c'), name, shop: '', phone, type: 'OCCASIONAL', createdAt: new Date(), addr: { street: '', landmark: '', area: '', city: '', lat: null, lng: null, src: null } };
@@ -1334,10 +1377,10 @@ function changePosition(sid, pos, reason) {
 }
 function addStaff(d) {
   const name = (d.name || '').trim(); if (name.length < 2) fail('Enter the staff name.');
-  const phone = String(d.phone || '').replace(/\D/g, ''); if (phone && phone.length !== 10) fail('Phone number must be 10 digits (or leave it blank).');
+  const phone = cleanPhone(d.phone); if (phone && phone.length !== 10) fail('Phone number must be 10 digits (or leave it blank).');
   const joined = d.joined || ymd(new Date()); if (!/^\d{4}-\d{2}-\d{2}$/.test(joined)) fail('Enter a valid joining date.'); if (joined > ymd(new Date())) fail('The joining date cannot be in the future.');
   const email = cleanEmail(d.email); if (email && !validEmail(email)) fail('That email address does not look right (example: name@gmail.com).');
-  const s = { id: nid('s'), name, position: d.position || 'HELPER', driver: !!d.driver, areas: [], active: true, att: {}, duty: null, joined, phone, email, home: '', aadhaar: '', family: [],
+  const s = { id: nid('s'), name, position: d.position || 'HELPER', driver: !!d.driver, areas: [], active: true, att: {}, duty: null, joined, phones: phone ? [{ label: 'Mobile', num: phone }] : [], phone, email, home: '', aadhaar: '', pan: '', dlNo: '', docs: {}, family: [],
     model: d.position === 'AGENT' ? { salary: { on: false, method: 'NONE', rate: 0 }, commission: { on: true, bp: 100 } } : { salary: { on: true, method: 'DAILY', rate: 50000 }, commission: { on: false, bp: 0 } } };
   s.hist = [{ at: parseYmd(joined), note: 'Joined — ' + posLabel[s.position], model: JSON.parse(JSON.stringify(s.model)), position: s.position }];
   S.staff.push(s); log('STAFF', name + ' added as ' + posLabel[s.position]); return s;
@@ -1542,8 +1585,8 @@ function seedDemo() {
   S.events.length = 0; S.approvals.length = 0;
   log('SYSTEM', 'Fictional demo data loaded');
 }
-function resetDemo() { S = newState(false); }                     // the owner's clean start: nothing at all
-function loadExample() { S = newState(true); seedDemo(); }        // fictional example data — only the Scenarios use it
+function resetDemo() { S = newState(false); fileClear(); }                     // the owner's clean start: nothing at all
+function loadExample() { S = newState(true); seedDemo(); fileClear(); }        // fictional example data — only the Scenarios use it
 
 /* ---------- 50-ui.js ---------- */
 /* ---------------------------------------------------------------------
@@ -1742,6 +1785,7 @@ window.addEventListener('popstate', () => {
 document.addEventListener('keydown', ev => {                         // Enter on a one-question input = Continue
   if (ev.key === 'Enter' && ev.target.matches && ev.target.matches('input[data-enter]')) { const b = $('.screen:not(.leave) .foot .btn.primary:not(:disabled)'); if (b) { ev.preventDefault(); b.click(); } }
 });
+document.addEventListener('input', ev => { const el = ev.target; if (el && el.matches && el.matches('input[data-phone]')) { const c = cleanPhone(el.value); if (c !== el.value) el.value = c; } }, true);
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, ev => ev.preventDefault(), { passive: false }));   // iOS pinch-zoom (the viewport tag and touch-action stop double-tap zoom)
 document.addEventListener('dblclick', ev => { if (!(ev.target.matches && ev.target.matches('input,textarea,select'))) ev.preventDefault(); }, { passive: false });
 document.addEventListener('focusin', ev => {                         // keep the focused field visible above the on-screen keyboard
@@ -1750,7 +1794,7 @@ document.addEventListener('focusin', ev => {                         // keep the
 
 /* ---- one-question screen pattern (like PDF pages 3-5) ---- */
 function oneQuestion(o) {
-  const inp = h('input', { class: 'a', id: 'oq', type: o.type || 'text', inputmode: o.inputmode, placeholder: o.placeholder || '', value: o.value || '', maxlength: o.maxlength || 60, autocomplete: 'off', 'data-autofocus': '1', 'data-enter': '1', 'aria-label': o.q, onInput: () => o.onInput(inp.value) });
+  const inp = h('input', { class: 'a', id: 'oq', type: o.type || 'text', inputmode: o.inputmode, placeholder: o.placeholder || '', value: o.value || '', maxlength: o.maxlength || 60, autocomplete: 'off', 'data-phone': o.phone ? '1' : null, 'data-autofocus': '1', 'data-enter': '1', 'aria-label': o.q, onInput: () => o.onInput(inp.value) });
   return h('div', { class: 'oq' }, h('div', { class: 'q' }, o.q), inp, o.hint ? h('div', { class: 'hint' }, o.hint) : null, o.err ? h('div', { class: 'errtxt' }, o.err) : null);
 }
 /* dismissible "owner approval" checkpoint — a future permission boundary, simulated here (no login) */
@@ -1808,6 +1852,7 @@ function attention() {
   const collect = S.sales.filter(s => !s.cashAndCarry && !s.legacy && s.partyId && s.source !== 'DIRECT' && saleDue(s) > 0 && !s.dueMarked && (s.orderId || s.source === 'SIDE'));
   collect.forEach(s => out.push({ n: 1, text: 'Delivered — collect money', sub: partyName(s.partyId) + ' · ' + rs(saleDue(s)), tone: 'red', go: () => nav.go('col.home', { sid: s.id }) }));
   const pend = pendingPayments(); if (pend.length) out.push({ n: pend.length, text: pend.length === 1 ? 'Payment needs verification' : 'Payments need verification', sub: 'Not counted as money until checked', go: () => nav.go('cash.pend') });
+  const inc = S.staff.filter(profileIncomplete).length; if (inc) out.push({ n: inc, text: inc === 1 ? 'Staff profile incomplete' : 'Staff profiles incomplete', sub: 'Phone, email, Aadhaar, PAN, photos, family contact', go: () => nav.go('sf.list') });
   return out;
 }
 
@@ -2055,10 +2100,10 @@ route('cust.shop', (p, E) => {
   return { title: 'Add New Customer', step: { label: 'ADDING CUSTOMER', n: 2, of: 4 }, body, foot: [Btn('CONTINUE', { kind: 'primary', onClick: () => nav.go('cust.phone') })], center: true };
 });
 route('cust.phone', (p, E) => {
-  const d = custDraft(), digits = s => s.replace(/\D/g, '').slice(0, 10);
+  const d = custDraft(), digits = s => cleanPhone(s);
   const hint = h('div', { class: 'hint' }), btn = Btn('CONTINUE', { kind: 'primary', disabled: digits(d.phone).length !== 10, onClick: () => nav.go('cust.addr') });
   const upd = () => { const n = digits(d.phone).length; hint.textContent = n === 10 ? '✓ 10 digits' : n + ' of 10 digits'; btn.disabled = n !== 10; };
-  const inp = oneQuestion({ q: 'Phone number', value: d.phone, placeholder: '98XXXXXXXX', type: 'tel', inputmode: 'numeric', maxlength: 10, onInput: v => { d.phone = digits(v); const i = $('#oq'); if (i && i.value !== d.phone) i.value = d.phone; upd(); } });
+  const inp = oneQuestion({ q: 'Phone number', value: d.phone, placeholder: '98XXXXXXXX', type: 'tel', inputmode: 'numeric', maxlength: 24, phone: true, onInput: v => { d.phone = digits(v); const i = $('#oq'); if (i && i.value !== d.phone) i.value = d.phone; upd(); } });
   upd(); inp.append(hint);
   return { title: 'Add New Customer', step: { label: 'ADDING CUSTOMER', n: 3, of: 4 }, body: inp, foot: [btn], center: true };
 });
@@ -2340,7 +2385,7 @@ route('ss.buyer', (p, E) => {
   const v = E.st.v, btn = Btn('CONTINUE', { kind: 'primary', disabled: v.name.trim().length < 2, onClick: () => {
     if (forCart) { const c = addOccasional(v.name, v.phone); cartOf(forCart).partyId = c.id; nav.popTo('cart.cust'); nav.go('cart.prod', { mode: forCart }); } else { if (v.phone && v.phone.replace(/\D/g, '').length !== 10) fail('Phone must be 10 digits, or leave it blank.'); d.buyer = { name: v.name.trim(), phone: v.phone.replace(/\D/g, '') }; nav.go('ss.items'); } } });
   const body = h('div', { class: 'gap' }, oneQuestion({ q: 'Buyer name', value: v.name, placeholder: 'Name of the buyer', maxlength: 40, hint: 'Only the name is needed. No customer registration.', onInput: x => { v.name = x; btn.disabled = x.trim().length < 2; } }),
-    Field('Phone (optional)', h('input', { class: 'input', type: 'tel', inputmode: 'numeric', maxlength: 10, placeholder: 'Optional', value: v.phone, onInput: ev => { v.phone = ev.target.value.replace(/\D/g, ''); ev.target.value = v.phone; } })));
+    Field('Phone (optional)', h('input', { class: 'input', type: 'tel', inputmode: 'numeric', maxlength: 24, 'data-phone': '1', placeholder: 'Optional', value: v.phone, onInput: ev => { v.phone = cleanPhone(ev.target.value); ev.target.value = v.phone; } })));
   return { title: forCart ? 'Occasional buyer' : 'Sell remaining goods', step: forCart ? null : { label: 'SELLING FROM PICKUP', n: 1, of: 4 }, body, foot: [btn], center: true };
 });
 route('ss.items', (p, E) => {
@@ -3009,72 +3054,220 @@ const todayStr = () => ymd(new Date());
 const attChip = (s, d) => { const a = s.att[d || todayStr()]; return a ? Chip(a.status === 'PRESENT' ? 'PRESENT' : 'ABSENT', a.status === 'PRESENT' ? 'ok' : 'bad') : null; };
 route('sf.list', (p, E) => {
   const body = pickList(E, { placeholder: 'Search staff', empty: S.staff.length ? 'No staff found.' : 'No staff yet. Add them in More → Settings → Staff.', items: () => S.staff.filter(s => s.active), text: s => s.name + ' ' + posLabel[s.position],
-    render: s => Row({ title: s.name, sub: posLabel[s.position] + ' · ' + currentDuty(s), right: attChip(s) || h('span', { class: 'mute' }, '—'), onClick: () => nav.go('sf.person', { sid: s.id }) }) });
-  return { title: 'Staff', sub: 'Today ' + fmtD(new Date()), body, foot: [Btn('MARK ATTENDANCE', { kind: 'primary', onClick: () => nav.go('sf.att', {}) }), Btn('UNLOADING JOB', { kind: 'dark', onClick: () => nav.go('sf.unload') })] };
+    render: s => Row({ title: s.name, sub: posLabel[s.position] + ' · ' + currentDuty(s), chip: profileIncomplete(s) ? 'PROFILE INCOMPLETE' : null, tone: 'bad', right: attChip(s) || h('span', { class: 'mute' }, '—'), onClick: () => nav.go('sf.person', { sid: s.id }) }) });
+  const inc = S.staff.filter(profileIncomplete).length;
+  return { title: 'Staff', sub: 'Today ' + fmtD(new Date()), body: inc ? h('div', null, h('div', { class: 'aside bad', style: { marginBottom: '14px' } }, h('b', null, plural(inc, 'profile') + ' incomplete. '), 'Open a person to see what is missing.'), body) : body, foot: [Btn('MARK ATTENDANCE', { kind: 'primary', onClick: () => nav.go('sf.att', {}) }), Btn('UNLOADING JOB', { kind: 'dark', onClick: () => nav.go('sf.unload') })] };
 });
-/* ---- personal details: phone, home address, Aadhaar, family contacts (several allowed). Aadhaar is shown masked everywhere except the edit screen. ---- */
+/* ---- document photos (Aadhaar, PAN, driving licence): the image files live in IndexedDB (too big for localStorage); the saved state only remembers which photos exist ---- */
+const FILES = { db: null, urls: new Map(), ok: typeof indexedDB !== 'undefined' };
+function filesDb() {
+  return new Promise((res, rej) => {
+    if (FILES.db) return res(FILES.db); if (!FILES.ok) return rej(new Error('Photos cannot be saved in this browser.'));
+    let r; try { r = indexedDB.open('agencyPilotV2.files', 1); } catch (e) { return rej(new Error('Photos cannot be saved in this browser.')); }
+    r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains('files')) r.result.createObjectStore('files'); };
+    r.onsuccess = () => { FILES.db = r.result; res(r.result); }; r.onerror = () => rej(new Error('Photos cannot be saved in this browser.'));
+  });
+}
+function filesTx(mode, fn) {
+  return filesDb().then(db => new Promise((res, rej) => { const tx = db.transaction('files', mode); const rq = fn(tx.objectStore('files')); tx.oncomplete = () => res(rq ? rq.result : undefined); tx.onerror = tx.onabort = () => rej(tx.error || new Error('Could not save the photo.')); }));
+}
+const fileGet = key => filesTx('readonly', s => s.get(key)), filePut = (key, blob) => filesTx('readwrite', s => s.put(blob, key)), fileDel = key => filesTx('readwrite', s => s.delete(key)), fileKeys = () => filesTx('readonly', s => s.getAllKeys());
+function fileClear() { for (const u of FILES.urls.values()) { try { URL.revokeObjectURL(u); } catch (e) { /* ignore */ } } FILES.urls.clear(); if (!FILES.ok) return Promise.resolve(); return filesTx('readwrite', s => s.clear()).catch(() => { /* nothing stored */ }); }
+async function fileUrl(key) {                                              // object URL for a stored photo (cached); null when the photo is not on this phone
+  if (FILES.urls.has(key)) return FILES.urls.get(key);
+  const blob = await fileGet(key); if (!blob) return null; const u = URL.createObjectURL(blob); FILES.urls.set(key, u); return u;
+}
+const blobToDataUrl = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(b); });
+async function compressImage(file) {                                       // phone photos are 3–10 MB: shrink to ~1600 px JPEG so ten staff × five documents stay small
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('That file is not a photo this browser can read.')); i.src = url; });
+    const sc = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)), w = Math.max(1, Math.round(img.naturalWidth * sc)), hh = Math.max(1, Math.round(img.naturalHeight * sc));
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = hh; const cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, w, hh); cx.drawImage(img, 0, 0, w, hh);
+    const blob = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.82)); if (!blob) throw new Error('Could not prepare the photo.'); return blob;
+  } finally { URL.revokeObjectURL(url); }
+}
+const DOC_SLOTS = [['AADHAAR_FRONT', 'Aadhaar card — front'], ['AADHAAR_BACK', 'Aadhaar card — back'], ['PAN', 'PAN card'], ['DL_FRONT', 'Driving licence — front'], ['DL_BACK', 'Driving licence — back']];
+const docLabel = k => (DOC_SLOTS.find(x => x[0] === k) || [k, k])[1];
+const staffDocs = s => (s.docs && typeof s.docs === 'object') ? s.docs : {};
+async function addDocPhoto(sid, slot, file) {
+  const s = staffOf(sid); if (!s) throw new Biz('Staff member not found.');
+  if (!file || !/^image\//.test(file.type || 'image/jpeg')) throw new Biz('Please choose a photo (JPG or PNG).');
+  if (file.size > 30 * 1024 * 1024) throw new Biz('That photo is too large (30 MB at most).');
+  const blob = await compressImage(file); await filePut(sid + ':' + slot, blob);
+  const old = FILES.urls.get(sid + ':' + slot); if (old) { try { URL.revokeObjectURL(old); } catch (e) { /* ignore */ } FILES.urls.delete(sid + ':' + slot); }
+  s.docs = Object.assign({}, staffDocs(s), { [slot]: { at: new Date(), size: blob.size } }); log('STAFF', s.name + ': ' + docLabel(slot) + ' photo saved'); scheduleSave();
+}
+async function removeDocPhoto(sid, slot) {
+  const s = staffOf(sid); if (!s) return; try { await fileDel(sid + ':' + slot); } catch (e) { /* the record is removed either way */ }
+  const old = FILES.urls.get(sid + ':' + slot); if (old) { try { URL.revokeObjectURL(old); } catch (e) { /* ignore */ } FILES.urls.delete(sid + ':' + slot); }
+  const d = Object.assign({}, staffDocs(s)); delete d[slot]; s.docs = d; log('STAFF', s.name + ': ' + docLabel(slot) + ' photo removed'); scheduleSave();
+}
+
+/* ---- full-screen photo viewer: pinch / double-tap / wheel / + − buttons to zoom, drag to move ---- */
+function closeViewer() { if (UI.viewer) { const v = UI.viewer; UI.viewer = null; v.remove(); document.removeEventListener('keydown', v._esc); } }
+function openViewer(o) {
+  closeViewer();
+  const stage = h('div', { class: 'vstage' }), img = h('img', { class: 'vimg', src: o.url, alt: o.title, draggable: 'false' }), zl = h('span', { class: 'vz' }, '100%');
+  stage.append(img);
+  let sc = 1, tx = 0, ty = 0, pinch = null, pan = null, lastTap = 0, moved = false; const P = new Map();
+  const apply = () => { img.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + sc + ')'; zl.textContent = Math.round(sc * 100) + '%'; };
+  const clamp = () => { const r = stage.getBoundingClientRect(), mx = Math.max(0, (img.offsetWidth * sc - r.width) / 2), my = Math.max(0, (img.offsetHeight * sc - r.height) / 2); tx = Math.min(mx, Math.max(-mx, tx)); ty = Math.min(my, Math.max(-my, ty)); };
+  const zoomTo = (ns, cx, cy) => {
+    ns = Math.min(6, Math.max(1, ns)); const r = stage.getBoundingClientRect(), px = (cx == null ? r.left + r.width / 2 : cx) - (r.left + r.width / 2), py = (cy == null ? r.top + r.height / 2 : cy) - (r.top + r.height / 2), k = ns / sc;
+    tx = px - (px - tx) * k; ty = py - (py - ty) * k; sc = ns; if (sc === 1) { tx = 0; ty = 0; } clamp(); apply();
+  };
+  const dist = () => { const a = Array.from(P.values()); return Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); }, mid = () => { const a = Array.from(P.values()); return [(a[0].x + a[1].x) / 2, (a[0].y + a[1].y) / 2]; };
+  stage.addEventListener('pointerdown', ev => { try { stage.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ } P.set(ev.pointerId, { x: ev.clientX, y: ev.clientY }); moved = false;
+    if (P.size === 2) pinch = { d: dist(), sc }; else pan = { x: ev.clientX, y: ev.clientY, tx, ty }; });
+  stage.addEventListener('pointermove', ev => { if (!P.has(ev.pointerId)) return; P.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    if (P.size === 2 && pinch) { moved = true; const m = mid(); zoomTo(pinch.sc * dist() / pinch.d, m[0], m[1]); }
+    else if (P.size === 1 && pan) { const dx = ev.clientX - pan.x, dy = ev.clientY - pan.y; if (Math.abs(dx) + Math.abs(dy) > 6) moved = true; if (sc > 1) { tx = pan.tx + dx; ty = pan.ty + dy; clamp(); apply(); } } });
+  const up = ev => { if (!P.has(ev.pointerId)) return; const was = P.size; P.delete(ev.pointerId);
+    if (was === 1 && !moved && ev.type === 'pointerup') { const now = Date.now(); if (now - lastTap < 320) { zoomTo(sc > 1.05 ? 1 : 2.5, ev.clientX, ev.clientY); lastTap = 0; } else lastTap = now; }
+    if (P.size < 2) pinch = null; if (P.size === 1) { const r = Array.from(P.values())[0]; pan = { x: r.x, y: r.y, tx, ty }; } else if (!P.size) pan = null; };
+  stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+  stage.addEventListener('wheel', ev => { ev.preventDefault(); zoomTo(sc * (ev.deltaY < 0 ? 1.25 : 0.8), ev.clientX, ev.clientY); }, { passive: false });
+  const ctl = (label, aria, fn) => h('button', { class: 'vbtn', type: 'button', 'aria-label': aria, onClick: fn }, label);
+  const wrap = h('div', { class: 'viewer', role: 'dialog', 'aria-modal': 'true', 'aria-label': o.title },
+    h('div', { class: 'vtop' }, h('div', { class: 'vt' }, o.title), h('button', { class: 'vbtn', type: 'button', 'aria-label': 'Close', onClick: closeViewer }, ic('close'))),
+    stage,
+    h('div', { class: 'vbar' }, h('div', { class: 'vzoom' }, ctl('−', 'Zoom out', () => zoomTo(sc / 1.4)), zl, ctl('+', 'Zoom in', () => zoomTo(sc * 1.4)), ctl('RESET', 'Reset zoom', () => zoomTo(1))),
+      o.actions && o.actions.length ? h('div', { class: 'vact' }, o.actions.map(a => h('button', { class: 'vbtn wide' + (a.danger ? ' danger' : ''), type: 'button', onClick: a.onClick }, a.label))) : null,
+      h('div', { class: 'vhint' }, 'Pinch or double-tap to zoom · drag to move')));
+  wrap._esc = ev => { if (ev.key === 'Escape') closeViewer(); }; document.addEventListener('keydown', wrap._esc);
+  $('#app').append(wrap); UI.viewer = wrap; apply();
+}
+function docThumb(s, slot) {
+  const box = h('div', { class: 'dthumb' }); const has = !!staffDocs(s)[slot];
+  if (!has) { box.append(ic('plus'), h('span', null, 'ADD')); return box; }
+  box.classList.add('has'); fileUrl(s.id + ':' + slot).then(u => { if (u) box.style.backgroundImage = 'url("' + u + '")'; else { box.classList.remove('has'); box.append(h('span', null, 'Photo not on this phone')); } }).catch(() => { box.append(h('span', null, 'Cannot open')); });
+  return box;
+}
+function pickDocPhoto(s, slot, then) {
+  const go = cam => { const i = h('input', { type: 'file', accept: 'image/*', capture: cam ? 'environment' : null, style: { display: 'none' } });
+    i.addEventListener('change', () => { const f = i.files && i.files[0]; i.remove(); if (!f) return; closeSheet(); toast('Saving photo…');
+      addDocPhoto(s.id, slot, f).then(() => { toast('Photo saved'); then(); }).catch(err => handleErr(err)); });
+    document.body.append(i); i.click(); };
+  openSheet({ title: docLabel(slot), sub: s.name, body: h('div', { class: 'aside' }, 'Take a clear photo of the card, flat and well lit, or choose one from the gallery. It is saved only on this phone (and in your backup file).'),
+    actions: [Btn('TAKE PHOTO', { kind: 'primary', icon: 'camera', onClick: () => go(true) }), Btn('CHOOSE FROM GALLERY', { kind: 'ghost', onClick: () => go(false) }), sheetClose('CANCEL')] });
+}
+function viewDocPhoto(s, slot, then) {
+  fileUrl(s.id + ':' + slot).then(u => {
+    if (!u) { toast('This photo is not on this phone any more. Add it again.', true); return pickDocPhoto(s, slot, then); }
+    openViewer({ title: s.name + ' · ' + docLabel(slot), url: u, actions: [
+      { label: 'REPLACE', onClick: () => { closeViewer(); pickDocPhoto(s, slot, then); } },
+      { label: 'DELETE', danger: true, onClick: () => { closeViewer(); confirmSheet({ title: 'Delete this photo?', sub: docLabel(slot) + ' — ' + s.name, yes: 'YES, DELETE', danger: true, no: 'KEEP IT', onYes: () => { removeDocPhoto(s.id, slot).then(() => { then(); toast('Photo deleted'); }); } }); } }] });
+  }).catch(err => handleErr(err));
+}
+const docTile = (s, slot, then) => h('button', { class: 'doctile', type: 'button', 'aria-label': docLabel(slot) + (staffDocs(s)[slot] ? ' — open' : ' — add photo'), onClick: act(() => staffDocs(s)[slot] ? viewDocPhoto(s, slot, then) : pickDocPhoto(s, slot, then)) }, docThumb(s, slot), h('span', { class: 'dl' }, docLabel(slot)));
+
+/* ---- personal details: several phone numbers, email, home address, Aadhaar / PAN / licence numbers and photos, family contacts ---- */
 const RELATIONS = ['Father', 'Mother', 'Wife', 'Husband', 'Brother', 'Sister', 'Son', 'Daughter', 'Other relative', 'Friend', 'Neighbour'];
+const PHONE_LABELS = ['Mobile', 'WhatsApp', 'Home', 'Work', 'Other'];
 const digitsOf = (v, n) => String(v || '').replace(/\D/g, '').slice(0, n);
 const maskAadhaar = a => a ? 'XXXX XXXX ' + a.slice(-4) : '';
 const cleanEmail = v => String(v || '').trim().toLowerCase();
 const validEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) && v.length <= 80;
+const cleanPan = v => String(v || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 10);
+const cleanLicence = v => String(v || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 20);
 const staffFamily = s => Array.isArray(s.family) ? s.family : [];
-const hasDetails = s => !!(s.phone || s.email || s.home || s.aadhaar || staffFamily(s).length);
+const staffPhones = s => Array.isArray(s.phones) ? s.phones : (s.phone ? [{ label: 'Mobile', num: s.phone }] : []);
+const hasDetails = s => !!(staffPhones(s).length || s.email || s.home || s.aadhaar || s.pan || s.dlNo || staffFamily(s).length || Object.keys(staffDocs(s)).length);
+/* the essentials every staff profile needs: phone, email, home address, Aadhaar + photo, PAN + photo, a family contact; a driver also needs a licence number + photo */
+function profileMissing(s) {
+  const m = [], d = staffDocs(s);
+  if (!staffPhones(s).length) m.push('Phone number'); if (!s.email) m.push('Email address'); if (!s.home) m.push('Home address'); if (!s.aadhaar) m.push('Aadhaar number'); if (!d.AADHAAR_FRONT) m.push('Aadhaar card photo');
+  if (!s.pan) m.push('PAN number'); if (!d.PAN) m.push('PAN card photo');
+  if (!staffFamily(s).length) m.push('Family contact');
+  if (s.driver) { if (!s.dlNo) m.push('Driving licence number'); if (!d.DL_FRONT) m.push('Driving licence photo'); }
+  return m;
+}
+const profileIncomplete = s => s.active !== false && profileMissing(s).length > 0;
+const incompleteBanner = (s, onGo) => { const m = profileMissing(s); return m.length ? h('div', { class: 'aside bad' }, h('b', null, 'Profile incomplete — '), 'missing: ' + m.join(', ') + '.', onGo ? h('div', { class: 'mt8' }, Btn('COMPLETE PROFILE', { kind: 'dark', cls: 'sm', onClick: onGo })) : null) : null; };
 const callLink = ph => h('a', { class: 'btn ghost sm', href: 'tel:' + ph, style: { width: 'auto', minWidth: '84px' }, 'aria-label': 'Call ' + ph }, ic('phone'), 'CALL');
 function saveStaffDetails(sid, v) {
   const s = staffOf(sid); if (!s) fail('Staff member not found.');
-  const phone = digitsOf(v.phone, 10), aad = digitsOf(v.aadhaar, 12), home = (v.home || '').trim(), email = cleanEmail(v.email);
-  if (phone && phone.length !== 10) fail('Phone number must be 10 digits.');
+  const aad = digitsOf(v.aadhaar, 12), home = (v.home || '').trim(), email = cleanEmail(v.email), pan = cleanPan(v.pan), dl = cleanLicence(v.dlNo);
+  const phones = v.phones.map(x => ({ label: x.label || 'Mobile', num: cleanPhone(x.num) }));
+  for (const x of phones) if (x.num.length !== 10) fail('Phone number ' + (x.num || '(empty)') + ' must be 10 digits.');
+  if (new Set(phones.map(x => x.num)).size !== phones.length) fail('The same phone number is listed twice.');
   if (email && !validEmail(email)) fail('That email address does not look right (example: name@gmail.com).');
-  if (email) { const dupE = S.staff.find(x => x.id !== s.id && cleanEmail(x.email) === email); if (dupE) fail('This email is already saved for ' + dupE.name + '.'); }
+  if (email) { const d = S.staff.find(x => x.id !== s.id && cleanEmail(x.email) === email); if (d) fail('This email is already saved for ' + d.name + '.'); }
   if (aad && aad.length !== 12) fail('Aadhaar number must be 12 digits (' + aad.length + ' entered).');
-  if (aad) { const dup = S.staff.find(x => x.id !== s.id && x.aadhaar === aad); if (dup) fail('This Aadhaar number is already saved for ' + dup.name + '.'); }
+  if (aad) { const d = S.staff.find(x => x.id !== s.id && x.aadhaar === aad); if (d) fail('This Aadhaar number is already saved for ' + d.name + '.'); }
+  if (pan && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) fail('PAN must look like ABCDE1234F (5 letters, 4 digits, 1 letter).');
+  if (pan) { const d = S.staff.find(x => x.id !== s.id && x.pan === pan); if (d) fail('This PAN is already saved for ' + d.name + '.'); }
+  if (dl && dl.length < 8) fail('The driving licence number looks too short.');
   if (home.length > 160) fail('The home address is too long.');
-  const fam = v.family.map(f => ({ name: (f.name || '').trim(), rel: f.rel || 'Other relative', phone: digitsOf(f.phone, 10) }));
+  const fam = v.family.map(f => ({ name: (f.name || '').trim(), rel: f.rel || 'Other relative', phone: cleanPhone(f.phone) }));
   for (const f of fam) { if (f.name.length < 2) fail('Every family contact needs a name.'); if (f.phone.length !== 10) fail(f.name + ': phone number must be 10 digits.'); }
-  s.phone = phone; s.email = email; s.aadhaar = aad; s.home = home; s.family = fam;
+  s.phones = phones; s.phone = phones.length ? phones[0].num : ''; s.email = email; s.aadhaar = aad; s.pan = pan; s.dlNo = dl; s.home = home; s.family = fam;
   log('STAFF', s.name + ': personal details updated');
+}
+const PHONE_HINT = 'Tip: you can paste a number straight from your Contacts — +91, spaces and dashes are removed for you.';
+function phoneSheet(v, i) {
+  const f = i != null ? Object.assign({}, v.phones[i]) : { label: v.phones.length ? 'WhatsApp' : 'Mobile', num: '' };
+  const body = h('div', null,
+    Field('Phone number', h('input', { class: 'input', value: f.num, type: 'tel', inputmode: 'numeric', maxlength: 24, 'data-phone': '1', placeholder: '98XXXXXXXX', 'aria-label': 'Phone number', onInput: ev => { f.num = cleanPhone(ev.target.value); } })),
+    h('div', { class: 'hint', style: { marginTop: '6px' } }, PHONE_HINT),
+    Field('What kind of number?', h('select', { class: 'select', 'aria-label': 'Kind of number', onChange: ev => { f.label = ev.target.value; } }, PHONE_LABELS.map(r => h('option', { value: r, selected: f.label === r }, r)))));
+  openSheet({ title: i != null ? 'Phone number' : 'Add phone number', body, actions: [
+    Btn('SAVE NUMBER', { kind: 'primary', onClick: () => { f.num = cleanPhone(f.num); if (f.num.length !== 10) fail('Phone number must be 10 digits.'); if (v.phones.some((x, k) => k !== i && x.num === f.num)) fail('That number is already in the list.'); if (i != null) v.phones[i] = f; else v.phones.push(f); closeSheet(); nav.refresh(); } }),
+    i != null ? Btn('REMOVE NUMBER', { kind: 'danger', onClick: () => { v.phones.splice(i, 1); closeSheet(); nav.refresh(); } }) : null, sheetClose('CANCEL')] });
 }
 function familySheet(v, i) {
   const f = i != null ? Object.assign({}, v.family[i]) : { name: '', rel: 'Father', phone: '' };
   const body = h('div', null,
     Field('Name', h('input', { class: 'input', value: f.name, maxlength: 40, placeholder: 'e.g. Ramesh Kumar', 'aria-label': 'Name', onInput: ev => { f.name = ev.target.value; } })),
     Field('Who is this person to the staff member?', h('select', { class: 'select', 'aria-label': 'Relation', onChange: ev => { f.rel = ev.target.value; } }, RELATIONS.map(r => h('option', { value: r, selected: f.rel === r }, r)))),
-    Field('Phone number (10 digits)', h('input', { class: 'input', value: f.phone, type: 'tel', inputmode: 'numeric', maxlength: 10, placeholder: '98XXXXXXXX', 'aria-label': 'Phone number', onInput: ev => { f.phone = digitsOf(ev.target.value, 10); ev.target.value = f.phone; } })));
+    Field('Phone number', h('input', { class: 'input', value: f.phone, type: 'tel', inputmode: 'numeric', maxlength: 24, 'data-phone': '1', placeholder: '98XXXXXXXX', 'aria-label': 'Phone number', onInput: ev => { f.phone = cleanPhone(ev.target.value); } })),
+    h('div', { class: 'hint', style: { marginTop: '6px' } }, PHONE_HINT));
   openSheet({ title: i != null ? 'Family contact' : 'Add family contact', sub: 'Someone to call in an emergency.', body, actions: [
-    Btn('SAVE CONTACT', { kind: 'primary', onClick: () => { if (f.name.trim().length < 2) fail('Enter the name.'); if (digitsOf(f.phone, 10).length !== 10) fail('Phone number must be 10 digits.'); if (i != null) v.family[i] = f; else v.family.push(f); closeSheet(); nav.refresh(); } }),
+    Btn('SAVE CONTACT', { kind: 'primary', onClick: () => { if (f.name.trim().length < 2) fail('Enter the name.'); f.phone = cleanPhone(f.phone); if (f.phone.length !== 10) fail('Phone number must be 10 digits.'); if (i != null) v.family[i] = f; else v.family.push(f); closeSheet(); nav.refresh(); } }),
     i != null ? Btn('REMOVE CONTACT', { kind: 'danger', onClick: () => { v.family.splice(i, 1); closeSheet(); nav.refresh(); } }) : null, sheetClose('CANCEL')] });
 }
 route('sf.details', (p, E) => {
   const s = staffOf(p.sid); if (!s) return { title: 'Staff', body: Empty('Not found') };
-  const st = E.st; if (!st.v) st.v = { phone: s.phone || '', email: s.email || '', home: s.home || '', aadhaar: s.aadhaar || '', family: staffFamily(s).map(f => ({ ...f })) };
-  const v = st.v, cnt = h('div', { class: 'hint' });
-  const aadHint = () => { const n = digitsOf(v.aadhaar, 12).length; cnt.textContent = n === 0 ? 'Optional · 12 digits' : n === 12 ? '✓ 12 digits' : n + ' of 12 digits'; };
-  const body = h('div', { class: 'gap' },
-    Field('Phone number (10 digits)', h('input', { class: 'input', value: v.phone, type: 'tel', inputmode: 'numeric', maxlength: 10, placeholder: '98XXXXXXXX', 'aria-label': 'Phone number', onInput: ev => { v.phone = digitsOf(ev.target.value, 10); ev.target.value = v.phone; } })),
-    Field('Email address (optional)', h('input', { class: 'input', value: v.email, type: 'email', inputmode: 'email', autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false', maxlength: 80, placeholder: 'name@gmail.com', 'aria-label': 'Email address', onInput: ev => { v.email = ev.target.value; } })),
-    Field('Home address', h('input', { class: 'input', value: v.home, maxlength: 160, placeholder: 'House, street, village / town', 'aria-label': 'Home address', onInput: ev => { v.home = ev.target.value; } })),
-    h('div', null, Field('Aadhaar number', h('input', { class: 'input', value: v.aadhaar, type: 'tel', inputmode: 'numeric', maxlength: 12, placeholder: '12 digits', autocomplete: 'off', 'aria-label': 'Aadhaar number', onInput: ev => { v.aadhaar = digitsOf(ev.target.value, 12); ev.target.value = v.aadhaar; aadHint(); } })), cnt),
+  const st = E.st; if (!st.v) st.v = { phones: staffPhones(s).map(x => ({ ...x })), email: s.email || '', home: s.home || '', aadhaar: s.aadhaar || '', pan: s.pan || '', dlNo: s.dlNo || '', family: staffFamily(s).map(f => ({ ...f })) };
+  const v = st.v, cnt = h('div', { class: 'hint' }), aadHint = () => { const n = digitsOf(v.aadhaar, 12).length; cnt.textContent = n === 0 ? 'Required · 12 digits' : n === 12 ? '✓ 12 digits' : n + ' of 12 digits'; };
+  const again = () => nav.refresh();
+  const txt = (label, key, o) => Field(label, h('input', Object.assign({ class: 'input', value: v[key], maxlength: 80, 'aria-label': label, onInput: ev => { v[key] = o && o.clean ? o.clean(ev.target.value) : ev.target.value; if (o && o.clean && ev.target.value !== v[key]) ev.target.value = v[key]; } }, o && o.attrs)));
+  const body = h('div', { class: 'gap' }, incompleteBanner(s, null),
+    h('div', null, Sec('Phone numbers', h('span', null, v.phones.length ? String(v.phones.length) : '')),
+      v.phones.length ? Pane(v.phones.map((x, i) => Row({ title: x.num, sub: x.label, onClick: () => phoneSheet(v, i) }))) : h('div', { class: 'aside' }, 'No phone number yet. Add one or more.'),
+      h('div', { class: 'mt12' }, Btn('ADD PHONE NUMBER', { kind: 'dark', icon: 'plus', onClick: () => phoneSheet(v, null) })), h('div', { class: 'hint', style: { marginTop: '8px' } }, PHONE_HINT)),
+    txt('Email address', 'email', { attrs: { type: 'email', inputmode: 'email', autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false', placeholder: 'name@gmail.com' } }),
+    txt('Home address', 'home', { attrs: { maxlength: 160, placeholder: 'House, street, village / town' } }),
+    h('div', null, Field('Aadhaar number', h('input', { class: 'input', value: v.aadhaar, type: 'tel', inputmode: 'numeric', maxlength: 20, placeholder: '12 digits', autocomplete: 'off', 'aria-label': 'Aadhaar number', onInput: ev => { v.aadhaar = digitsOf(ev.target.value, 12); ev.target.value = v.aadhaar; aadHint(); } })), cnt),
+    txt('PAN number', 'pan', { clean: cleanPan, attrs: { maxlength: 14, placeholder: 'ABCDE1234F', autocapitalize: 'characters', autocomplete: 'off' } }),
+    txt(s.driver ? 'Driving licence number' : 'Driving licence number (optional — needed for drivers)', 'dlNo', { clean: cleanLicence, attrs: { maxlength: 24, placeholder: 'e.g. RJ1420110012345', autocapitalize: 'characters', autocomplete: 'off' } }),
+    h('div', null, Sec('Document photos'), h('div', { class: 'doctiles' }, DOC_SLOTS.map(d => docTile(s, d[0], again))),
+      h('div', { class: 'hint', style: { marginTop: '8px' } }, 'Tap a tile to add a photo, or to open it full screen and zoom. Photos are saved at once — you do not need to press SAVE DETAILS for them.')),
     h('div', null, Sec('Family contacts', h('span', null, v.family.length ? String(v.family.length) : '')),
       v.family.length ? Pane(v.family.map((f, i) => Row({ title: f.name, sub: f.rel, right: f.phone, onClick: () => familySheet(v, i) }))) : h('div', { class: 'aside' }, 'No family contact yet. Add one or more people to call in an emergency.'),
       h('div', { class: 'mt12' }, Btn('ADD FAMILY CONTACT', { kind: 'dark', icon: 'plus', onClick: () => familySheet(v, null) }))),
-    h('div', { class: 'aside' }, 'Aadhaar is private. It is saved only on this phone (and in your backup file) and is shown hidden, like XXXX XXXX 1234, everywhere except this screen.'));
+    h('div', { class: 'aside' }, 'Aadhaar, PAN and card photos are private. They are saved only on this phone (and in your backup file). Aadhaar is shown hidden, like XXXX XXXX 1234, everywhere except this screen.'));
   aadHint();
   return { title: 'Personal details', sub: s.name, body, foot: [Btn('SAVE DETAILS', { kind: 'primary', onClick: () => { saveStaffDetails(s.id, v); nav.back(); toast('Details saved'); } })] };
 });
 function detailsCard(s) {
-  const fam = staffFamily(s);
+  const fam = staffFamily(s), ph = staffPhones(s), d = staffDocs(s), have = DOC_SLOTS.filter(x => d[x[0]]);
   const kv = (k, val) => h('div', { class: 'kv' }, h('span', null, k), h('span', null, val));
+  const then = () => nav.refresh();
   return h('div', { class: 'gap' },
     h('div', { class: 'pane' }, h('div', { class: 'pad', style: { paddingTop: '8px', paddingBottom: 0 } },
-      s.phone ? h('div', { class: 'row', style: { borderBottom: 0, padding: '6px 0' } }, h('div', { class: 'l' }, h('div', { class: 's' }, 'Phone'), h('div', { class: 't' }, s.phone)), callLink(s.phone)) : kv('Phone', '—'),
+      ph.length ? ph.map(x => h('div', { class: 'row', style: { borderBottom: 0, padding: '6px 0' } }, h('div', { class: 'l' }, h('div', { class: 's' }, x.label), h('div', { class: 't' }, x.num)), callLink(x.num))) : kv('Phone', '—'),
       s.email ? h('div', { class: 'row', style: { borderBottom: 0, padding: '6px 0' } }, h('div', { class: 'l' }, h('div', { class: 's' }, 'Email'), h('div', { class: 't', style: { overflowWrap: 'anywhere' } }, s.email)), h('a', { class: 'btn ghost sm', href: 'mailto:' + s.email, style: { width: 'auto', minWidth: '84px' }, 'aria-label': 'Email ' + s.email }, 'MAIL')) : kv('Email', '—'),
-      kv('Home address', s.home || '—'), kv('Aadhaar', s.aadhaar ? maskAadhaar(s.aadhaar) : '—'))),
+      kv('Home address', s.home || '—'), kv('Aadhaar', s.aadhaar ? maskAadhaar(s.aadhaar) : '—'), s.pan ? kv('PAN', s.pan) : null, s.dlNo || s.driver ? kv('Driving licence', s.dlNo || '—') : null)),
+    have.length ? h('div', null, Sec('Document photos'), h('div', { class: 'doctiles' }, have.map(x => docTile(s, x[0], then)))) : null,
     fam.length ? h('div', null, Sec('Family contacts'), Pane(fam.map(f => h('div', { class: 'row' }, h('div', { class: 'l' }, h('div', { class: 't' }, f.name), h('div', { class: 's' }, f.rel + ' · ' + f.phone)), callLink(f.phone))))) : null);
 }
+
 route('sf.person', (p, E) => {
   const s = staffOf(p.sid), b = netBal(s.id);
   const body = h('div', { class: 'gap' }, s.driver ? h('div', null, Chip('Driver-eligible')) : null,
+    incompleteBanner(s, () => nav.go('sf.details', { sid: s.id })),
     Sec('Personal details'), hasDetails(s) ? detailsCard(s) : h('div', { class: 'aside' }, 'No phone, address, Aadhaar or family contact saved yet.'),
     Btn(hasDetails(s) ? 'EDIT PERSONAL DETAILS' : 'ADD PERSONAL DETAILS', { kind: 'ghost', onClick: () => nav.go('sf.details', { sid: s.id }) }),
     h('div', { class: 'pane' }, h('div', { class: 'pad', style: { paddingTop: '8px', paddingBottom: 0 } }, KV('Joined', fmtDY(parseYmd(staffJoined(s)))), KV('Attendance today', attChip(s) || 'Not marked'), KV('Current duty', currentDuty(s)), KV('Earning', earningText(s)), KV('Khata', b === 0 ? 'Clear' : (b < 0 ? 'Owes ' : 'To receive ') + rs(Math.abs(b))))),
@@ -3338,7 +3531,7 @@ function editSheet(o) {
   const vals = {}; o.fields.forEach(f => vals[f.key] = f.value != null ? f.value : '');
   const body = h('div', null, o.fields.map(f => Field(f.label, f.type === 'select'
     ? h('select', { class: 'select', 'aria-label': f.label, onChange: ev => { vals[f.key] = ev.target.value; } }, f.options.map(op => h('option', { value: op[0], selected: String(vals[f.key]) === String(op[0]) }, op[1])))
-    : h('input', { class: 'input', type: f.type === 'date' ? 'date' : null, max: f.max || null, 'aria-label': f.label, inputmode: f.type === 'money' || f.type === 'num' ? 'decimal' : null, placeholder: f.placeholder || '', maxlength: f.maxlength || 60, value: vals[f.key], onInput: ev => { vals[f.key] = ev.target.value; } }))));
+    : h('input', { class: 'input', type: f.type === 'date' ? 'date' : f.type === 'tel' ? 'tel' : null, 'data-phone': f.type === 'tel' ? '1' : null, max: f.max || null, 'aria-label': f.label, inputmode: f.type === 'money' || f.type === 'num' ? 'decimal' : f.type === 'tel' ? 'numeric' : null, placeholder: f.placeholder || '', maxlength: f.maxlength || 60, value: vals[f.key], onInput: ev => { vals[f.key] = ev.target.value; } }))));
   openSheet({ title: o.title, sub: o.sub, body, actions: [Btn(o.save || 'SAVE', { kind: 'primary', onClick: () => { o.onSave(vals); closeSheet(); nav.refresh(); } }), sheetClose('CANCEL')] });
 }
 
@@ -3352,7 +3545,7 @@ route('more', (p, E) => {
       Row({ title: 'Attendance', sub: (() => { const a = attendanceToday(); return a.total ? (a.unmarked ? a.unmarked + ' not marked today' : 'Everyone marked today ✓') : 'Mark staff present or absent'; })(), onClick: () => nav.go('sf.att', {}) }),
       Row({ title: 'Staff', sub: 'Profiles, duty, earnings', onClick: () => nav.go('sf.list') }), Row({ title: 'Returns & expired goods', sub: 'What came back, and money for it', onClick: () => nav.go('rtn.start') })]),
     sec('Money', [Row({ title: 'Cash / Day close', sub: 'Cash ' + rs(cbal('CASH')) + ' · Bank ' + rs(cbal('BANK')), onClick: () => nav.go('cash.home') }), Row({ title: 'Pending verification', sub: 'Money waiting to be checked', right: pend ? Chip(String(pend), 'bad') : '✓', onClick: () => nav.go('cash.pend') })]),
-    sec('Setup', [Row({ title: 'Areas', sub: S.areas.length ? S.areas.map(a => a.name).slice(0, 3).join(', ') + (S.areas.length > 3 ? '…' : '') : 'Add the areas you deliver to', onClick: () => nav.go('set.area') }), Row({ title: 'Settings', sub: 'Staff · Area · Stock · Vehicles · Cameras', onClick: () => nav.go('set.home') }), Row({ title: 'Data & backup', sub: saveStatusText(), right: STORE.ok && !STORE.error ? null : Chip('NOT SAVING', 'bad'), onClick: () => nav.go('set.data') }), Row({ title: 'History', sub: 'Everything that happened', onClick: () => nav.go('hist') })]),
+    sec('Setup', [Row({ title: 'Areas', sub: S.areas.length ? S.areas.map(a => a.name).slice(0, 3).join(', ') + (S.areas.length > 3 ? '…' : '') : 'Add the areas you deliver to', onClick: () => nav.go('set.area') }), Row({ title: 'Settings', sub: 'Staff · Area · Stock · Vehicles · Cameras', onClick: () => nav.go('set.home') }), Row({ title: 'Data & backup', sub: saveStatusText(), right: STORE.ok && !STORE.error ? null : Chip('NOT SAVING', 'bad'), onClick: () => nav.go('set.data') }), Row({ title: 'Feedback notes', sub: FB.notes.length ? plural(FB.notes.filter(x => !x.done).length, 'open note') + ' · hold an empty space 5 seconds to add' : 'Hold any empty space for 5 seconds to leave a note', right: FB.notes.length ? Chip(String(FB.notes.length)) : null, onClick: () => nav.go('fb.list') }), Row({ title: 'History', sub: 'Everything that happened', onClick: () => nav.go('hist') })]),
     h('div', { class: 'center mute mt24', style: { fontSize: '12px', marginBottom: '12px' } }, 'Agency Pilot V2 · test build · ' + saveStatusText()));
   return { title: 'More', body };
 });
@@ -3366,16 +3559,16 @@ route('set.home', (p, E) => {
       Row({ title: 'Example scenarios', sub: 'Jump straight to one situation: delivery, partial payment, pickup return, Agent Khata, day close…', onClick: () => nav.go('scen') })]),
     h('div', { class: 'aside mt16' }, 'The app normally starts empty. Sample data is fictional and is never mixed with what you enter — loading it replaces everything.')) };
 });
-route('set.staff', (p, E) => ({ title: 'Staff settings', body: h('div', { class: 'gap' }, S.staff.length ? null : Pane(Empty('No staff yet. Tap ADD STAFF — add the Manager, helpers and at least one driver.')), Pane(S.staff.map(s => Row({ title: s.name, sub: posLabel[s.position] + (s.driver ? ' · can drive' : '') + (s.areas.length ? ' · ' + s.areas.join(', ') : '') + (!s.active ? ' · not active' : ''), cls: s.active ? '' : 'off', onClick: () => nav.go('set.staff.edit', { sid: s.id }) }))),
+route('set.staff', (p, E) => ({ title: 'Staff settings', body: h('div', { class: 'gap' }, S.staff.length ? null : Pane(Empty('No staff yet. Tap ADD STAFF — add the Manager, helpers and at least one driver.')), Pane(S.staff.map(s => Row({ title: s.name, sub: posLabel[s.position] + (profileIncomplete(s) ? ' · profile incomplete' : '') + (s.driver ? ' · can drive' : '') + (s.areas.length ? ' · ' + s.areas.join(', ') : '') + (!s.active ? ' · not active' : ''), cls: s.active ? '' : 'off', onClick: () => nav.go('set.staff.edit', { sid: s.id }) }))),
   h('div', { class: 'aside' }, h('b', null, 'Photos & ID documents: '), 'staff photos and Aadhaar copies are not stored in this version.')),
-  foot: [Btn('ADD STAFF', { kind: 'primary', onClick: () => editSheet({ title: 'Add staff', save: 'ADD', fields: [{ key: 'name', label: 'Name', placeholder: 'Name', maxlength: 30 }, { key: 'phone', label: 'Phone number (optional)', placeholder: '98XXXXXXXX', maxlength: 10, type: 'num' }, { key: 'email', label: 'Email address (optional)', placeholder: 'name@gmail.com', maxlength: 80 }, { key: 'joined', label: 'Joining date', type: 'date', value: todayStr(), max: todayStr() }, { key: 'position', label: 'Position', type: 'select', value: 'HELPER', options: Object.keys(posLabel).filter(k => k !== 'CEO').map(k => [k, posLabel[k]]) }, { key: 'driver', label: 'Can be the driver?', type: 'select', value: '0', options: [['0', 'No'], ['1', 'Yes — can drive a pickup']] }], onSave: v => { const s = addStaff({ name: v.name, phone: v.phone, email: v.email, joined: v.joined, position: v.position, driver: v.driver === '1' }); toast(s.name + ' added'); } }) })] }));
+  foot: [Btn('ADD STAFF', { kind: 'primary', onClick: () => editSheet({ title: 'Add staff', save: 'ADD', fields: [{ key: 'name', label: 'Name', placeholder: 'Name', maxlength: 30 }, { key: 'phone', label: 'Phone number (optional)', placeholder: '98XXXXXXXX', maxlength: 24, type: 'tel' }, { key: 'email', label: 'Email address', placeholder: 'name@gmail.com', maxlength: 80 }, { key: 'joined', label: 'Joining date', type: 'date', value: todayStr(), max: todayStr() }, { key: 'position', label: 'Position', type: 'select', value: 'HELPER', options: Object.keys(posLabel).filter(k => k !== 'CEO').map(k => [k, posLabel[k]]) }, { key: 'driver', label: 'Can be the driver?', type: 'select', value: '0', options: [['0', 'No'], ['1', 'Yes — can drive a pickup']] }], onSave: v => { const s = addStaff({ name: v.name, phone: v.phone, email: v.email, joined: v.joined, position: v.position, driver: v.driver === '1' }); toast(s.name + ' added'); } }) })] }));
 route('set.staff.edit', (p, E) => {
   const s = staffOf(p.sid), agentish = ['AGENT', 'PERSONAL_AGENT'].includes(s.position);
   const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'big' }, s.name), h('div', { class: 'mt8' }, Chip(posLabel[s.position].toUpperCase())))),
     h('div', { class: 'card' }, Toggle('Can be assigned as driver', 'A driver is a duty — the position does not change', s.driver, v => { s.driver = v; log('STAFF', s.name + (v ? ' is now driver-eligible' : ' is no longer driver-eligible')); }),
       Toggle('Active', 'Inactive people cannot be picked for work; history is kept', s.active, v => { if (!v && busyStaff(s.id)) { fail(s.name + ' is on a pickup right now.'); } s.active = v; log('STAFF', s.name + (v ? ' reactivated' : ' set inactive')); nav.refresh(); })),
     h('div', { class: 'card' }, KV('Joining date', fmtDY(parseYmd(staffJoined(s)))), h('div', { class: 'mt8' }, Btn('CHANGE JOINING DATE', { kind: 'dark', cls: 'sm', onClick: () => editSheet({ title: 'Joining date — ' + s.name, fields: [{ key: 'd', label: 'Date of joining', type: 'date', value: staffJoined(s), max: todayStr() }], onSave: v => { setJoinDate(s.id, v.d); toast('Joining date saved'); } }) }))),
-    h('div', { class: 'card' }, KV('Personal details', hasDetails(s) ? [s.phone ? '☎' : null, s.email ? 'email' : null, s.home ? 'address' : null, s.aadhaar ? 'Aadhaar' : null, staffFamily(s).length ? plural(staffFamily(s).length, 'family contact') : null].filter(Boolean).join(' · ') : 'Not added'), h('div', { class: 'mt8' }, Btn(hasDetails(s) ? 'EDIT PERSONAL DETAILS' : 'ADD PERSONAL DETAILS', { kind: 'dark', cls: 'sm', onClick: () => nav.go('sf.details', { sid: s.id }) }))),
+    h('div', { class: 'card' }, KV('Personal details', hasDetails(s) ? [staffPhones(s).length ? plural(staffPhones(s).length, 'phone') : null, s.email ? 'email' : null, s.home ? 'address' : null, s.aadhaar ? 'Aadhaar' : null, staffFamily(s).length ? plural(staffFamily(s).length, 'family contact') : null].filter(Boolean).join(' · ') : 'Not added'), h('div', { class: 'mt8' }, Btn(hasDetails(s) ? 'EDIT PERSONAL DETAILS' : 'ADD PERSONAL DETAILS', { kind: 'dark', cls: 'sm', onClick: () => nav.go('sf.details', { sid: s.id }) }))),
     agentish ? h('div', null, Sec('Works only in these areas'), h('div', { class: 'card' }, S.areas.map(a => Toggle(a.name, null, s.areas.includes(a.name), v => { s.areas = v ? s.areas.concat([a.name]) : s.areas.filter(x => x !== a.name); })))) : null,
     h('div', { class: 'card' }, KV('Earning', earningText(s)), h('div', { class: 'mt8' }, Btn('CHANGE EARNING MODEL', { kind: 'dark', cls: 'sm', onClick: () => nav.go('sf.earn', { sid: s.id }) }))),
     h('div', { class: 'aside' }, 'A Personal Agent gets a basic salary and may earn commission later. An independent Agent works only in the given areas and earns commission. The lowest staff level can update deliveries and payments.'));
@@ -3469,7 +3662,7 @@ route('cu.list', (p, E) => {
 });
 function updateCustomer(pid, v) {
   const c = cust(pid); if (!c) fail('Customer not found.');
-  const name = (v.name || '').trim(), shop = (v.shop || '').trim(), phone = (v.phone || '').replace(/\D/g, ''), area = (v.area || '').trim();
+  const name = (v.name || '').trim(), shop = (v.shop || '').trim(), phone = cleanPhone(v.phone), area = (v.area || '').trim();
   if (name.length < 2) fail('Please enter the customer name.'); if (name.length > 40 || shop.length > 50) fail('Name is too long.');
   if (c.type !== 'OCCASIONAL' || phone) { if (phone.length !== 10) fail('Phone number must be 10 digits.'); const dup = S.customers.find(x => x.id !== c.id && x.phone === phone); if (dup) fail('Another customer already has this phone: ' + (dup.shop || dup.name) + '.'); }
   if (!area) fail('Please choose the area.'); if (!(v.street || '').trim() && !(v.landmark || '').trim()) fail('Enter a street address or a landmark.');
@@ -3481,9 +3674,9 @@ function updateCustomer(pid, v) {
 route('cu.edit', (p, E) => {
   const c = cust(p.pid); if (!c) return { title: 'Customer', body: Empty('Not found') };
   const st = E.st; if (!st.v) st.v = { name: c.name, shop: c.shop || '', phone: c.phone || '', area: c.addr.area || '', street: c.addr.street || '', landmark: c.addr.landmark || '', city: c.addr.city || '' };
-  const v = st.v, inp = (key, label, o) => Field(label, h('input', Object.assign({ class: 'input', value: v[key], maxlength: 80, 'aria-label': label, onInput: ev => { v[key] = o && o.digits ? ev.target.value.replace(/\D/g, '').slice(0, 10) : ev.target.value; if (o && o.digits) ev.target.value = v[key]; } }, o && o.attrs)));
+  const v = st.v, inp = (key, label, o) => Field(label, h('input', Object.assign({ class: 'input', value: v[key], maxlength: 80, 'aria-label': label, onInput: ev => { v[key] = o && o.digits ? cleanPhone(ev.target.value) : ev.target.value; if (o && o.digits) ev.target.value = v[key]; } }, o && o.attrs)));
   const areaSel = h('select', { class: 'select', 'aria-label': 'Area', onChange: ev => { v.area = ev.target.value; } }, !S.areas.some(a => a.name === v.area) && v.area ? h('option', { value: v.area, selected: true }, v.area) : null, !v.area ? h('option', { value: '' }, 'Choose area') : null, S.areas.map(a => h('option', { value: a.name, selected: v.area === a.name }, a.name)));
-  const body = h('div', { class: 'gap' }, inp('name', 'Customer name'), inp('shop', 'Shop name (optional)'), inp('phone', 'Phone number (10 digits)', { digits: true, attrs: { type: 'tel', inputmode: 'numeric', maxlength: 10 } }), Field('Area', areaSel),
+  const body = h('div', { class: 'gap' }, inp('name', 'Customer name'), inp('shop', 'Shop name (optional)'), inp('phone', 'Phone number (10 digits)', { digits: true, attrs: { type: 'tel', inputmode: 'numeric', maxlength: 24, 'data-phone': '1' } }), Field('Area', areaSel),
     inp('street', 'Street address'), inp('landmark', 'Landmark'), inp('city', 'City'), h('div', { class: 'aside' }, 'To add a brand-new area, use More → Areas. Changing details never changes bills, payments or the Khata.'));
   return { title: 'Edit customer', sub: c.shop || c.name, body, foot: [Btn('SAVE CHANGES', { kind: 'primary', onClick: () => { updateCustomer(c.id, v); nav.back(); toast('Saved'); } })] };
 });
@@ -3637,8 +3830,8 @@ function saveStatusText() {
   if (STORE.error) return 'Could not save — download a backup';
   return STORE.savedAt ? 'Saved on this phone · ' + fmtT(STORE.savedAt) : 'Saved on this phone';
 }
-function downloadBackup() {
-  const blob = new Blob([backupFileText()], { type: 'application/json' }), url = URL.createObjectURL(blob);
+async function downloadBackup() {
+  const blob = new Blob([await backupFileText()], { type: 'application/json' }), url = URL.createObjectURL(blob);
   const a = h('a', { href: url, download: 'AgencyPilot-backup-' + ymd(new Date()) + '.json' }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000);
   toast('Backup downloaded');
 }
@@ -3647,7 +3840,7 @@ route('set.data', (p, E) => {
     const f = ev.target.files && ev.target.files[0]; if (!f) return;
     const rd = new FileReader(); rd.onerror = () => toast('Could not read that file.', true);
     rd.onload = () => { try { JSON.parse(String(rd.result)); } catch (e) { toast('That file is not an Agency Pilot backup.', true); return; }
-      confirmSheet({ title: 'Replace everything with this backup?', sub: 'All data on this phone is replaced by the file “' + f.name + '”.', yes: 'YES, RESTORE', danger: true, no: 'KEEP MY DATA', onYes: () => { try { restoreFromText(String(rd.result)); nav.reset([['today']], 'none'); toast('Backup restored'); } catch (err) { handleErr(err); } } }); };
+      confirmSheet({ title: 'Replace everything with this backup?', sub: 'All data on this phone is replaced by the file “' + f.name + '”.', yes: 'YES, RESTORE', danger: true, no: 'KEEP MY DATA', onYes: () => { restoreFromText(String(rd.result)).then(() => { nav.reset([['today']], 'none'); toast('Backup restored'); }).catch(err => handleErr(err)); } }); };
     rd.readAsText(f); ev.target.value = ''; } });
   const n = (k, a) => KV(k, String(a));
   const body = h('div', { class: 'gap' },
@@ -3827,12 +4020,18 @@ function saveNow() {
   }
 }
 function scheduleSave() { if (STORE.ok && !STORE.timer) STORE.timer = setTimeout(saveNow, 350); }
-function storeWipe() { try { localStorage.removeItem(STORE.key); localStorage.removeItem(STORE.bak); } catch (e) { /* ignore */ } STORE.last = ''; STORE.savedAt = null; STORE.bakAt = 0; }
-function backupFileText() { return '{"app":"agencyPilotV2","v":' + STORE.ver + ',"savedAt":' + Date.now() + ',"state":' + stateText() + '}'; }
-function restoreFromText(text) {
+function storeWipe() { fileClear(); try { localStorage.removeItem(STORE.key); localStorage.removeItem(STORE.bak); } catch (e) { /* ignore */ } STORE.last = ''; STORE.savedAt = null; STORE.bakAt = 0; }
+async function backupFileText() {
+  const files = {}; if (FILES.ok) { try { for (const k of await fileKeys()) { const b = await fileGet(k); if (b) files[k] = await blobToDataUrl(b); } } catch (e) { /* no photos */ } }
+  return '{"app":"agencyPilotV2","v":' + STORE.ver + ',"savedAt":' + Date.now() + ',"state":' + stateText() + ',"files":' + JSON.stringify(files) + '}';
+}
+async function restoreFromText(text) {
   let o; try { o = JSON.parse(text, storeReviver); } catch (e) { fail('That file is not an Agency Pilot backup.'); }
   if (!o || o.app !== 'agencyPilotV2' || !validState(o.state)) fail('That file is not an Agency Pilot backup.');
-  S = hydrate(o.state); saveNow(); return S;
+  S = hydrate(o.state); saveNow();
+  await fileClear();                                                         // photos belong to the backup being restored — never to the data it replaces
+  if (o.files && typeof o.files === 'object') for (const k of Object.keys(o.files)) { try { const r = await fetch(o.files[k]); await filePut(k, await r.blob()); } catch (e) { /* skip a damaged photo */ } }
+  return S;
 }
 function bootState() {
   STORE.ok = storeProbe();
@@ -3847,6 +4046,172 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 window.addEventListener('pagehide', saveNow); window.addEventListener('beforeunload', saveNow);
 setInterval(() => { if (STORE.ok) scheduleSave(); }, 4000);
 
+/* ---------- 85-feedback.js ---------- */
+/* ---------------------------------------------------------------------
+   8c. TESTER FEEDBACK — hold an empty space for 5 seconds on ANY screen, then leave a note about the whole screen or about one
+   part of it (tap any element). Notes are kept in their own localStorage key, so "Erase all data", sample data or a restored
+   backup never delete them. More → Feedback notes exports everything as a JSON file for the developer.
+   --------------------------------------------------------------------- */
+const FB = { key: 'agencyPilotV2.feedback.v1', build: 'V2 test build · 2026-11', notes: [], tipShown: false, ok: true, HOLD_MS: 5000, picking: false, hl: null, hold: null };
+const FB_KINDS = [['CHANGE', 'Change this'], ['ADD', 'Add something'], ['REMOVE', 'Remove this'], ['WRONG', 'Something is wrong'], ['QUESTION', 'Question']];
+const fbKindLabel = k => (FB_KINDS.find(x => x[0] === k) || [k, k])[1];
+function fbLoad() {
+  try { const r = localStorage.getItem(FB.key); if (r) { const o = JSON.parse(r); if (o && Array.isArray(o.notes)) { FB.notes = o.notes; FB.tipShown = !!o.tipShown; } } } catch (e) { FB.ok = false; }
+}
+function fbSave() {
+  try { localStorage.setItem(FB.key, JSON.stringify({ v: 1, tipShown: FB.tipShown, notes: FB.notes })); return true; }
+  catch (e) { toast('Could not save the note on this phone (storage is full or blocked).', true); return false; }
+}
+const fbNotesFor = route => FB.notes.filter(n => n.screen && n.screen.route === route);
+
+/* ---- what screen is this, and which element was meant ---- */
+function fbSafeParams(p) { const o = {}; try { for (const k of Object.keys(p || {})) { const v = p[k]; if (v == null || typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') o[k] = typeof v === 'string' ? v.slice(0, 60) : v; } } catch (e) { /* ignore */ } return o; }
+function fbScreenCtx() {
+  const E = nav.top() || {}, scr = $('.screen:not(.leave)');
+  const txt = n => n ? n.innerText.replace(/\s+/g, ' ').trim() : '';
+  return { route: E.name || '', params: fbSafeParams(E.params), stack: UI.stack.map(e => e.name), tab: UI.tab || '', title: txt(scr && scr.querySelector('h1')), subtitle: txt(scr && scr.querySelector('.hdr .sub')), step: txt(scr && scr.querySelector('.stepline')),
+    visibleText: txt(scr).slice(0, 800) };
+}
+function fbPath(el) {
+  const parts = []; let n = el;
+  while (n && n.nodeType === 1 && !n.classList.contains('screen') && parts.length < 7) {
+    let p = n.tagName.toLowerCase(); const cls = (n.className && typeof n.className === 'string' ? n.className.trim().split(/\s+/).slice(0, 2).join('.') : ''); if (cls) p += '.' + cls;
+    const par = n.parentElement; if (par) { const sib = Array.from(par.children).filter(c => c.tagName === n.tagName); if (sib.length > 1) p += ':nth-of-type(' + (sib.indexOf(n) + 1) + ')'; }
+    parts.unshift(p); n = n.parentElement;
+  }
+  return parts.join(' > ');
+}
+function fbDescribe(el, point) {
+  const scr = $('.screen:not(.leave)'), r = el.getBoundingClientRect(), sr = scr ? scr.getBoundingClientRect() : { left: 0, top: 0, width: innerWidth, height: innerHeight };
+  const text = (el.innerText || el.value || el.getAttribute('aria-label') || el.getAttribute('placeholder') || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+  let kind = 'area'; if (el.matches('button,.btn')) kind = 'button'; else if (el.matches('input,textarea')) kind = 'input field'; else if (el.matches('select')) kind = 'dropdown'; else if (el.matches('h1,h2')) kind = 'heading'; else if (el.matches('.row')) kind = 'list row'; else if (el.matches('.sec')) kind = 'section title'; else if (el.matches('.pane,.card')) kind = 'box'; else if (el.matches('.kv')) kind = 'label / value line'; else if (el.matches('.tile')) kind = 'tile'; else if (el.matches('.chip')) kind = 'chip'; else if (el.matches('.seg')) kind = 'choice buttons';
+  let section = ''; const sec = el.closest('.sec') || (() => { let p = el; while (p && p !== scr) { let s = p.previousElementSibling; while (s) { if (s.classList && s.classList.contains('sec')) return s; s = s.previousElementSibling; } p = p.parentElement; } return null; })(); if (sec) section = sec.innerText.replace(/\s+/g, ' ').trim().slice(0, 60);
+  return { tag: el.tagName.toLowerCase(), kind, text, label: el.getAttribute('aria-label') || '', placeholder: el.getAttribute('placeholder') || '', id: el.id || '', classes: typeof el.className === 'string' ? el.className.trim().slice(0, 80) : '', sectionAbove: section, path: fbPath(el),
+    rect: { x: Math.round(r.left - sr.left), y: Math.round(r.top - sr.top), w: Math.round(r.width), h: Math.round(r.height) }, point: point ? { x: Math.round(point.x - sr.left), y: Math.round(point.y - sr.top), xPct: Math.round(100 * (point.x - sr.left) / Math.max(1, sr.width)), yPct: Math.round(100 * (point.y - sr.top) / Math.max(1, sr.height)) } : null };
+}
+const fbLabel = d => d ? (d.kind + (d.text ? ' “' + d.text.slice(0, 50) + (d.text.length > 50 ? '…' : '') + '”' : '')) : 'the whole screen';
+
+/* ---- hold an empty space for 5 seconds ---- */
+function fbEmptyTarget(el) {
+  if (!el || !el.closest || !el.closest('#app') || !el.closest('.screen')) return false;
+  if (el.closest('.sheet,.sheetbg,.viewer,.fbui,.toast')) return false;
+  return !el.closest('button,a,input,select,textarea,label,summary,[role=switch],.row,.tile,.seg,.tog,.stepper,.denom,.attn');
+}
+function fbHoldCancel() {
+  const hd = FB.hold; if (!hd) return; FB.hold = null; clearTimeout(hd.t); cancelAnimationFrame(hd.raf); if (hd.ring) hd.ring.remove();
+}
+function fbHoldStart(ev) {
+  fbHoldCancel(); if (FB.picking || UI.sheet || UI.viewer) return;
+  const ring = h('div', { class: 'fbring fbui', 'aria-hidden': 'true' }, h('i'), h('span', null, '')); ring.style.left = ev.clientX + 'px'; ring.style.top = ev.clientY + 'px'; ring.style.display = 'none'; document.body.append(ring);
+  const hd = FB.hold = { x: ev.clientX, y: ev.clientY, id: ev.pointerId, start: Date.now(), ring, t: null, raf: 0, ctx: fbScreenCtx() };
+  const tick = () => { if (FB.hold !== hd) return; const el = Date.now() - hd.start, p = Math.min(1, el / FB.HOLD_MS);
+    if (el > 900) { ring.style.display = 'grid'; ring.style.setProperty('--p', String(Math.round(p * 360)) + 'deg'); ring.lastChild.textContent = String(Math.max(1, Math.ceil((FB.HOLD_MS - el) / 1000))); }
+    hd.raf = requestAnimationFrame(tick); };
+  hd.raf = requestAnimationFrame(tick);
+  hd.t = setTimeout(() => { if (FB.hold !== hd) return; const ctx = hd.ctx, pt = { x: hd.x, y: hd.y }; fbHoldCancel(); try { navigator.vibrate && navigator.vibrate(40); } catch (e) { /* ignore */ } fbMenu(ctx, pt); }, FB.HOLD_MS);
+}
+document.addEventListener('pointerdown', ev => { if (ev.pointerType === 'mouse' && ev.button !== 0) return; if (!fbEmptyTarget(ev.target)) return; fbHoldStart(ev); });
+document.addEventListener('pointermove', ev => { const hd = FB.hold; if (hd && ev.pointerId === hd.id && Math.hypot(ev.clientX - hd.x, ev.clientY - hd.y) > 14) fbHoldCancel(); });
+['pointerup', 'pointercancel', 'scroll', 'wheel', 'visibilitychange'].forEach(t => document.addEventListener(t, () => fbHoldCancel(), true));
+document.addEventListener('contextmenu', ev => { if (FB.hold || fbEmptyTarget(ev.target)) ev.preventDefault(); });          // Android shows a menu on long-press; we are using the long-press ourselves
+
+/* ---- step 1: whole screen or one part? ---- */
+function fbMenu(ctx, point) {
+  const n = fbNotesFor(ctx.route).length;
+  openSheet({ title: 'Leave a note', sub: (ctx.title || ctx.route) + (n ? ' · ' + plural(n, 'note') + ' here already' : ''), body: h('div', { class: 'aside' }, 'Tell us what you want changed, added or removed. You can write about this whole screen, or point at one part of it.'),
+    actions: [Btn('NOTE ABOUT THE WHOLE SCREEN', { kind: 'primary', onClick: () => { closeSheet(); fbCompose(ctx, null, point); } }), Btn('POINT AT A PART OF THE SCREEN', { kind: 'dark', onClick: () => { closeSheet(); fbPick(ctx, point); } }),
+      Btn('SEE ALL NOTES' + (FB.notes.length ? ' (' + FB.notes.length + ')' : ''), { kind: 'ghost', onClick: () => { closeSheet(); nav.go('fb.list'); } }), sheetClose('CANCEL')] });
+}
+/* ---- step 2: tap the element (the app's own buttons are switched off while picking) ---- */
+function fbBest(el) {
+  if (!el || !el.closest || !el.closest('.screen') || el.closest('.fbui')) return null;
+  let c = el.closest('button,a,input,select,textarea,.row,.tile,.btn,.kv,.sec,h1,h2,.oq,.card,.aside,.chip,.stepline,.tog,.seg,.flowbar,.dochead,.ol,.empty,.helpcard,.attn,.pane,.hdr');
+  if (!c || c.classList.contains('screen') || c.classList.contains('body')) c = el;
+  if (c.classList.contains('screen')) return null;
+  return c;
+}
+function fbHighlight(el) {
+  if (!FB.hl) { FB.hl = h('div', { class: 'fbhl fbui', 'aria-hidden': 'true' }); document.body.append(FB.hl); }
+  if (!el) { FB.hl.style.display = 'none'; return; }
+  const r = el.getBoundingClientRect(); document.body.classList.add('fbhl-on'); Object.assign(FB.hl.style, { display: 'block', left: r.left - 3 + 'px', top: r.top - 3 + 'px', width: r.width + 6 + 'px', height: r.height + 6 + 'px' });
+}
+function fbHideHighlight() { document.body.classList.remove('fbhl-on'); if (FB.hl) { FB.hl.remove(); FB.hl = null; } }
+function fbPick(ctx, point) {
+  FB.picking = true;
+  const stop = () => { FB.picking = false; bar.remove(); document.removeEventListener('click', onClick, true); document.removeEventListener('pointerdown', onDown, true); document.removeEventListener('keydown', onKey, true); fbHideHighlight(); };
+  const onDown = ev => { if (ev.target.closest && ev.target.closest('.fbui')) return; fbHighlight(fbBest(ev.target)); };
+  const onClick = ev => { if (ev.target.closest && ev.target.closest('.fbui')) return; ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation();
+    const el = fbBest(ev.target); if (!el) return; const pt = { x: ev.clientX, y: ev.clientY }; stop(); fbCompose(ctx, el, pt); };
+  const onKey = ev => { if (ev.key === 'Escape') stop(); };
+  const bar = h('div', { class: 'fbbar fbui', role: 'status' }, h('div', { class: 'fbt' }, h('b', null, 'Tap the part you want to change'), h('span', null, 'Buttons will not work now — tap anything, even text or empty space. You can scroll first.')),
+    h('div', { class: 'fbbtns' }, h('button', { class: 'btn dark sm', type: 'button', onClick: () => { stop(); fbCompose(ctx, null, point); } }, 'WHOLE SCREEN'), h('button', { class: 'btn ghost sm', type: 'button', onClick: () => bar.classList.toggle('bottom') }, '↕ MOVE'), h('button', { class: 'btn ghost sm', type: 'button', onClick: stop }, 'CANCEL')));
+  document.body.append(bar);
+  document.addEventListener('click', onClick, true); document.addEventListener('pointerdown', onDown, true); document.addEventListener('keydown', onKey, true);
+}
+/* ---- step 3: what change do you want? ---- */
+function fbCompose(ctx, el, point, existing) {
+  const st = { kind: existing ? existing.kind : 'CHANGE', note: existing ? existing.note : '', el };
+  if (el) fbHighlight(el);
+  const sel = h('div', { class: 'aside' });
+  const upd = () => { setKids(sel, h('b', null, 'About: '), st.el ? fbLabel(fbDescribe(st.el, point)) : existing && existing.element ? fbLabel(existing.element) : 'the whole screen', ' · ', ctx.title || ctx.route); if (st.el) fbHighlight(st.el); };
+  upd();
+  const ta = h('textarea', { class: 'input', rows: '4', maxlength: 1200, placeholder: 'What change do you want here?', 'aria-label': 'Your note', onInput: () => { st.note = ta.value; } }); ta.value = st.note;
+  const body = h('div', { class: 'gap' }, sel, Seg(FB_KINDS, st.kind, v => { st.kind = v; }), ta,
+    st.el && st.el.parentElement && !st.el.parentElement.classList.contains('screen') && !st.el.parentElement.classList.contains('body') ? Btn('SELECT A BIGGER AREA', { kind: 'link', onClick: () => { const p = st.el.parentElement; if (p && !p.classList.contains('screen')) { st.el = p; upd(); } } }) : null);
+  openSheet({ title: existing ? 'Edit note' : 'What do you want changed?', body, onClose: fbHideHighlight, actions: [
+    Btn('SAVE NOTE', { kind: 'primary', onClick: () => {
+      const text = st.note.trim(); if (text.length < 2) fail('Please write a few words about the change you want.');
+      if (existing) { existing.note = text; existing.kind = st.kind; existing.editedAt = new Date().toISOString(); }
+      else { const d = st.el ? fbDescribe(st.el, point) : null; FB.notes.push({ id: 'fb' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), at: new Date().toISOString(), screen: { route: ctx.route, params: ctx.params, stack: ctx.stack, tab: ctx.tab, title: ctx.title, subtitle: ctx.subtitle, step: ctx.step }, scope: d ? 'element' : 'screen', element: d, kind: st.kind, note: text, done: false, visibleText: ctx.visibleText, viewport: { w: innerWidth, h: innerHeight } }); }
+      if (!fbSave()) return; closeSheet(); toast(existing ? 'Note updated' : 'Note saved — ' + plural(fbNotesFor(ctx.route).length, 'note') + ' on this screen'); if (existing) nav.refresh(); } }),
+    sheetClose('CANCEL')] });
+}
+/* ---- review & export ---- */
+function fbExportObject() {
+  return { app: 'AgencyPilotV2 tester feedback', build: FB.build, exportedAt: new Date().toISOString(), count: FB.notes.length,
+    howToRead: 'Each note is a change request typed by the customer while testing the app. screen.route is the route name registered in Demos/AgencyPilotV2/index.html (route(\'name\', …)); scope "element" means they pointed at one part of the screen (see element.text / kind / path / rect); scope "screen" means the whole screen. visibleText is what the screen showed at that moment. rect and point are in CSS pixels relative to the screen; xPct / yPct are percentages of the screen size.',
+    device: { userAgent: navigator.userAgent, platform: navigator.platform || '', language: navigator.language, viewport: { w: innerWidth, h: innerHeight }, screen: { w: screen.width, h: screen.height }, pixelRatio: window.devicePixelRatio || 1 },
+    notes: FB.notes.slice().sort((a, b) => a.at < b.at ? -1 : 1) };
+}
+function fbText() {
+  const L = ['AGENCY PILOT — TESTER NOTES (' + FB.notes.length + ') · ' + FB.build + ' · exported ' + new Date().toLocaleString(), ''];
+  FB.notes.slice().sort((a, b) => a.at < b.at ? -1 : 1).forEach((n, i) => L.push((i + 1) + '. [' + (n.screen.title || n.screen.route) + ' · ' + n.screen.route + '] ' + fbKindLabel(n.kind).toUpperCase() + (n.done ? ' (done)' : '') + ' — ' + (n.element ? fbLabel(n.element) : 'whole screen') + '\n   ' + n.note.replace(/\n/g, '\n   ')));
+  return L.join('\n');
+}
+function fbDownload() {
+  const blob = new Blob([JSON.stringify(fbExportObject(), null, 2)], { type: 'application/json' }), url = URL.createObjectURL(blob);
+  const a = h('a', { href: url, download: 'AgencyPilot-feedback-' + ymd(new Date()) + '.json' }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000); toast('Feedback file downloaded');
+}
+function fbCopy() {
+  const txt = fbText(), done = () => toast('Notes copied — paste them anywhere');
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done).catch(() => fbCopyOld(txt, done)); else fbCopyOld(txt, done);
+}
+function fbCopyOld(txt, done) { const t = h('textarea', { style: { position: 'fixed', opacity: 0, top: 0 } }); t.value = txt; document.body.append(t); t.select(); try { document.execCommand('copy'); done(); } catch (e) { toast('Could not copy — use the file download.', true); } t.remove(); }
+function fbNoteSheet(n) {
+  const ctx = { route: n.screen.route, title: n.screen.title };
+  openSheet({ title: fbKindLabel(n.kind) + (n.done ? ' · done' : ''), sub: (n.screen.title || n.screen.route) + ' · ' + fmtDT(new Date(n.at)), body: h('div', { class: 'gap' },
+    h('div', { style: { fontSize: '17px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' } }, n.note), h('div', { class: 'aside' }, h('b', null, 'About: '), n.element ? fbLabel(n.element) : 'the whole screen', n.element && n.element.sectionAbove ? h('div', { class: 'mute' }, 'under “' + n.element.sectionAbove + '”') : null)),
+    actions: [Btn(n.done ? 'REOPEN' : 'MARK AS DONE', { kind: 'primary', onClick: () => { n.done = !n.done; fbSave(); closeSheet(); nav.refresh(); } }), Btn('EDIT NOTE', { kind: 'ghost', onClick: () => { closeSheet(); fbCompose(ctx, null, null, n); } }),
+      Btn('DELETE NOTE', { kind: 'danger', onClick: () => { FB.notes = FB.notes.filter(x => x !== n); fbSave(); closeSheet(); nav.refresh(); toast('Note deleted'); } }), sheetClose('CLOSE')] });
+}
+route('fb.list', (p, E) => {
+  const f = E.st.f || 'OPEN', all = FB.notes.slice().sort((a, b) => a.at < b.at ? 1 : -1), open = all.filter(n => !n.done).length;
+  const items = all.filter(n => f === 'ALL' || (f === 'OPEN' ? !n.done : n.done));
+  const body = h('div', { class: 'gap' }, h('div', { class: 'aside' }, h('b', null, 'How to leave a note: '), 'on any screen, put your finger on an empty space and keep it there for 5 seconds. Then choose the whole screen, or tap the exact part you want changed.'),
+    Seg([['OPEN', 'Open (' + open + ')'], ['DONE', 'Done (' + (all.length - open) + ')'], ['ALL', 'All']], f, v => { E.st.f = v; nav.refresh(); }),
+    items.length ? Pane(items.map(n => Row({ title: n.note.length > 90 ? n.note.slice(0, 90) + '…' : n.note, sub: (n.screen.title || n.screen.route) + ' · ' + (n.element ? fbLabel(n.element) : 'whole screen') + ' · ' + fmtD(new Date(n.at)), chip: fbKindLabel(n.kind), tone: n.done ? 'ok' : '', onClick: () => fbNoteSheet(n) }))) : Pane(Empty(all.length ? 'Nothing here.' : 'No notes yet. Hold an empty space for 5 seconds on any screen.')));
+  return { title: 'Feedback notes', sub: plural(all.length, 'note') + ' · ' + open + ' open', body, foot: all.length ? [Btn('EXPORT NOTES (JSON FILE)', { kind: 'primary', icon: 'print', onClick: fbDownload }), Btn('COPY AS TEXT', { kind: 'ghost', onClick: fbCopy }),
+    h('div', { class: 'linkrow' }, Btn('DELETE ALL NOTES', { kind: 'link', cls: 'neg', onClick: () => confirmSheet({ title: 'Delete all ' + all.length + ' notes?', sub: 'Export them first if you still need them.', yes: 'YES, DELETE ALL', danger: true, no: 'KEEP THEM', onYes: () => { FB.notes = []; fbSave(); nav.refresh(); toast('All notes deleted'); } }) }))] : [] };
+});
+function fbTip() {
+  openSheet({ title: 'Tell us what to change', body: h('div', { class: 'gap' }, h('div', null, 'While you test, you can leave a note on ', h('b', null, 'any screen'), ':'),
+    h('div', { class: 'aside' }, h('b', null, '1. '), 'Put your finger on an empty space and keep it there for ', h('b', null, '5 seconds'), '.', h('br'), h('b', null, '2. '), 'Choose the whole screen, or tap the exact button, line or box you mean.', h('br'), h('b', null, '3. '), 'Write what change you want.'),
+    h('div', { class: 'mute', style: { fontSize: '14px' } }, 'All notes are in More → Feedback notes, and can be sent as a file.')),
+    actions: [Btn('GOT IT', { kind: 'primary', onClick: () => { FB.tipShown = true; fbSave(); closeSheet(); } })], onClose: () => { FB.tipShown = true; fbSave(); } });
+}
+fbLoad();
+
+
 /* ---------- 90-boot.js ---------- */
 /* ---------------------------------------------------------------------
    9. BOOT — load the saved data (or start empty the first time).
@@ -3854,9 +4219,10 @@ setInterval(() => { if (STORE.ok) scheduleSave(); }, 4000);
 (function boot() {
   bootState();
   nav.reset([['today']], 'none');
+  if (!FB.tipShown) setTimeout(() => { if (!UI.sheet) fbTip(); }, 700);
   if (STORE.loaded && STORE.loaded.fromBackup) toast('Your main save was damaged, so the backup copy was opened.', true);
   /* read-only inspection handle for the person demonstrating / testing in the console */
-  window.AP = { get state() { return S; }, nav, UI, ROUTES, STORE, saveNow, resetDemo, rs, qtyText };
+  window.AP = { get state() { return S; }, FB, nav, UI, ROUTES, STORE, saveNow, resetDemo, rs, qtyText };
 })();
 
 </script>
