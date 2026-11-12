@@ -477,7 +477,7 @@ function ic(name, cls) {
 /* money: everything is integer PAISE internally */
 const INR = new Intl.NumberFormat('en-IN');
 function rs(p, o) {
-  o = o || {};
+  o = o || {}; p = Math.round(p);                          // buying prices may carry fractions of a paisa; every displayed amount is a whole paisa
   const neg = p < 0, a = Math.abs(p), r = Math.floor(a / 100), q = a % 100;
   return (neg ? '−' : (o.plus && a > 0 ? '+' : '')) + '₹' + INR.format(r) + (q ? '.' + String(q).padStart(2, '0') : '');
 }
@@ -487,6 +487,15 @@ function parseRs(str) {                                    // "1,500" "1500.5" "
   const parts = s.split('.');
   return parseInt(parts[0], 10) * 100 + parseInt(((parts[1] || '') + '00').slice(0, 2), 10);
 }
+/* a per-unit BUYING price can have up to 4 decimals (Balaji's real cost is e.g. ₹4.1861 a packet). Result is paise, possibly fractional. */
+function parseRate(str) {
+  const s = String(str == null ? '' : str).replace(/[₹,\s]/g, '');
+  if (!/^\d+(\.\d{1,4})?$/.test(s)) return null;
+  const parts = s.split('.');
+  return parseInt(parts[0], 10) * 100 + parseInt(((parts[1] || '') + '0000').slice(0, 4), 10) / 100;
+}
+const rsr = p => Math.abs(p - Math.round(p)) < 1e-9 ? rs(p) : (p < 0 ? '−' : '') + '₹' + Number((Math.abs(p) / 100).toFixed(4));   // ₹4.1861 — extra decimals only when there are some
+const rateStr = p => Number((p / 100).toFixed(4)).toString();
 const pctText = bp => Number((bp / 100).toFixed(2)) + '%';
 const pctOf = (paise, bp) => Math.floor((paise * bp + 5000) / 10000);   // integer, round half up to the paise
 const cap = s => s.charAt(0) + s.slice(1).toLowerCase();
@@ -765,7 +774,7 @@ function mkLine(pid, units) {
 /* total of lines at given per-base prices; paise are waived to a whole rupee (PROVISIONAL shop practice, shown on every bill) */
 function totalsOf(lines, prices) {
   let items = 0;
-  const rows = lines.map(l => { const rate = prices[l.pid]; const amt = l.base * rate; items += amt; return { pid: l.pid, base: l.base, units: l.units, rate, amt }; });
+  const rows = lines.map(l => { const rate = prices[l.pid]; const amt = Math.round(l.base * rate); items += amt; return { pid: l.pid, base: l.base, units: l.units, rate, amt }; });
   const waived = items % 100;
   return { rows, items, waived, total: items - waived };
 }
@@ -902,7 +911,7 @@ function confirmLoading(tid, token) {
   const t = tripOf(tid); if (!t) fail('Pickup not found.');
   if (tokUsed(token)) return t;
   if (t.status !== 'LOADING') fail('Loading was already confirmed.');
-  if (!t.vehicleId) fail('Choose the pickup vehicle first.');
+  if (!t.vehicleId) fail('Choose the vehicle first.');
   if (!t.driverId) fail('Choose a driver first.');
   if (S.settings.helperRequired && !t.helperId) fail('Choose a helper first.');
   if (!t.cameraId) fail('Choose the camera used for loading.');
@@ -1260,9 +1269,24 @@ function applyCount(pid, counted, reason, note, token) {
 
 /* ---- staff: position, duty and earning model are independent. Driver is a DUTY, not a position. ---- */
 const curModel = s => s.model;
-function markAttendance(sid, dateStr, status) {
-  const s = staffOf(sid); if (!s || !s.active) fail('Staff member not available.');
+const staffJoined = s => s.joined || ymd((s.hist && s.hist[0] && s.hist[0].at) || new Date());       // staff saved before joining dates existed: the day they were added
+const joinedBy = (s, dstr) => staffJoined(s) <= dstr;
+function setJoinDate(sid, dstr) {
+  const s = staffOf(sid); if (!s) fail('Staff member not found.');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dstr || '')) fail('Enter a valid joining date.');
+  if (dstr > ymd(new Date())) fail('The joining date cannot be in the future.');
+  const first = Object.keys(s.att).sort()[0]; if (first && dstr > first) fail('Attendance is already marked from ' + fmtDY(parseYmd(first)) + ', so the joining date cannot be later than that.');
+  s.joined = dstr; if (s.hist && s.hist[0]) s.hist[0].at = parseYmd(dstr);
+  log('STAFF', s.name + ': joining date set to ' + fmtDY(parseYmd(dstr)));
+}
+function markAllPresent(dstr) {
+  let n = 0; for (const s of S.staff) if (s.active && joinedBy(s, dstr) && !s.att[dstr]) { markAttendance(s.id, dstr, 'PRESENT'); n++; }
+  return n;
+}
+function markAttendance(sid, dstr0, status) {
+  const dateStr = dstr0, s = staffOf(sid); if (!s || !s.active) fail('Staff member not available.');
   if (dateStr > ymd(new Date())) fail('You cannot mark attendance for a future day.');
+  if (!joinedBy(s, dateStr)) fail(s.name + ' joined on ' + fmtDY(parseYmd(staffJoined(s))) + ' — attendance starts from that day.');
   const prev = s.att[dateStr];
   if (prev && prev.status === status) return prev;
   const daily = s.model.salary.on && s.model.salary.method === 'DAILY';
@@ -1310,9 +1334,12 @@ function changePosition(sid, pos, reason) {
 }
 function addStaff(d) {
   const name = (d.name || '').trim(); if (name.length < 2) fail('Enter the staff name.');
-  const s = { id: nid('s'), name, position: d.position || 'HELPER', driver: !!d.driver, areas: [], active: true, att: {}, duty: null,
+  const phone = String(d.phone || '').replace(/\D/g, ''); if (phone && phone.length !== 10) fail('Phone number must be 10 digits (or leave it blank).');
+  const joined = d.joined || ymd(new Date()); if (!/^\d{4}-\d{2}-\d{2}$/.test(joined)) fail('Enter a valid joining date.'); if (joined > ymd(new Date())) fail('The joining date cannot be in the future.');
+  const email = cleanEmail(d.email); if (email && !validEmail(email)) fail('That email address does not look right (example: name@gmail.com).');
+  const s = { id: nid('s'), name, position: d.position || 'HELPER', driver: !!d.driver, areas: [], active: true, att: {}, duty: null, joined, phone, email, home: '', aadhaar: '', family: [],
     model: d.position === 'AGENT' ? { salary: { on: false, method: 'NONE', rate: 0 }, commission: { on: true, bp: 100 } } : { salary: { on: true, method: 'DAILY', rate: 50000 }, commission: { on: false, bp: 0 } } };
-  s.hist = [{ at: new Date(), note: 'Joined — ' + posLabel[s.position], model: JSON.parse(JSON.stringify(s.model)), position: s.position }];
+  s.hist = [{ at: parseYmd(joined), note: 'Joined — ' + posLabel[s.position], model: JSON.parse(JSON.stringify(s.model)), position: s.position }];
   S.staff.push(s); log('STAFF', name + ' added as ' + posLabel[s.position]); return s;
 }
 /* off-duty unloading: ONE fee per job, paid to ONE coordinator — never multiplied by the number of workers */
@@ -1565,7 +1592,7 @@ const Chip = (t, tone) => h('span', { class: 'chip' + (tone ? ' ' + tone : '') }
 const KV = (k, v, cls) => h('div', { class: 'kv' + (cls ? ' ' + cls : '') }, h('span', null, k), h('span', null, v));
 const Sec = (t, right) => h('div', { class: 'sec' }, h('span', null, t), right || null);
 const Empty = t => h('div', { class: 'empty' }, t);
-const Field = (label, input, err) => h('div', null, h('label', { class: 'lbl' }, label, input), err ? h('div', { class: 'errtxt' }, err) : null);
+const Field = (label, input, err, errEl) => h('div', null, h('label', { class: 'lbl' }, label, input), err ? h('div', { class: 'errtxt' }, err) : null, errEl || null);
 const Toggle = (title, sub, on, onChange) => h('button', { class: 'tog', type: 'button', role: 'switch', 'aria-checked': String(!!on), onClick: function () { const v = this.getAttribute('aria-checked') !== 'true'; try { onChange(v); this.setAttribute('aria-checked', String(v)); } catch (err) { handleErr(err); } } },
   h('span', { class: 'tx' }, h('b', null, title), sub ? h('span', null, sub) : null), h('span', { class: 'sw' }));
 function Seg(options, value, onChange) {          // options: [[value,label],...]
@@ -1792,9 +1819,14 @@ function setupSteps() {
     { title: 'Add opening stock', sub: counted ? 'Stock counted' : prods.length ? 'Count what is in the godown today' : 'After you add a product', done: counted, go: () => nav.go('st.list') },
     { title: 'Add your areas', sub: S.areas.length ? plural(S.areas.length, 'area') + ' added' : 'Where you deliver', done: S.areas.length > 0, go: () => nav.go('set.area') },
     { title: 'Add your customers', sub: realCustomers().length ? plural(realCustomers().length, 'customer') + ' added' : 'Shops, inside their area', done: realCustomers().length > 0, go: () => nav.go('cu.list') },
-    { title: 'Add a pickup vehicle', sub: S.vehicles.length ? plural(S.vehicles.length, 'vehicle') + ' added' : 'And the loading camera', done: S.vehicles.length > 0, go: () => nav.go('set.pickup') },
-    { title: 'Add staff and a driver', sub: S.staff.some(s => s.driver) ? plural(S.staff.length, 'person', 'people') + ' added' : 'Driver, helpers, Manager', done: S.staff.some(s => s.driver), go: () => nav.go('set.staff') },
+    { title: 'Add a vehicle', sub: S.vehicles.length ? plural(S.vehicles.length, 'vehicle') + ' added' : 'Truck, pickup or tempo', done: S.vehicles.length > 0, go: () => nav.go('set.vehicles') },
+    { title: 'Add camera numbers', sub: S.cameras.length ? plural(S.cameras.length, 'camera') + ' added' : 'The camera that watches loading', done: S.cameras.length > 0, go: () => nav.go('set.cameras') },
+    { title: 'Add staff', sub: S.staff.length ? plural(S.staff.length, 'person', 'people') + ' added' : 'Manager, helpers, drivers — any staff can drive', done: S.staff.length > 0, go: () => nav.go('set.staff') },
   ];
+}
+function attendanceToday() {
+  const d = ymd(new Date()), staff = S.staff.filter(s => s.active && joinedBy(s, d)), marked = staff.filter(s => s.att[d]);
+  return { total: staff.length, marked: marked.length, unmarked: staff.length - marked.length, present: marked.filter(s => s.att[d].status === 'PRESENT').length, absent: marked.filter(s => s.att[d].status === 'ABSENT').length };
 }
 route('today', (p, E) => {
   const d = new Date();
@@ -1809,6 +1841,10 @@ route('today', (p, E) => {
   const drafts = activeDrafts();
   drafts.forEach(k => body.append(h('div', { class: 'resume mt16' }, h('div', null, h('b', null, 'Unfinished: '), DRAFTS[k].text(S.drafts[k])),
     h('div', { class: 'rr' }, Btn('RESUME', { kind: 'dark', cls: 'sm', onClick: () => DRAFTS[k].go(S.drafts[k]) }), Btn('DISCARD', { kind: 'link', cls: 'sm', onClick: () => discardDraft(k) })))));
+  const ats = attendanceToday();
+  if (ats.total) body.append(Sec('Attendance today', h('span', null, ats.marked + ' / ' + ats.total)), Pane(h('div', { class: 'pad', style: { paddingTop: '14px' } },
+    h('div', { style: { fontSize: '15px', color: 'var(--ink2)' } }, ats.unmarked ? (ats.marked ? ats.unmarked + ' of ' + ats.total + ' not marked yet' : 'Nobody is marked yet') : 'Everyone is marked ✓', ats.marked ? ' · ' + ats.present + ' present' + (ats.absent ? ', ' + ats.absent + ' absent' : '') : ''),
+    h('div', { class: 'btnrow', style: { paddingTop: '12px' } }, ats.unmarked ? Btn('ALL PRESENT', { kind: 'primary', cls: 'sm', onClick: () => { const n = markAllPresent(todayStr()); nav.refresh(); toast(plural(n, 'person', 'people') + ' marked present') } }) : null, Btn(ats.unmarked ? 'ONE BY ONE' : 'OPEN LIST', { kind: 'ghost', cls: 'sm', onClick: () => nav.go('sf.att', {}) })))));
   const steps = setupSteps(), left = steps.filter(x => !x.done);
   if (left.length) body.append(Sec('Set up your agency', h('span', null, (steps.length - left.length) + ' / ' + steps.length)), Pane(steps.map(x => Row({ title: x.title, sub: x.sub, chip: x.done ? 'DONE' : null, tone: 'ok', cls: x.done ? 'off' : '', onClick: x.go }))));
   const att = attention();
@@ -1852,7 +1888,7 @@ function linesPane(rows, tot, o) {
     const parts = r.units && Object.keys(r.units).length ? Object.keys(r.units).map(u => [u, r.units[u]]) : breakdown(pr, r.base);
     const blk = h('div', { class: 'ol' + (o.edit ? ' tap' : '') },
       h('div', { class: 'nm' }, h('span', null, prodLabel(pr)), h('span', null, rs(r.amt))),
-      parts.map(([u, n]) => h('div', { class: 'ln' }, h('span', null, n + ' ' + u), h('span', { class: 'rt' }, '× ' + rs(unitPrice(pr, u, r.rate))), h('span', { class: 'a' }, rs(n * unitPrice(pr, u, r.rate)))))
+      parts.map(([u, n]) => h('div', { class: 'ln' }, h('span', null, n + ' ' + u), h('span', { class: 'rt' }, '× ' + (u === pr.base ? rsr : rs)(unitPrice(pr, u, r.rate))), h('span', { class: 'a' }, rs(n * unitPrice(pr, u, r.rate)))))
     );
     if (o.edit) { const b = h('button', { type: 'button', class: 'row', style: { padding: 0, minHeight: 0, border: 0, display: 'block' }, onClick: act(() => o.edit(r)), 'aria-label': 'Change ' + pr.name }, blk); pane.append(b); } else pane.append(blk);
   });
@@ -2094,7 +2130,7 @@ route('pk.orders', (p, E) => {
         h('span', { class: 'check' + (on ? ' on' : '') }, on ? ic('check') : null),
         h('div', { class: 'l' }, h('div', { class: 't' }, orderTitle(o)), h('div', { class: 's' }, [areaOf(o.partyId), o.no, blocked ? 'needs Manager approval' : ''].filter(Boolean).join(' · '))),
         h('div', { class: 'r' }, rs(orderTotals(o).total))); })) : Pane(Empty('No orders are waiting.')));
-  return { title: 'Prepare Pickup', step: { label: 'LOADING PICKUP', n: 1, of: 7 }, body, help: ['Pick the orders that will travel on the same vehicle.', 'Next you choose the pickup, driver and helper. Goods only leave the godown when you confirm loading.'],
+  return { title: 'Prepare Pickup', step: { label: 'LOADING PICKUP', n: 1, of: 7 }, body, help: ['Pick the orders that will travel on the same vehicle.', 'Next you choose the vehicle, driver and helper. Goods only leave the godown when you confirm loading.'],
     foot: [Btn(n ? 'CONTINUE WITH ' + n + (n === 1 ? ' ORDER' : ' ORDERS') : 'SELECT AN ORDER', { kind: 'primary', disabled: !n, onClick: () => { const t = prepareTrip(d.orderIds); delete S.drafts.pk; nav.replace('pk.vehicle', { tid: t.id }); } }),
       waiting.length > 1 ? Btn(n === waiting.filter(o => !(o.needsApproval && !o.approved)).length ? 'CLEAR SELECTION' : 'SELECT ALL', { kind: 'link', onClick: () => { const all = waiting.filter(o => !(o.needsApproval && !o.approved)).map(o => o.id); d.orderIds = d.orderIds.length === all.length ? [] : all; nav.refresh(); } }) : null] };
 });
@@ -2102,9 +2138,9 @@ route('pk.orders', (p, E) => {
 /* ---- 2. pick pickup (vehicle) ---- */
 route('pk.vehicle', (p, E) => {
   const t = tripOf(p.tid);
-  const body = h('div', null, tripBar(t), h('div', { class: 'mt12' }, pickList(E, { placeholder: 'Search pickup', empty: S.vehicles.length ? 'No pickup found.' : 'No pickup vehicle yet. Add one in More → Settings → Pickup.', items: () => S.vehicles.filter(v => v.active), text: v => v.reg + ' ' + v.label,
+  const body = h('div', null, tripBar(t), h('div', { class: 'mt12' }, pickList(E, { placeholder: 'Search vehicle', empty: S.vehicles.length ? 'No vehicle found.' : 'No vehicle yet. Add one in More → Settings → Vehicles.', items: () => S.vehicles.filter(v => v.active), text: v => v.reg + ' ' + v.label,
     render: v => { const busy = busyVehicle(v.id, t.id), on = t.vehicleId === v.id; return Row({ title: v.reg, sub: v.label, chip: busy ? 'ON ANOTHER JOB' : on ? 'SELECTED' : null, tone: busy ? 'bad' : 'ok', cls: busy ? 'off' : '', onClick: busy ? null : () => { setTripPart(t.id, 'vehicleId', v.id); nav.go('pk.driver', { tid: t.id }); } }); } })));
-  return { title: 'Pick Pickup', step: pkStep(t, 'vehicle'), body, help: 'Choose the vehicle that will carry these orders. A vehicle already on another job is greyed out.', foot: [t.vehicleId ? Btn('NEXT', { kind: 'primary', onClick: () => nav.go('pk.driver', { tid: t.id }) }) : null, cancelLink(t)] };
+  return { title: 'Pick Vehicle', step: pkStep(t, 'vehicle'), body, help: 'Choose the vehicle that will carry these orders. A vehicle already on another job is greyed out.', foot: [t.vehicleId ? Btn('NEXT', { kind: 'primary', onClick: () => nav.go('pk.driver', { tid: t.id }) }) : null, cancelLink(t)] };
 });
 /* ---- 3. driver ---- */
 route('pk.driver', (p, E) => {
@@ -2165,14 +2201,14 @@ route('pk.camera', (p, E) => {
   const t = tripOf(p.tid);
   if (t.status === 'CANCELLED') return { title: 'Pickup', body: Empty('This pickup was cancelled.'), foot: [Btn('BACK TO TODAY', { kind: 'primary', onClick: () => nav.reset([['today']]) })] };
   const body = h('div', null, tripBar(t), h('div', { class: 'oq mt12', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Which camera is watching the loading?'), h('div', { class: 'hint' }, 'This is only a reference number to find the footage later.')),
-    S.cameras.some(c => c.active) ? null : Pane(Empty('No camera yet. Add one in More → Settings → Pickup.')), Pane(S.cameras.filter(c => c.active).map(c => Row({ title: c.id, sub: c.desc, chip: c.id === t.cameraId ? 'SELECTED' : (c.id === S.settings.defaultCamera ? 'USUAL' : null), tone: 'ok', onClick: () => { setTripPart(t.id, 'cameraId', c.id); nav.go('pk.confirm', { tid: t.id }); } }))));
+    S.cameras.some(c => c.active) ? null : h('div', { class: 'gap' }, Pane(Empty('No camera yet.')), Btn('ADD CAMERA NUMBER', { kind: 'dark', onClick: () => nav.go('set.cameras') })), Pane(S.cameras.filter(c => c.active).map(c => Row({ title: c.id, sub: c.desc, chip: c.id === t.cameraId ? 'SELECTED' : (c.id === S.settings.defaultCamera ? 'USUAL' : null), tone: 'ok', onClick: () => { setTripPart(t.id, 'cameraId', c.id); nav.go('pk.confirm', { tid: t.id }); } }))));
   return { title: 'Camera', step: pkStep(t, 'camera'), body, foot: [t.cameraId ? Btn('NEXT', { kind: 'primary', onClick: () => nav.go('pk.confirm', { tid: t.id }) }) : null] };
 });
 /* ---- 7. confirm loading ---- */
 route('pk.confirm', (p, E) => {
   const t = tripOf(p.tid), needs = tripNeeds(t);
   const body = h('div', { class: 'gap' },
-    h('div', { class: 'pane' }, h('div', { class: 'pad' }, KV('Pickup', vehOf(t.vehicleId).reg + ' (' + t.no + ')'), KV('Driver', staffOf(t.driverId).name), KV('Helper', t.helperId ? staffOf(t.helperId).name : '—'), KV('Camera', t.cameraId))),
+    h('div', { class: 'pane' }, h('div', { class: 'pad' }, KV('Vehicle', vehOf(t.vehicleId).reg + ' (' + t.no + ')'), KV('Driver', staffOf(t.driverId).name), KV('Helper', t.helperId ? staffOf(t.helperId).name : '—'), KV('Camera', t.cameraId))),
     Sec('Orders on this pickup'), Pane(tripOrders(t).map((o, i) => Row({ title: (i + 1) + '. ' + orderTitle(o), sub: areaOf(o.partyId) + ' · ' + (chalOf(o.dcId) ? chalOf(o.dcId).no + ' (prepared)' : ''), right: rs(orderTotals(o).total) }))),
     Sec('Loaded products'), Pane(Object.keys(needs).map(pid => Row({ title: prodLabel(prod(pid)), sub: 'Counted ' + qtyText(prod(pid), t.counted[pid]), right: '✓' }))));
   return { title: 'Confirm Loading', step: pkStep(t, 'confirm'), body, help: ['Confirming loading moves these goods from godown stock to the selected pickup.', 'After this, the stock is counted as being on the vehicle until it is delivered or brought back.'],
@@ -2842,7 +2878,7 @@ route('st.product', (p, E) => {
   const foot = fresh ? [Btn('ADD OPENING STOCK', { kind: 'primary', icon: 'plus', onClick: () => nav.go('st.count', { pid: pr.id, opening: true }), sub: 'Count what is on the shelves today' }), Btn('RECEIVE STOCK FROM A SUPPLIER', { kind: 'ghost', onClick: () => nav.go('st.receive') })]
     : [Btn('RECEIVE STOCK', { kind: 'primary', onClick: () => nav.go('st.receive') }), Btn('COUNT STOCK', { kind: 'dark', onClick: () => nav.go('st.count', { pid: pr.id }) })];
   foot.push(h('div', { class: 'linkrow' }, Btn('VIEW HISTORY', { kind: 'link', onClick: () => nav.go('st.hist', { pid: pr.id }) }), Btn('EDIT PRODUCT', { kind: 'link', onClick: () => nav.go('set.prod', { pid: pr.id }) })));
-  return { title: pr.name, sub: 'MRP ' + rs(pr.mrp) + ' · buy ' + (pr.buy ? rs(pr.buy) : '—') + ' · sell ' + rs(pr.sell) + ' per ' + unitWord(pr.base, 1), body, foot };
+  return { title: pr.name, sub: 'MRP ' + rs(pr.mrp) + ' · buy ' + (pr.buy ? rsr(pr.buy) : '—') + ' · sell ' + rs(pr.sell) + ' per ' + unitWord(pr.base, 1), body, foot };
 });
 route('st.hist', (p, E) => {
   const pr = p.pid ? prod(p.pid) : null, mv = S.moves.filter(m => !pr || m.pid === pr.id).slice().reverse();
@@ -2867,7 +2903,7 @@ function createPurchase(d) {
   const no = (d.no || '').trim() || nextNo('PU', 'PUR');
   if (S.invoices.some(i => i.no.toLowerCase() === no.toLowerCase())) fail('Invoice ' + no + ' was already entered.');
   tokUse(d.tok);
-  const inv = { id: nid('inv'), no, date: new Date(), supplier, lines: d.lines.map(l => ({ pid: l.pid, base: l.base, boxes: 0, units: { ...l.units }, rate: l.rate })), status: 'OPEN', value: d.lines.reduce((s, l) => s + l.base * l.rate, 0) };
+  const inv = { id: nid('inv'), no, date: new Date(), supplier, lines: d.lines.map(l => ({ pid: l.pid, base: l.base, boxes: 0, units: { ...l.units }, rate: l.rate })), status: 'OPEN', value: d.lines.reduce((s, l) => s + Math.round(l.base * l.rate), 0) };
   S.invoices.push(inv);
   log('STOCK', 'Purchase invoice ' + no + ' from ' + supplier + ' entered — ' + rs(inv.value) + ' (stock changes only after the count)', { inv: inv.id });
   return inv;
@@ -2875,7 +2911,7 @@ function createPurchase(d) {
 const BUY_STEP = n => ({ label: 'NEW PURCHASE', n, of: 4 });
 function startPurchase() { if (!S.drafts.buy) S.drafts.buy = { supplier: (S.invoices[S.invoices.length - 1] || {}).supplier || '', no: '', lines: [], tok: nid('tok') }; nav.go('st.buy'); }
 const buyRates = d => d.lines.reduce((m, l) => (m[l.pid] = l.rate, m), {});
-const buyTotal = d => d.lines.reduce((s, l) => s + l.base * l.rate, 0);
+const buyTotal = d => d.lines.reduce((s, l) => s + Math.round(l.base * l.rate), 0);
 route('st.buy', (p, E) => {
   const d = S.drafts.buy; if (!d) return { title: 'New purchase', body: Empty('Nothing in progress') };
   const btn = Btn('CONTINUE', { kind: 'primary', disabled: d.supplier.trim().length < 2, onClick: () => nav.go('st.buy.items') });
@@ -2889,7 +2925,7 @@ route('st.buy.items', (p, E) => {
   const prods = S.products.filter(x => x.active);
   const body = h('div', null, h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Which products came?')),
     prods.length ? pickList(E, { placeholder: 'Search product', empty: 'No product found.', items: () => prods, text: x => prodLabel(x) + ' ' + x.nick,
-      render: x => { const l = d.lines.find(q => q.pid === x.id); return Row({ title: prodLabel(x), sub: 'Buying ' + (x.buy ? rs(x.buy) + ' per ' + unitWord(x.base, 1) : 'price not set'), right: l ? '✓ ' + qtyText(x, l.base) : null, onClick: () => nav.go('st.buy.qty', { pid: x.id }) }); } })
+      render: x => { const l = d.lines.find(q => q.pid === x.id); return Row({ title: prodLabel(x), sub: 'Buying ' + (x.buy ? rsr(x.buy) + ' per ' + unitWord(x.base, 1) : 'price not set'), right: l ? '✓ ' + qtyText(x, l.base) : null, onClick: () => nav.go('st.buy.qty', { pid: x.id }) }); } })
       : h('div', null, Pane(Empty('No products yet. Add the product first, then come back to the purchase.')), h('div', { class: 'mt16' }, Btn('ADD PRODUCT', { kind: 'dark', onClick: () => startProduct('st.buy.items') }))));
   const foot = [];
   if (d.lines.length) foot.push(h('div', { class: 'flowbar' }, h('span', null, plural(d.lines.length, 'product'), h('small', null, 'from ' + d.supplier)), h('b', null, rs(buyTotal(d)))));
@@ -2898,10 +2934,10 @@ route('st.buy.items', (p, E) => {
 });
 route('st.buy.qty', (p, E) => {
   const d = S.drafts.buy, pr = prod(p.pid), line = d.lines.find(l => l.pid === pr.id), unit = unitWord(pr.base, 1);
-  if (!E.st.u) { E.st.u = Object.assign({}, line ? line.units : {}); E.st.rate = line ? String(line.rate / 100) : pr.buy ? String(pr.buy / 100) : ''; }
+  if (!E.st.u) { E.st.u = Object.assign({}, line ? line.units : {}); E.st.rate = line ? rateStr(line.rate) : pr.buy ? rateStr(pr.buy) : ''; }
   const tot = h('div', { class: 'big' }), sub = h('div', { class: 'mute' });
-  const upd = () => { const b = toBase(pr, E.st.u), r = parseRs(E.st.rate); tot.textContent = rs(b * (r || 0)); sub.textContent = b ? qtyText(pr, b) + ' = ' + baseText(pr, b) : 'Choose how many'; add.disabled = !(b > 0 && r > 0); };
-  const add = Btn(line ? 'UPDATE' : 'ADD TO PURCHASE', { kind: 'primary', disabled: true, onClick: () => { const l = mkLine(pr.id, E.st.u), r = parseRs(E.st.rate); if (!(l.base > 0)) fail('Choose how many.'); if (!(r > 0)) fail('Enter the buying price.'); l.rate = r; const i = d.lines.findIndex(q => q.pid === pr.id); if (i >= 0) d.lines[i] = l; else d.lines.push(l); nav.back(); toast(prodLabel(pr) + ' added'); } });
+  const upd = () => { const b = toBase(pr, E.st.u), r = parseRate(E.st.rate); tot.textContent = rs(b * (r || 0)); sub.textContent = b ? qtyText(pr, b) + ' = ' + baseText(pr, b) : 'Choose how many'; add.disabled = !(b > 0 && r > 0); };
+  const add = Btn(line ? 'UPDATE' : 'ADD TO PURCHASE', { kind: 'primary', disabled: true, onClick: () => { const l = mkLine(pr.id, E.st.u), r = parseRate(E.st.rate); if (!(l.base > 0)) fail('Choose how many.'); if (!(r > 0)) fail('Enter the buying price.'); l.rate = r; const i = d.lines.findIndex(q => q.pid === pr.id); if (i >= 0) d.lines[i] = l; else d.lines.push(l); nav.back(); toast(prodLabel(pr) + ' added'); } });
   const body = h('div', null, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'How many arrived on the invoice?'), h('div', { class: 'big mt8' }, prodLabel(pr))),
     h('div', { class: 'mt16' }, unitsEditor(pr, E.st.u, { onChange: upd })),
     Field('Buying price per ' + unit + ' (₹)', h('input', { class: 'input', id: 'rate', inputmode: 'decimal', maxlength: 9, value: E.st.rate, placeholder: 'e.g. 4', onInput: ev => { ev.target.value = ev.target.value.replace(/[^\d.]/g, ''); E.st.rate = ev.target.value; upd(); } })),
@@ -2976,28 +3012,97 @@ route('sf.list', (p, E) => {
     render: s => Row({ title: s.name, sub: posLabel[s.position] + ' · ' + currentDuty(s), right: attChip(s) || h('span', { class: 'mute' }, '—'), onClick: () => nav.go('sf.person', { sid: s.id }) }) });
   return { title: 'Staff', sub: 'Today ' + fmtD(new Date()), body, foot: [Btn('MARK ATTENDANCE', { kind: 'primary', onClick: () => nav.go('sf.att', {}) }), Btn('UNLOADING JOB', { kind: 'dark', onClick: () => nav.go('sf.unload') })] };
 });
+/* ---- personal details: phone, home address, Aadhaar, family contacts (several allowed). Aadhaar is shown masked everywhere except the edit screen. ---- */
+const RELATIONS = ['Father', 'Mother', 'Wife', 'Husband', 'Brother', 'Sister', 'Son', 'Daughter', 'Other relative', 'Friend', 'Neighbour'];
+const digitsOf = (v, n) => String(v || '').replace(/\D/g, '').slice(0, n);
+const maskAadhaar = a => a ? 'XXXX XXXX ' + a.slice(-4) : '';
+const cleanEmail = v => String(v || '').trim().toLowerCase();
+const validEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) && v.length <= 80;
+const staffFamily = s => Array.isArray(s.family) ? s.family : [];
+const hasDetails = s => !!(s.phone || s.email || s.home || s.aadhaar || staffFamily(s).length);
+const callLink = ph => h('a', { class: 'btn ghost sm', href: 'tel:' + ph, style: { width: 'auto', minWidth: '84px' }, 'aria-label': 'Call ' + ph }, ic('phone'), 'CALL');
+function saveStaffDetails(sid, v) {
+  const s = staffOf(sid); if (!s) fail('Staff member not found.');
+  const phone = digitsOf(v.phone, 10), aad = digitsOf(v.aadhaar, 12), home = (v.home || '').trim(), email = cleanEmail(v.email);
+  if (phone && phone.length !== 10) fail('Phone number must be 10 digits.');
+  if (email && !validEmail(email)) fail('That email address does not look right (example: name@gmail.com).');
+  if (email) { const dupE = S.staff.find(x => x.id !== s.id && cleanEmail(x.email) === email); if (dupE) fail('This email is already saved for ' + dupE.name + '.'); }
+  if (aad && aad.length !== 12) fail('Aadhaar number must be 12 digits (' + aad.length + ' entered).');
+  if (aad) { const dup = S.staff.find(x => x.id !== s.id && x.aadhaar === aad); if (dup) fail('This Aadhaar number is already saved for ' + dup.name + '.'); }
+  if (home.length > 160) fail('The home address is too long.');
+  const fam = v.family.map(f => ({ name: (f.name || '').trim(), rel: f.rel || 'Other relative', phone: digitsOf(f.phone, 10) }));
+  for (const f of fam) { if (f.name.length < 2) fail('Every family contact needs a name.'); if (f.phone.length !== 10) fail(f.name + ': phone number must be 10 digits.'); }
+  s.phone = phone; s.email = email; s.aadhaar = aad; s.home = home; s.family = fam;
+  log('STAFF', s.name + ': personal details updated');
+}
+function familySheet(v, i) {
+  const f = i != null ? Object.assign({}, v.family[i]) : { name: '', rel: 'Father', phone: '' };
+  const body = h('div', null,
+    Field('Name', h('input', { class: 'input', value: f.name, maxlength: 40, placeholder: 'e.g. Ramesh Kumar', 'aria-label': 'Name', onInput: ev => { f.name = ev.target.value; } })),
+    Field('Who is this person to the staff member?', h('select', { class: 'select', 'aria-label': 'Relation', onChange: ev => { f.rel = ev.target.value; } }, RELATIONS.map(r => h('option', { value: r, selected: f.rel === r }, r)))),
+    Field('Phone number (10 digits)', h('input', { class: 'input', value: f.phone, type: 'tel', inputmode: 'numeric', maxlength: 10, placeholder: '98XXXXXXXX', 'aria-label': 'Phone number', onInput: ev => { f.phone = digitsOf(ev.target.value, 10); ev.target.value = f.phone; } })));
+  openSheet({ title: i != null ? 'Family contact' : 'Add family contact', sub: 'Someone to call in an emergency.', body, actions: [
+    Btn('SAVE CONTACT', { kind: 'primary', onClick: () => { if (f.name.trim().length < 2) fail('Enter the name.'); if (digitsOf(f.phone, 10).length !== 10) fail('Phone number must be 10 digits.'); if (i != null) v.family[i] = f; else v.family.push(f); closeSheet(); nav.refresh(); } }),
+    i != null ? Btn('REMOVE CONTACT', { kind: 'danger', onClick: () => { v.family.splice(i, 1); closeSheet(); nav.refresh(); } }) : null, sheetClose('CANCEL')] });
+}
+route('sf.details', (p, E) => {
+  const s = staffOf(p.sid); if (!s) return { title: 'Staff', body: Empty('Not found') };
+  const st = E.st; if (!st.v) st.v = { phone: s.phone || '', email: s.email || '', home: s.home || '', aadhaar: s.aadhaar || '', family: staffFamily(s).map(f => ({ ...f })) };
+  const v = st.v, cnt = h('div', { class: 'hint' });
+  const aadHint = () => { const n = digitsOf(v.aadhaar, 12).length; cnt.textContent = n === 0 ? 'Optional · 12 digits' : n === 12 ? '✓ 12 digits' : n + ' of 12 digits'; };
+  const body = h('div', { class: 'gap' },
+    Field('Phone number (10 digits)', h('input', { class: 'input', value: v.phone, type: 'tel', inputmode: 'numeric', maxlength: 10, placeholder: '98XXXXXXXX', 'aria-label': 'Phone number', onInput: ev => { v.phone = digitsOf(ev.target.value, 10); ev.target.value = v.phone; } })),
+    Field('Email address (optional)', h('input', { class: 'input', value: v.email, type: 'email', inputmode: 'email', autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false', maxlength: 80, placeholder: 'name@gmail.com', 'aria-label': 'Email address', onInput: ev => { v.email = ev.target.value; } })),
+    Field('Home address', h('input', { class: 'input', value: v.home, maxlength: 160, placeholder: 'House, street, village / town', 'aria-label': 'Home address', onInput: ev => { v.home = ev.target.value; } })),
+    h('div', null, Field('Aadhaar number', h('input', { class: 'input', value: v.aadhaar, type: 'tel', inputmode: 'numeric', maxlength: 12, placeholder: '12 digits', autocomplete: 'off', 'aria-label': 'Aadhaar number', onInput: ev => { v.aadhaar = digitsOf(ev.target.value, 12); ev.target.value = v.aadhaar; aadHint(); } })), cnt),
+    h('div', null, Sec('Family contacts', h('span', null, v.family.length ? String(v.family.length) : '')),
+      v.family.length ? Pane(v.family.map((f, i) => Row({ title: f.name, sub: f.rel, right: f.phone, onClick: () => familySheet(v, i) }))) : h('div', { class: 'aside' }, 'No family contact yet. Add one or more people to call in an emergency.'),
+      h('div', { class: 'mt12' }, Btn('ADD FAMILY CONTACT', { kind: 'dark', icon: 'plus', onClick: () => familySheet(v, null) }))),
+    h('div', { class: 'aside' }, 'Aadhaar is private. It is saved only on this phone (and in your backup file) and is shown hidden, like XXXX XXXX 1234, everywhere except this screen.'));
+  aadHint();
+  return { title: 'Personal details', sub: s.name, body, foot: [Btn('SAVE DETAILS', { kind: 'primary', onClick: () => { saveStaffDetails(s.id, v); nav.back(); toast('Details saved'); } })] };
+});
+function detailsCard(s) {
+  const fam = staffFamily(s);
+  const kv = (k, val) => h('div', { class: 'kv' }, h('span', null, k), h('span', null, val));
+  return h('div', { class: 'gap' },
+    h('div', { class: 'pane' }, h('div', { class: 'pad', style: { paddingTop: '8px', paddingBottom: 0 } },
+      s.phone ? h('div', { class: 'row', style: { borderBottom: 0, padding: '6px 0' } }, h('div', { class: 'l' }, h('div', { class: 's' }, 'Phone'), h('div', { class: 't' }, s.phone)), callLink(s.phone)) : kv('Phone', '—'),
+      s.email ? h('div', { class: 'row', style: { borderBottom: 0, padding: '6px 0' } }, h('div', { class: 'l' }, h('div', { class: 's' }, 'Email'), h('div', { class: 't', style: { overflowWrap: 'anywhere' } }, s.email)), h('a', { class: 'btn ghost sm', href: 'mailto:' + s.email, style: { width: 'auto', minWidth: '84px' }, 'aria-label': 'Email ' + s.email }, 'MAIL')) : kv('Email', '—'),
+      kv('Home address', s.home || '—'), kv('Aadhaar', s.aadhaar ? maskAadhaar(s.aadhaar) : '—'))),
+    fam.length ? h('div', null, Sec('Family contacts'), Pane(fam.map(f => h('div', { class: 'row' }, h('div', { class: 'l' }, h('div', { class: 't' }, f.name), h('div', { class: 's' }, f.rel + ' · ' + f.phone)), callLink(f.phone))))) : null);
+}
 route('sf.person', (p, E) => {
   const s = staffOf(p.sid), b = netBal(s.id);
   const body = h('div', { class: 'gap' }, s.driver ? h('div', null, Chip('Driver-eligible')) : null,
-    h('div', { class: 'pane' }, h('div', { class: 'pad', style: { paddingTop: '8px', paddingBottom: 0 } }, KV('Attendance today', attChip(s) || 'Not marked'), KV('Current duty', currentDuty(s)), KV('Earning', earningText(s)), KV('Khata', b === 0 ? 'Clear' : (b < 0 ? 'Owes ' : 'To receive ') + rs(Math.abs(b))))),
+    Sec('Personal details'), hasDetails(s) ? detailsCard(s) : h('div', { class: 'aside' }, 'No phone, address, Aadhaar or family contact saved yet.'),
+    Btn(hasDetails(s) ? 'EDIT PERSONAL DETAILS' : 'ADD PERSONAL DETAILS', { kind: 'ghost', onClick: () => nav.go('sf.details', { sid: s.id }) }),
+    h('div', { class: 'pane' }, h('div', { class: 'pad', style: { paddingTop: '8px', paddingBottom: 0 } }, KV('Joined', fmtDY(parseYmd(staffJoined(s)))), KV('Attendance today', attChip(s) || 'Not marked'), KV('Current duty', currentDuty(s)), KV('Earning', earningText(s)), KV('Khata', b === 0 ? 'Clear' : (b < 0 ? 'Owes ' : 'To receive ') + rs(Math.abs(b))))),
     Sec('Actions'), Pane([Row({ title: 'Mark attendance', onClick: () => nav.go('sf.att', { sid: s.id }) }), Row({ title: 'Assign duty', sub: currentDuty(s), onClick: () => nav.go('sf.duty', { sid: s.id }) }),
       Row({ title: 'Change earning model', sub: earningText(s), onClick: () => nav.go('sf.earn', { sid: s.id }) }), Row({ title: 'View Khata', right: h('span', { class: b < 0 ? 'red' : '' }, rs(b, { plus: true })), rightSub: balShort(b), onClick: () => nav.go('kh.person', { pid: s.id }) })]));
   return { title: s.name, sub: posLabel[s.position], big: true, body };
 });
+/* ---- attendance: one stable list, one tap per person, or ALL PRESENT. Only staff who have already joined on that day are listed. ---- */
 route('sf.att', (p, E) => {
-  const dstr = E.st.date || todayStr(), d = parseYmd(dstr), isToday = dstr === todayStr();
+  const dstr = E.st.date || p.date || todayStr(), d = parseYmd(dstr), isToday = dstr === todayStr();
   const move = n => { const nd = ymd(addDays(d, n)); if (nd > todayStr()) return; E.st.date = nd; nav.refresh(); };
-  const staff = S.staff.filter(s => s.active), un = staff.filter(s => !s.att[dstr]), pr = staff.filter(s => s.att[dstr] && s.att[dstr].status === 'PRESENT'), ab = staff.filter(s => s.att[dstr] && s.att[dstr].status === 'ABSENT');
+  const all = S.staff.filter(s => s.active), staff = all.filter(s => joinedBy(s, dstr)), later = all.length - staff.length;
+  const un = staff.filter(s => !s.att[dstr]), pr = staff.filter(s => s.att[dstr] && s.att[dstr].status === 'PRESENT').length, ab = staff.filter(s => s.att[dstr] && s.att[dstr].status === 'ABSENT').length;
   const set = (s, st) => { markAttendance(s.id, dstr, st); nav.refresh(); toast(s.name + ' ' + (st === 'PRESENT' ? 'present' : 'absent') + (s.model.salary.on && s.model.salary.method === 'DAILY' && st === 'PRESENT' ? ' — ' + rs(s.att[dstr].rate) + ' earned' : '')); };
   const row = s => { const a = s.att[dstr];
     return h('div', { class: 'row' }, h('div', { class: 'l' }, h('div', { class: 't' }, s.name), h('div', { class: 's' }, posLabel[s.position] + (a && a.hist.length > 1 ? ' · corrected' : ''))),
       h('div', { style: { display: 'flex', gap: '8px' } }, h('button', { class: 'btn sm ' + (a && a.status === 'PRESENT' ? 'primary' : 'ghost'), type: 'button', style: { minWidth: '88px' }, 'aria-pressed': String(!!a && a.status === 'PRESENT'), onClick: act(() => set(s, 'PRESENT')) }, 'PRESENT'),
         h('button', { class: 'btn sm ' + (a && a.status === 'ABSENT' ? 'black' : 'ghost'), type: 'button', style: { minWidth: '88px' }, 'aria-pressed': String(!!a && a.status === 'ABSENT'), onClick: act(() => set(s, 'ABSENT')) }, 'ABSENT'))); };
-  const grp = (t, list) => list.length ? h('div', null, Sec(t + ' (' + list.length + ')'), Pane(list.map(row))) : null;
   const body = h('div', null, h('div', { class: 'flowbar' }, h('button', { class: 'btn ghost sm', type: 'button', style: { minWidth: '52px', padding: 0 }, 'aria-label': 'Previous day', onClick: () => move(-1) }, ic('back')), h('span', { style: { textAlign: 'center' } }, weekday(d) + ', ' + fmtDY(d), h('small', null, isToday ? 'Today' : 'Past day — changes are recorded as corrections')), h('button', { class: 'btn ghost sm', type: 'button', style: { minWidth: '52px', padding: 0 }, disabled: isToday, 'aria-label': 'Next day', onClick: () => move(1) }, ic('next'))),
-    grp('Not marked', un), grp('Present', pr), grp('Absent', ab), h('div', { class: 'mute mt16 center', style: { fontSize: '14px' } }, 'Daily-wage staff earn their day’s wage when marked present. Earned is not paid — it appears in their Khata.'));
-  return { title: 'Attendance', sub: staff.length + ' staff', body, help: 'Mark each person present or absent. A day’s wage is added to their Khata when they are present. Changing an old mark adds a correction — the first mark stays in history.' };
+    staff.length ? h('div', null, Sec(pr + ' present · ' + ab + ' absent' + (un.length ? ' · ' + un.length + ' not marked' : ''), un.length ? null : h('span', null, '✓ all marked')), Pane(staff.map(row)))
+      : Pane(Empty(S.staff.length ? 'No one had joined yet on this day.' : 'No staff yet. Add them in More → Settings → Staff.')),
+    later ? h('div', { class: 'mute mt12 center', style: { fontSize: '14px' } }, plural(later, 'person', 'people') + ' joined after this day and ' + (later === 1 ? 'is' : 'are') + ' not listed.') : null,
+    h('div', { class: 'mute mt16 center', style: { fontSize: '14px' } }, 'Daily-wage staff earn their day’s wage when marked present. Earned is not paid — it appears in their Khata.'));
+  return { title: 'Attendance', sub: staff.length + ' staff', body,
+    foot: un.length ? [Btn('MARK ALL ' + (un.length === staff.length ? '' : 'THE REST ') + 'PRESENT', { kind: 'primary', onClick: () => { const n = markAllPresent(dstr); nav.refresh(); toast(plural(n, 'person', 'people') + ' marked present — tap ABSENT for anyone who is away'); } })] : staff.length ? [Btn('DONE', { kind: 'primary', onClick: () => nav.back() })] : [],
+    help: 'Tap PRESENT or ABSENT for each person, or MARK ALL PRESENT and then tap ABSENT for anyone who is away. A day’s wage is added to their Khata when they are present. Changing an old mark adds a correction — the first mark stays in history.' };
 });
+
 route('sf.duty', (p, E) => {
   const s = staffOf(p.sid), st = E.st; if (!st.t) { st.t = s.duty ? s.duty.type : 'NONE'; st.note = s.duty ? s.duty.note : ''; }
   const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'eyebrow' }, s.name + ' · ' + posLabel[s.position]), h('div', { class: 'big mt8' }, 'Assign duty')),
@@ -3233,7 +3338,7 @@ function editSheet(o) {
   const vals = {}; o.fields.forEach(f => vals[f.key] = f.value != null ? f.value : '');
   const body = h('div', null, o.fields.map(f => Field(f.label, f.type === 'select'
     ? h('select', { class: 'select', 'aria-label': f.label, onChange: ev => { vals[f.key] = ev.target.value; } }, f.options.map(op => h('option', { value: op[0], selected: String(vals[f.key]) === String(op[0]) }, op[1])))
-    : h('input', { class: 'input', 'aria-label': f.label, inputmode: f.type === 'money' || f.type === 'num' ? 'decimal' : null, placeholder: f.placeholder || '', maxlength: f.maxlength || 60, value: vals[f.key], onInput: ev => { vals[f.key] = ev.target.value; } }))));
+    : h('input', { class: 'input', type: f.type === 'date' ? 'date' : null, max: f.max || null, 'aria-label': f.label, inputmode: f.type === 'money' || f.type === 'num' ? 'decimal' : null, placeholder: f.placeholder || '', maxlength: f.maxlength || 60, value: vals[f.key], onInput: ev => { vals[f.key] = ev.target.value; } }))));
   openSheet({ title: o.title, sub: o.sub, body, actions: [Btn(o.save || 'SAVE', { kind: 'primary', onClick: () => { o.onSave(vals); closeSheet(); nav.refresh(); } }), sheetClose('CANCEL')] });
 }
 
@@ -3244,9 +3349,10 @@ route('more', (p, E) => {
     sec('Sell', [Row({ title: 'Godown sale', sub: 'Customer comes to the godown', onClick: () => startCart('godown') }), Row({ title: 'Retail sale', sub: 'Single packets at the counter', onClick: () => { const d = S.drafts.retail; if (d && d.pid) openSheet({ title: 'Unfinished retail sale', sub: prod(d.pid).name, body: h('div'), actions: [Btn('RESUME IT', { kind: 'primary', onClick: () => { closeSheet(); nav.go('rl.qty'); } }), Btn('START NEW', { kind: 'ghost', onClick: () => { closeSheet(); delete S.drafts.retail; nav.go('rl.prod'); } }), sheetClose('CANCEL')] }); else nav.go('rl.prod'); } }), Row({ title: 'Inter-agency sale', sub: 'Another Balaji agency buys goods', onClick: () => startCart('ia') })]),
     sec('Operate', [Row({ title: 'Pickups', sub: 'Loading, on the road, returns', onClick: () => nav.go('pk.list') }), Row({ title: 'Stock', sub: S.products.length ? plural(S.products.filter(x => x.active).length, 'product') + ' · search, receive, count' : 'Add products, receive and count stock', onClick: () => nav.go('st.list') }),
       Row({ title: 'Customers', sub: S.customers.length ? plural(S.customers.filter(c => c.type !== 'OCCASIONAL').length, 'customer') + ' · ' + plural(S.areas.length, 'area') : 'Add shops and areas', onClick: () => nav.go('cu.list') }),
-      Row({ title: 'Staff', sub: 'Attendance, duty, earnings', onClick: () => nav.go('sf.list') }), Row({ title: 'Returns & expired goods', sub: 'What came back, and money for it', onClick: () => nav.go('rtn.start') })]),
+      Row({ title: 'Attendance', sub: (() => { const a = attendanceToday(); return a.total ? (a.unmarked ? a.unmarked + ' not marked today' : 'Everyone marked today ✓') : 'Mark staff present or absent'; })(), onClick: () => nav.go('sf.att', {}) }),
+      Row({ title: 'Staff', sub: 'Profiles, duty, earnings', onClick: () => nav.go('sf.list') }), Row({ title: 'Returns & expired goods', sub: 'What came back, and money for it', onClick: () => nav.go('rtn.start') })]),
     sec('Money', [Row({ title: 'Cash / Day close', sub: 'Cash ' + rs(cbal('CASH')) + ' · Bank ' + rs(cbal('BANK')), onClick: () => nav.go('cash.home') }), Row({ title: 'Pending verification', sub: 'Money waiting to be checked', right: pend ? Chip(String(pend), 'bad') : '✓', onClick: () => nav.go('cash.pend') })]),
-    sec('Setup', [Row({ title: 'Areas', sub: S.areas.length ? S.areas.map(a => a.name).slice(0, 3).join(', ') + (S.areas.length > 3 ? '…' : '') : 'Add the areas you deliver to', onClick: () => nav.go('set.area') }), Row({ title: 'Settings', sub: 'Staff · Area · Stock · Pickup', onClick: () => nav.go('set.home') }), Row({ title: 'Data & backup', sub: saveStatusText(), right: STORE.ok && !STORE.error ? null : Chip('NOT SAVING', 'bad'), onClick: () => nav.go('set.data') }), Row({ title: 'History', sub: 'Everything that happened', onClick: () => nav.go('hist') })]),
+    sec('Setup', [Row({ title: 'Areas', sub: S.areas.length ? S.areas.map(a => a.name).slice(0, 3).join(', ') + (S.areas.length > 3 ? '…' : '') : 'Add the areas you deliver to', onClick: () => nav.go('set.area') }), Row({ title: 'Settings', sub: 'Staff · Area · Stock · Vehicles · Cameras', onClick: () => nav.go('set.home') }), Row({ title: 'Data & backup', sub: saveStatusText(), right: STORE.ok && !STORE.error ? null : Chip('NOT SAVING', 'bad'), onClick: () => nav.go('set.data') }), Row({ title: 'History', sub: 'Everything that happened', onClick: () => nav.go('hist') })]),
     h('div', { class: 'center mute mt24', style: { fontSize: '12px', marginBottom: '12px' } }, 'Agency Pilot V2 · test build · ' + saveStatusText()));
   return { title: 'More', body };
 });
@@ -3254,20 +3360,22 @@ route('more', (p, E) => {
 /* ===================== SETTINGS ===================== */
 route('set.home', (p, E) => {
   const big = (t, r) => h('button', { class: 'row', type: 'button', style: { color: 'var(--ink)', borderBottom: '1px solid var(--line)', minHeight: '76px', padding: '10px 4px' }, onClick: act(() => nav.go(r)) }, h('div', { class: 'l' }, h('div', { style: { fontSize: '26px', fontWeight: 500, letterSpacing: '-.02em' } }, t)), ic('next', 'chev'));
-  return { title: 'Settings', body: h('div', null, big('STAFF', 'set.staff'), big('AREA', 'set.area'), big('STOCK', 'set.stock'), big('PICKUP', 'set.pickup'), Sec('Additional'), Pane([Row({ title: 'Data & backup', sub: saveStatusText(), onClick: () => nav.go('set.data') })]), Pane([Row({ title: 'Payments, expenses & agency', sub: 'Payment methods · expense types · agency details · print', onClick: () => nav.go('set.more') })]),
+  return { title: 'Settings', body: h('div', null, big('STAFF', 'set.staff'), big('AREA', 'set.area'), big('STOCK', 'set.stock'), big('VEHICLES', 'set.vehicles'), big('CAMERAS', 'set.cameras'), Sec('Additional'), Pane([Row({ title: 'Data & backup', sub: saveStatusText(), onClick: () => nav.go('set.data') })]), Pane([Row({ title: 'Payments, expenses & agency', sub: 'Payment methods · expense types · agency details · print', onClick: () => nav.go('set.more') })]),
     Sec('Sample data for testing'), Pane([
-      Row({ title: 'Load sample data', sub: '10 products with stock, 8 customers, 9 staff, 3 pickup vehicles, orders waiting, a pickup on the road and some dues', onClick: () => confirmSheet({ title: 'Replace your data with sample data?', sub: 'This REPLACES everything on this phone with a fictional sample agency. Download a backup first (Data & backup). “Erase all data” makes the app empty again.', yes: 'REPLACE WITH SAMPLE', danger: true, no: 'CANCEL', onYes: () => { loadExample(); saveNow(); nav.reset([['today']], 'none'); toast('Sample data loaded'); } }) }),
+      Row({ title: 'Load sample data', sub: '10 products with stock, 8 customers, 9 staff, 3 vehicles, orders waiting, a pickup on the road and some dues', onClick: () => confirmSheet({ title: 'Replace your data with sample data?', sub: 'This REPLACES everything on this phone with a fictional sample agency. Download a backup first (Data & backup). “Erase all data” makes the app empty again.', yes: 'REPLACE WITH SAMPLE', danger: true, no: 'CANCEL', onYes: () => { loadExample(); saveNow(); nav.reset([['today']], 'none'); toast('Sample data loaded'); } }) }),
       Row({ title: 'Example scenarios', sub: 'Jump straight to one situation: delivery, partial payment, pickup return, Agent Khata, day close…', onClick: () => nav.go('scen') })]),
     h('div', { class: 'aside mt16' }, 'The app normally starts empty. Sample data is fictional and is never mixed with what you enter — loading it replaces everything.')) };
 });
 route('set.staff', (p, E) => ({ title: 'Staff settings', body: h('div', { class: 'gap' }, S.staff.length ? null : Pane(Empty('No staff yet. Tap ADD STAFF — add the Manager, helpers and at least one driver.')), Pane(S.staff.map(s => Row({ title: s.name, sub: posLabel[s.position] + (s.driver ? ' · can drive' : '') + (s.areas.length ? ' · ' + s.areas.join(', ') : '') + (!s.active ? ' · not active' : ''), cls: s.active ? '' : 'off', onClick: () => nav.go('set.staff.edit', { sid: s.id }) }))),
   h('div', { class: 'aside' }, h('b', null, 'Photos & ID documents: '), 'staff photos and Aadhaar copies are not stored in this version.')),
-  foot: [Btn('ADD STAFF', { kind: 'primary', onClick: () => editSheet({ title: 'Add staff', save: 'ADD', fields: [{ key: 'name', label: 'Name', placeholder: 'Name', maxlength: 30 }, { key: 'position', label: 'Position', type: 'select', value: 'HELPER', options: Object.keys(posLabel).filter(k => k !== 'CEO').map(k => [k, posLabel[k]]) }, { key: 'driver', label: 'Can drive a pickup?', type: 'select', value: '0', options: [['0', 'No'], ['1', 'Yes — can be the driver']] }], onSave: v => { const s = addStaff({ name: v.name, position: v.position, driver: v.driver === '1' }); toast(s.name + ' added'); } }) })] }));
+  foot: [Btn('ADD STAFF', { kind: 'primary', onClick: () => editSheet({ title: 'Add staff', save: 'ADD', fields: [{ key: 'name', label: 'Name', placeholder: 'Name', maxlength: 30 }, { key: 'phone', label: 'Phone number (optional)', placeholder: '98XXXXXXXX', maxlength: 10, type: 'num' }, { key: 'email', label: 'Email address (optional)', placeholder: 'name@gmail.com', maxlength: 80 }, { key: 'joined', label: 'Joining date', type: 'date', value: todayStr(), max: todayStr() }, { key: 'position', label: 'Position', type: 'select', value: 'HELPER', options: Object.keys(posLabel).filter(k => k !== 'CEO').map(k => [k, posLabel[k]]) }, { key: 'driver', label: 'Can be the driver?', type: 'select', value: '0', options: [['0', 'No'], ['1', 'Yes — can drive a pickup']] }], onSave: v => { const s = addStaff({ name: v.name, phone: v.phone, email: v.email, joined: v.joined, position: v.position, driver: v.driver === '1' }); toast(s.name + ' added'); } }) })] }));
 route('set.staff.edit', (p, E) => {
   const s = staffOf(p.sid), agentish = ['AGENT', 'PERSONAL_AGENT'].includes(s.position);
   const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'big' }, s.name), h('div', { class: 'mt8' }, Chip(posLabel[s.position].toUpperCase())))),
     h('div', { class: 'card' }, Toggle('Can be assigned as driver', 'A driver is a duty — the position does not change', s.driver, v => { s.driver = v; log('STAFF', s.name + (v ? ' is now driver-eligible' : ' is no longer driver-eligible')); }),
       Toggle('Active', 'Inactive people cannot be picked for work; history is kept', s.active, v => { if (!v && busyStaff(s.id)) { fail(s.name + ' is on a pickup right now.'); } s.active = v; log('STAFF', s.name + (v ? ' reactivated' : ' set inactive')); nav.refresh(); })),
+    h('div', { class: 'card' }, KV('Joining date', fmtDY(parseYmd(staffJoined(s)))), h('div', { class: 'mt8' }, Btn('CHANGE JOINING DATE', { kind: 'dark', cls: 'sm', onClick: () => editSheet({ title: 'Joining date — ' + s.name, fields: [{ key: 'd', label: 'Date of joining', type: 'date', value: staffJoined(s), max: todayStr() }], onSave: v => { setJoinDate(s.id, v.d); toast('Joining date saved'); } }) }))),
+    h('div', { class: 'card' }, KV('Personal details', hasDetails(s) ? [s.phone ? '☎' : null, s.email ? 'email' : null, s.home ? 'address' : null, s.aadhaar ? 'Aadhaar' : null, staffFamily(s).length ? plural(staffFamily(s).length, 'family contact') : null].filter(Boolean).join(' · ') : 'Not added'), h('div', { class: 'mt8' }, Btn(hasDetails(s) ? 'EDIT PERSONAL DETAILS' : 'ADD PERSONAL DETAILS', { kind: 'dark', cls: 'sm', onClick: () => nav.go('sf.details', { sid: s.id }) }))),
     agentish ? h('div', null, Sec('Works only in these areas'), h('div', { class: 'card' }, S.areas.map(a => Toggle(a.name, null, s.areas.includes(a.name), v => { s.areas = v ? s.areas.concat([a.name]) : s.areas.filter(x => x !== a.name); })))) : null,
     h('div', { class: 'card' }, KV('Earning', earningText(s)), h('div', { class: 'mt8' }, Btn('CHANGE EARNING MODEL', { kind: 'dark', cls: 'sm', onClick: () => nav.go('sf.earn', { sid: s.id }) }))),
     h('div', { class: 'aside' }, 'A Personal Agent gets a basic salary and may earn commission later. An independent Agent works only in the given areas and earns commission. The lowest staff level can update deliveries and payments.'));
@@ -3379,16 +3487,16 @@ route('cu.edit', (p, E) => {
     inp('street', 'Street address'), inp('landmark', 'Landmark'), inp('city', 'City'), h('div', { class: 'aside' }, 'To add a brand-new area, use More → Areas. Changing details never changes bills, payments or the Khata.'));
   return { title: 'Edit customer', sub: c.shop || c.name, body, foot: [Btn('SAVE CHANGES', { kind: 'primary', onClick: () => { updateCustomer(c.id, v); nav.back(); toast('Saved'); } })] };
 });
-route('set.stock', (p, E) => ({ title: 'Stock settings', body: h('div', { class: 'gap' }, S.products.length ? null : Pane(Empty('No products yet. Tap ADD PRODUCT to create the first one.')), Pane(S.products.map(x => Row({ title: prodLabel(x), sub: x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(' · ') + ' ' + x.base.toLowerCase() + 's · buys ' + (x.buy ? rs(x.buy) : '—') + ' · sells ' + rs(x.sell), cls: x.active ? '' : 'off', onClick: () => nav.go('set.prod', { pid: x.id }) }))), Pane([Row({ title: 'Movement reasons', sub: S.settings.reasons.length + ' reasons', onClick: () => nav.go('set.reasons') })])),
+route('set.stock', (p, E) => ({ title: 'Stock settings', body: h('div', { class: 'gap' }, S.products.length ? null : Pane(Empty('No products yet. Tap ADD PRODUCT to create the first one.')), Pane(S.products.map(x => Row({ title: prodLabel(x), sub: x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(' · ') + ' ' + x.base.toLowerCase() + 's · buys ' + (x.buy ? rsr(x.buy) : '—') + ' · sells ' + rs(x.sell), cls: x.active ? '' : 'off', onClick: () => nav.go('set.prod', { pid: x.id }) }))), Pane([Row({ title: 'Movement reasons', sub: S.settings.reasons.length + ' reasons', onClick: () => nav.go('set.reasons') })])),
   foot: [Btn('ADD PRODUCT', { kind: 'primary', onClick: () => startProduct('set.stock') })] }));
 route('set.prod', (p, E) => {
   const x = prod(p.pid);
-  return { title: x.name, sub: 'Product settings', body: h('div', { class: 'gap' }, h('div', { class: 'card' }, KV('Printed MRP', rs(x.mrp)), KV('Buying price (per ' + x.base.toLowerCase() + ')', x.buy ? rs(x.buy) : 'Not set'), KV('Sell-to-Shop (per ' + x.base.toLowerCase() + ')', rs(x.sell)), KV('Retail counter (per ' + x.base.toLowerCase() + ')', rs(x.retail)), x.buy ? KV('Margin per BOX', h('span', { class: x.sell < x.buy ? 'red' : '' }, rs((x.sell - x.buy) * x.levels[0].n, { plus: true }))) : null, KV('Packing', x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(', ') + ' ' + x.base.toLowerCase() + 's')),
+  return { title: x.name, sub: 'Product settings', body: h('div', { class: 'gap' }, h('div', { class: 'card' }, KV('Printed MRP', rs(x.mrp)), KV('Buying price (per ' + x.base.toLowerCase() + ')', x.buy ? rsr(x.buy) : 'Not set'), KV('Sell-to-Shop (per ' + x.base.toLowerCase() + ')', rs(x.sell)), KV('Retail counter (per ' + x.base.toLowerCase() + ')', rs(x.retail)), x.buy ? KV('Margin per BOX', h('span', { class: x.sell < x.buy ? 'red' : '' }, rs((x.sell - x.buy) * x.levels[0].n, { plus: true }))) : null, KV('Packing', x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(', ') + ' ' + x.base.toLowerCase() + 's')),
     h('div', { class: 'card' }, Toggle('Active', 'Hidden products cannot be ordered', x.active, v => { setProductHidden(x.id, !v); })),
     h('div', { class: 'linkrow' }, Btn('DELETE PRODUCT', { kind: 'link', cls: 'neg', onClick: () => productRemoveSheet(x) }), Btn('RENAME PRODUCT', { kind: 'link', onClick: () => editSheet({ title: 'Rename product', fields: [{ key: 'name', label: 'Product name', value: x.name, maxlength: 40 }], onSave: v => { const n = v.name.trim(); if (n.length < 2) fail('Enter the product name.'); if (S.products.some(q => q !== x && q.name.toLowerCase() === n.toLowerCase())) fail('A product called ' + n + ' already exists.'); x.name = n; x.nick = n.toLowerCase(); log('STOCK', 'Product renamed to ' + n); toast('Renamed'); } }) })),
     h('div', { class: 'aside' }, 'Stock is kept as one number in ' + x.base.toLowerCase() + 's. Changing a price affects new orders only — orders already taken keep their price.')),
     foot: [Btn('CHANGE PACKAGING', { kind: 'dark', onClick: () => editSheet({ title: 'Packaging — ' + x.name, sub: 'Stock is kept as one number in ' + x.base.toLowerCase() + 's, so the stock quantity does not change.', fields: x.levels.map((l, i) => ({ key: 'l' + i, label: '1 ' + l.u + ' = how many ' + x.base.toLowerCase() + 's?', type: 'num', value: String(l.n) })), onSave: v => { const ns = x.levels.map((l, i) => parseInt(v['l' + i], 10)); if (ns.some(n => !(n > 0))) fail('Enter a number for every unit.'); for (let i = 1; i < ns.length; i++) if (ns[i] >= ns[i - 1]) fail('Each smaller unit must hold fewer ' + x.base.toLowerCase() + 's than the one above.'); x.levels.forEach((l, i) => { l.n = ns[i]; }); log('STOCK', x.name + ' packaging changed: ' + x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(', ') + ' (future entries only)'); toast('Packaging saved'); } }) }),
-    Btn('CHANGE PRICES', { kind: 'primary', onClick: () => editSheet({ title: 'Prices — ' + x.name, fields: [{ key: 'mrp', label: 'Printed MRP per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.mrp / 100) }, { key: 'buy', label: 'Buying price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: x.buy ? String(x.buy / 100) : '' }, { key: 'sell', label: 'Sell-to-Shop price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.sell / 100) }, { key: 'retail', label: 'Retail counter price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.retail / 100) }], onSave: v => { const m = parseRs(v.mrp), u = parseRs(v.buy), a = parseRs(v.sell), b = parseRs(v.retail); if (!(m > 0) || !(u > 0) || !(a > 0) || !(b > 0)) fail('Enter all four prices.'); if (a > m || b > m) fail('A selling price cannot be more than the MRP (' + rs(m) + ').'); x.mrp = m; x.buy = u; x.sell = a; x.retail = b; log('STOCK', x.name + ' prices changed: MRP ' + rs(m) + ', buy ' + rs(u) + ', sell ' + rs(a) + ', retail ' + rs(b)); } }) })] };
+    Btn('CHANGE PRICES', { kind: 'primary', onClick: () => editSheet({ title: 'Prices — ' + x.name, fields: [{ key: 'mrp', label: 'Printed MRP per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.mrp / 100) }, { key: 'buy', label: 'Buying price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: x.buy ? rateStr(x.buy) : '' }, { key: 'sell', label: 'Sell-to-Shop price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.sell / 100) }, { key: 'retail', label: 'Retail counter price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.retail / 100) }], onSave: v => { const m = parseRs(v.mrp), u = parseRate(v.buy), a = parseRs(v.sell), b = parseRs(v.retail); if (!(m > 0) || !(u > 0) || !(a > 0) || !(b > 0)) fail('Enter all four prices.'); if (a > m || b > m) fail('A selling price cannot be more than the MRP (' + rs(m) + ').'); x.mrp = m; x.buy = u; x.sell = a; x.retail = b; log('STOCK', x.name + ' prices changed: MRP ' + rs(m) + ', buy ' + rsr(u) + ', sell ' + rs(a) + ', retail ' + rs(b)); } }) })] };
 });
 /* ---- add a product: name → packing → prices. Every price is per smallest unit (packet / piece); BOX and LADI prices are worked out. ---- */
 const emptyProd = () => ({ name: '', base: 'PACKET', box: '', mid: 'LADI', midN: '', mrp: '', buy: '', sell: '', retail: '' });
@@ -3405,7 +3513,7 @@ function packLevels(d) {
 function addProduct(d) {
   const name = (d.name || '').trim(); if (name.length < 2) fail('Enter the product name.');
   if (S.products.some(p => p.name.toLowerCase() === name.toLowerCase())) fail('A product called ' + name + ' already exists.');
-  const levels = packLevels(d), mrp = parseRs(d.mrp), buy = parseRs(d.buy), sell = parseRs(d.sell), retail = (d.retail || '') === '' ? mrp : parseRs(d.retail);
+  const levels = packLevels(d), mrp = parseRs(d.mrp), buy = parseRate(d.buy), sell = parseRs(d.sell), retail = (d.retail || '') === '' ? mrp : parseRs(d.retail);
   if (!(mrp > 0)) fail('Enter the printed MRP.');
   if (!(buy > 0)) fail('Enter the buying price.');
   if (!(sell > 0)) fail('Enter the Sell-to-Shop price.');
@@ -3413,7 +3521,7 @@ function addProduct(d) {
   if (sell > mrp || retail > mrp) fail('A selling price cannot be more than the MRP (' + rs(mrp) + ').');
   const pr = { id: nid('p'), name, mrp, base: d.base, levels, buy, sell, retail, nick: name.toLowerCase(), active: true };
   S.products.push(pr); S.godown[pr.id] = 0; S.retail[pr.id] = 0;
-  log('STOCK', 'Product added: ' + name + ' — buy ' + rs(buy) + ', sell ' + rs(sell) + ', MRP ' + rs(mrp) + ' per ' + unitWord(pr.base, 1) + ' (stock starts at zero)');
+  log('STOCK', 'Product added: ' + name + ' — buy ' + rsr(buy) + ', sell ' + rs(sell) + ', MRP ' + rs(mrp) + ' per ' + unitWord(pr.base, 1) + ' (stock starts at zero)');
   return pr;
 }
 const PR_STEP = n => ({ label: 'NEW PRODUCT', n, of: 3 });
@@ -3445,27 +3553,73 @@ route('pr.price', (p, E) => {
   const d = prodDraft(), levels = packLevels(d), unit = unitWord(d.base, 1);
   const sum = h('div');
   const upd = () => {
-    const mrp = parseRs(d.mrp), buy = parseRs(d.buy), sell = parseRs(d.sell), retail = (d.retail || '') === '' ? mrp : parseRs(d.retail), rows = [];
+    const mrp = parseRs(d.mrp), buy = parseRate(d.buy), sell = parseRs(d.sell), retail = (d.retail || '') === '' ? mrp : parseRs(d.retail), rows = [];
     levels.forEach(l => { if (buy > 0 || sell > 0) rows.push(KV('1 ' + l.u + ' (' + l.n + ')', [buy > 0 ? 'buy ' + rs(buy * l.n) : null, sell > 0 ? 'sell ' + rs(sell * l.n) : null].filter(Boolean).join(' · '))); });
     if (buy > 0 && sell > 0) rows.push(KV('Margin per BOX', h('span', { class: sell < buy ? 'red' : '' }, rs((sell - buy) * levels[0].n, { plus: true }) + ' (' + Math.round((sell - buy) * 1000 / buy) / 10 + '%)'), 'tot'));
     const warn = mrp > 0 && (sell > mrp || retail > mrp) ? 'A selling price cannot be more than the MRP.' : buy > 0 && sell > 0 && sell < buy ? 'The Sell-to-Shop price is below the buying price — every sale would lose money.' : '';
     setKids(sum, rows.length ? h('div', { class: 'pane' }, h('div', { class: 'pad', style: { paddingBottom: 0 } }, rows)) : null, warn ? h('div', { class: 'errtxt mt8' }, warn) : null);
   };
-  const money = (key, label, ph) => Field(label, h('input', { class: 'input', id: 'pp-' + key, inputmode: 'decimal', maxlength: 9, placeholder: ph, value: d[key], onInput: ev => { ev.target.value = ev.target.value.replace(/[^\d.]/g, ''); d[key] = ev.target.value; upd(); } }));
+  /* the buying price accepts up to 4 decimals (₹4.1861); the other prices up to 2. A price that cannot be read is said so — it is never silently ignored. */
+  const money = (key, label, ph) => {
+    const dec = key === 'buy' ? 4 : 2, parse = key === 'buy' ? parseRate : parseRs, err = h('div', { class: 'errtxt' });
+    const check = () => { err.textContent = d[key] !== '' && d[key] != null && parse(d[key]) == null ? 'Use numbers only, with at most ' + dec + ' digits after the dot.' : ''; };
+    const inp = h('input', { class: 'input' + (key === 'buy' ? ' ' : ''), id: 'pp-' + key, inputmode: 'decimal', maxlength: 12, placeholder: ph, value: d[key], onInput: ev => { ev.target.value = ev.target.value.replace(/[^\d.]/g, ''); d[key] = ev.target.value; check(); upd(); } });
+    check(); return Field(label, inp, null, err);
+  };
   const body = h('div', null, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Prices for one ' + unit), h('div', { class: 'hint' }, 'Enter each price for a single ' + unit + '. BOX' + (levels[1] ? ' and ' + levels[1].u : '') + ' prices are worked out below.')),
-    money('mrp', 'Printed MRP (₹)', 'e.g. 5'), money('buy', 'Buying price — what the agency pays (₹)', 'e.g. 4'), money('sell', 'Sell-to-Shop price (₹)', 'e.g. 4.50'), money('retail', 'Retail counter price (₹)', 'Blank = same as MRP'),
+    money('mrp', 'Printed MRP (₹)', 'e.g. 5'), money('buy', 'Buying price — what the agency pays (₹)', 'e.g. 4.1861'), money('sell', 'Sell-to-Shop price (₹)', 'e.g. 4.50'), money('retail', 'Retail counter price (₹)', 'Blank = same as MRP'),
     h('div', { class: 'mt24' }, sum));
   upd();
   return { title: 'Add product', sub: d.name, step: PR_STEP(3), body, help: ['MRP is the price printed on the packet. Buying price is what the agency pays the supplier. Sell-to-Shop is what shops pay the agency. Retail counter is for single packets sold at the godown.', 'Prices can be changed later in Settings → Stock. Orders already taken keep their price.'],
     foot: [Btn('ADD PRODUCT', { kind: 'primary', onClick: () => { const pr = addProduct(d), from = d.from; delete S.drafts.prod; if (from) nav.popTo(from); else nav.reset([['more'], ['st.list']]); nav.go('st.product', { pid: pr.id }); toast(pr.name + ' added — stock is zero'); } })] };
 });
 route('set.reasons', (p, E) => ({ title: 'Movement reasons', body: Pane(S.settings.reasons.map(r => Row({ title: r }))), foot: [Btn('ADD REASON', { kind: 'primary', onClick: () => editSheet({ title: 'Add reason', save: 'ADD', fields: [{ key: 'r', label: 'Reason' }], onSave: v => { const r = v.r.trim(); if (r.length < 3) fail('Enter a reason.'); S.settings.reasons.push(r); } }) })] }));
-route('set.pickup', (p, E) => ({ title: 'Pickup settings', body: h('div', { class: 'gap' },
-  Sec('Pickups'), S.vehicles.length ? null : Pane(Empty('No pickup vehicle yet.')), Pane(S.vehicles.map(v => Row({ title: v.reg, sub: v.label + (v.active ? '' : ' · not active'), cls: v.active ? '' : 'off', onClick: () => editSheet({ title: v.reg, fields: [{ key: 'label', label: 'Description', value: v.label }, { key: 'active', label: 'Status', type: 'select', value: v.active ? '1' : '0', options: [['1', 'Active'], ['0', 'Not active']] }], onSave: val => { if (val.active === '0' && busyVehicle(v.id)) fail(v.reg + ' is on a job right now.'); v.label = val.label.trim() || v.label; v.active = val.active === '1'; } }) }))),
-  Btn('ADD PICKUP VEHICLE', { kind: 'dark', onClick: () => editSheet({ title: 'Add pickup', save: 'ADD', fields: [{ key: 'reg', label: 'Registration', placeholder: 'RJ35-0000' }, { key: 'label', label: 'Description', placeholder: 'e.g. Tata Ace' }], onSave: v => { const r = v.reg.trim().toUpperCase(); if (r.length < 4) fail('Enter the registration.'); if (S.vehicles.some(x => x.reg === r)) fail('That vehicle already exists.'); S.vehicles.push({ id: nid('v'), reg: r, label: v.label.trim() || 'Pickup', active: true }); } }) }),
-  Sec('Cameras'), S.cameras.length ? null : Pane(Empty('No camera yet. A camera is only a reference number to find the loading video later.')), Pane(S.cameras.map(c => Row({ title: c.id, sub: c.desc + (c.active ? '' : ' · not active'), cls: c.active ? '' : 'off', onClick: () => editSheet({ title: c.id, fields: [{ key: 'desc', label: 'Where it looks', value: c.desc }, { key: 'active', label: 'Status', type: 'select', value: c.active ? '1' : '0', options: [['1', 'Active'], ['0', 'Not active']] }], onSave: v => { c.desc = v.desc.trim() || c.desc; c.active = v.active === '1'; if (S.settings.defaultCamera === c.id && !c.active) S.settings.defaultCamera = (S.cameras.find(x => x.active) || {}).id || ''; } }) }))),
-  Btn('ADD CAMERA', { kind: 'dark', onClick: () => editSheet({ title: 'Add camera', save: 'ADD', fields: [{ key: 'desc', label: 'Where it looks', placeholder: 'e.g. Godown back door' }], onSave: v => { if (v.desc.trim().length < 3) fail('Describe the camera.'); const id = 'CN-' + String(S.cameras.length + 1).padStart(2, '0'); S.cameras.push({ id, desc: v.desc.trim(), active: true }); toast(id + ' added'); } }) }),
-  Sec('Default loading details'), h('div', { class: 'card' }, h('div', { class: 'lbl', style: { marginTop: 0 } }, 'Usual camera'), Seg(S.cameras.filter(c => c.active).map(c => [c.id, c.id]), S.settings.defaultCamera, v => { S.settings.defaultCamera = v; }), Toggle('A helper is required', 'Otherwise the helper step can be skipped', S.settings.helperRequired, v => { S.settings.helperRequired = v; }))) }));
+/* ===================== VEHICLES ===================== */
+route('set.vehicles', (p, E) => ({ title: 'Vehicles', sub: S.vehicles.length ? plural(S.vehicles.length, 'vehicle') : 'Trucks, pickups and tempos', body: h('div', { class: 'gap' },
+  S.vehicles.length ? Pane(S.vehicles.map(v => Row({ title: v.reg, sub: v.label + (v.active ? '' : ' · not active'), cls: v.active ? '' : 'off', onClick: () => editSheet({ title: v.reg, fields: [{ key: 'label', label: 'Description', value: v.label }, { key: 'active', label: 'Status', type: 'select', value: v.active ? '1' : '0', options: [['1', 'Active'], ['0', 'Not active']] }], onSave: val => { if (val.active === '0' && busyVehicle(v.id)) fail(v.reg + ' is on a job right now.'); v.label = val.label.trim() || v.label; v.active = val.active === '1'; } }) })))
+    : h('div', { class: 'gap' }, Pane(Empty('No vehicle yet.')), h('div', { class: 'aside' }, 'Add every vehicle that carries goods to shops. When you prepare a pickup you choose one of these.')),
+  Sec('Loading rule'), h('div', { class: 'card' }, Toggle('A helper is required', 'Otherwise the helper step can be skipped', S.settings.helperRequired, v => { S.settings.helperRequired = v; })),
+  h('div', { class: 'aside' }, 'Cameras have their own page: More → Settings → Cameras.')),
+  foot: [Btn('ADD VEHICLE', { kind: 'primary', icon: 'plus', onClick: () => editSheet({ title: 'Add vehicle', save: 'ADD VEHICLE', fields: [{ key: 'reg', label: 'Registration number', placeholder: 'RJ35-0000' }, { key: 'label', label: 'Description', placeholder: 'e.g. Tata Ace' }], onSave: v => { const r = v.reg.trim().toUpperCase(); if (r.length < 4) fail('Enter the registration number.'); if (S.vehicles.some(x => x.reg === r)) fail('That vehicle already exists.'); S.vehicles.push({ id: nid('v'), reg: r, label: v.label.trim() || 'Vehicle', active: true }); toast(r + ' added'); } }) })] }));
+
+/* ===================== CAMERAS — a camera is only a number + a note that helps find the loading video later ===================== */
+const cameraUsed = id => S.trips.some(t => t.cameraId === id);
+const busyCamera = id => S.trips.some(t => t.status === 'LOADING' && t.cameraId === id);
+function saveCamera(c, v) {
+  const num = (v.num || '').trim().replace(/\s+/g, ' '), note = (v.note || '').trim();
+  if (!num) fail('Enter the camera number.'); if (num.length > 14) fail('The camera number is too long (14 letters at most).'); if (note.length > 80) fail('The note is too long.');
+  if (S.cameras.some(x => x !== c && x.id.toLowerCase() === num.toLowerCase())) fail('Camera ' + num + ' already exists.');
+  if (!c) { c = { id: num, desc: note, active: true }; S.cameras.push(c); if (!S.settings.defaultCamera) S.settings.defaultCamera = c.id; log('CAMERA', 'Camera ' + num + ' added' + (note ? ' — ' + note : '')); return c; }
+  const old = c.id;
+  if (v.active === '0' && c.active && busyCamera(c.id)) fail('Camera ' + old + ' is used by a pickup that is still being loaded.');
+  if (old !== num) { S.trips.forEach(t => { if (t.cameraId === old) t.cameraId = num; }); if (S.settings.defaultCamera === old) S.settings.defaultCamera = num; c.id = num; }     // earlier pickups keep pointing at the renamed camera
+  c.desc = note; c.active = v.active !== '0';
+  if (!c.active && S.settings.defaultCamera === c.id) S.settings.defaultCamera = (S.cameras.find(x => x.active) || {}).id || '';
+  log('CAMERA', 'Camera ' + (old !== num ? old + ' is now ' + num : num) + ' updated' + (note ? ' — ' + note : ''));
+  return c;
+}
+function cameraSheet(c) {
+  const v = { num: c ? c.id : '', note: c ? c.desc : '', active: c ? (c.active ? '1' : '0') : '1' };
+  const next = 'CN-' + String(S.cameras.length + 1).padStart(2, '0');
+  const body = h('div', null,
+    Field('Camera number', h('input', { class: 'input', value: v.num, maxlength: 14, placeholder: 'e.g. ' + next, 'aria-label': 'Camera number', onInput: ev => { v.num = ev.target.value; } })),
+    Field('Note — where it looks', h('input', { class: 'input', value: v.note, maxlength: 80, placeholder: 'e.g. Godown loading bay, left side', 'aria-label': 'Note', onInput: ev => { v.note = ev.target.value; } })),
+    c ? Field('Status', h('select', { class: 'select', 'aria-label': 'Status', onChange: ev => { v.active = ev.target.value; } }, h('option', { value: '1', selected: v.active === '1' }, 'Active'), h('option', { value: '0', selected: v.active === '0' }, 'Not active'))) : null,
+    c && cameraUsed(c.id) ? h('div', { class: 'aside mt12' }, 'This camera was used on earlier pickups, so it cannot be deleted. Set it to Not active instead — the old records keep its number.') : null);
+  openSheet({ title: c ? 'Camera ' + c.id : 'Add camera', sub: c ? null : 'Use the number written on the camera or the recorder.', body, actions: [
+    Btn(c ? 'SAVE' : 'ADD CAMERA', { kind: 'primary', onClick: () => { const k = saveCamera(c, v); closeSheet(); nav.refresh(); toast(c ? 'Camera saved' : 'Camera ' + k.id + ' added'); } }),
+    c && !cameraUsed(c.id) ? Btn('DELETE CAMERA', { kind: 'danger', onClick: () => { S.cameras = S.cameras.filter(x => x !== c); if (S.settings.defaultCamera === c.id) S.settings.defaultCamera = (S.cameras.find(x => x.active) || {}).id || ''; log('CAMERA', 'Camera ' + c.id + ' deleted'); closeSheet(); nav.refresh(); toast('Camera deleted'); } }) : null,
+    sheetClose('CANCEL')] });
+}
+route('set.cameras', (p, E) => {
+  const act_ = S.cameras.filter(c => c.active);
+  return { title: 'Cameras', sub: S.cameras.length ? plural(S.cameras.length, 'camera') : 'For the loading bay', body: h('div', { class: 'gap' },
+    S.cameras.length ? Pane(S.cameras.map(c => Row({ title: c.id, sub: c.desc || 'No note — tap to add one', chip: !c.active ? 'NOT ACTIVE' : c.id === S.settings.defaultCamera ? 'USUAL' : null, tone: 'ok', cls: c.active ? '' : 'off', onClick: () => cameraSheet(c) })))
+      : h('div', { class: 'gap' }, Pane(Empty('No camera yet.')), h('div', { class: 'aside' }, 'A camera here is only a number and a note. When a pickup is loaded you pick the camera that was watching, so the video can be found later. No video is stored in the app.')),
+    act_.length > 1 ? h('div', null, Sec('Usual camera'), h('div', { class: 'card' }, h('div', { class: 'mute', style: { fontSize: '14px', marginBottom: '8px' } }, 'Shown first when you load a pickup.'), Seg(act_.map(c => [c.id, c.id]), S.settings.defaultCamera, v => { S.settings.defaultCamera = v; nav.refresh(); }))) : null),
+    foot: [Btn('ADD CAMERA', { kind: 'primary', icon: 'plus', onClick: () => cameraSheet(null) })] };
+});
+
 route('set.more', (p, E) => {
   const pm = S.settings.pay, ag = S.settings.agency, bk = S.settings.bank, up = S.settings.upi;
   const body = h('div', { class: 'gap' }, Sec('Payment methods'), h('div', { class: 'card' }, ['CASH', 'UPI', 'BANK', 'CHEQUE'].map(k => Toggle(PAY_LABEL[k], null, pm[k], v => { const next = Object.assign({}, pm, { [k]: v }); if (!Object.values(next).some(Boolean)) { nav.refresh(); fail('At least one payment method must stay on.'); } pm[k] = v; }))),
@@ -3563,7 +3717,7 @@ function docDC(id, paper) {
   return h('div', { class: 'paper ' + PAPERS[paper][0] },
     docHead('DELIVERY CHALLAN', d.no, kvp('Date', fmtDT(d.createdAt))), kvp('Status', d.status.replace('_', ' ')), o ? kvp('Order', o.no) : null, d.type === 'SIDE' ? h('div', { class: 'note' }, 'Sold from pickup goods' + (d.extra.fromOrderId ? ' not accepted on ' + orderOf(d.extra.fromOrderId).no : '')) : null,
     h('div', { class: 'hr' }), h('b', null, 'Deliver to'), h('div', null, c ? (c.shop || c.name) : (d.buyerName || '—')), c && c.name && c.shop ? h('div', null, c.name) : null, c && c.addr && addrLine(c) ? h('div', { class: 'note' }, addrLine(c)) : null, c && c.phone ? h('div', { class: 'note' }, '☎ ' + c.phone) : null,
-    t ? h('div', null, h('div', { class: 'hr' }), kvp('Pickup', t.vehicleId ? vehOf(t.vehicleId).reg : '—'), kvp('Driver', t.driverId ? staffOf(t.driverId).name : '—'), d.type === 'ORDER' && t.cameraId ? kvp('Camera', t.cameraId) : null) : (d.extra && d.extra.mode ? kvp('Goods leave by', d.extra.mode === 'SELF' ? 'Self pickup' : 'Customer vehicle ' + (d.extra.vehicleNo || '')) : null),
+    t ? h('div', null, h('div', { class: 'hr' }), kvp('Vehicle', t.vehicleId ? vehOf(t.vehicleId).reg : '—'), kvp('Driver', t.driverId ? staffOf(t.driverId).name : '—'), d.type === 'ORDER' && t.cameraId ? kvp('Camera', t.cameraId) : null) : (d.extra && d.extra.mode ? kvp('Goods leave by', d.extra.mode === 'SELF' ? 'Self pickup' : 'Customer vehicle ' + (d.extra.vehicleNo || '')) : null),
     h('table', null, h('thead', null, h('tr', null, h('th', null, 'Product'), delivered && partial ? h('th', { class: 'opt' }, 'Loaded') : null, h('th', { class: 'r' }, delivered ? 'Delivered' : 'Qty'))), h('tbody', null, rows)),
     h('div', { class: 'note' }, 'Goods document only — not a bill.'), h('div', { class: 'sig' }, h('span', null, 'Received by'), h('span', null, 'Driver')),
     d.revs.length > 1 ? h('div', { class: 'note', style: { marginTop: '8px' } }, 'Version ' + d.revs.length + ' · ' + d.revs[d.revs.length - 1].note) : null);
