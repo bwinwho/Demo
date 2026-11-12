@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Agency Pilot">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
 <meta name="theme-color" content="#f7f6f2">
 <meta name="color-scheme" content="light">
 <title>Agency Pilot V2</title>
@@ -37,6 +42,11 @@
   --ease:cubic-bezier(.2,.7,.2,1);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* iPhone: tapping a + / − button twice quickly must never zoom the page. `manipulation` switches double-tap-zoom off
+   everywhere (the viewport above blocks pinch zoom; a small script below covers older iOS that still zooms). */
+html,body,button,a,input,select,textarea,label,.row,.tile,.seg,.tog,.stepper{touch-action:manipulation}
+button,.row,.tile,.tabbar,.hdr,.btn{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,select,textarea{-webkit-user-select:text;user-select:text}
 html,body{height:100%;margin:0}
 body{background:#e6e5e0;color:var(--ink);font:16px/1.4 var(--font);-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased;overflow:hidden}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -405,13 +415,13 @@ textarea.input{padding:12px 14px;min-height:96px}
   <nav id="tabbar" class="tabbar" aria-label="Main navigation"></nav>
 </div>
 <div id="printRoot" aria-hidden="true"></div>
-<noscript>Agency Pilot V2 needs JavaScript. It is a single-file demo with no server and no saved data.</noscript>
+<noscript>Agency Pilot V2 needs JavaScript. It is a single-file app that saves its data in this browser.</noscript>
 <script>
 /* ---------- 20-core.js ---------- */
 /* =====================================================================
-   AGENCY PILOT V2 — single-file interactive prototype
-   Everything below lives in memory only. Refresh = fresh fictional data.
-   No Firebase, no backend, no localStorage / sessionStorage / IndexedDB / cookies.
+   AGENCY PILOT V2 — single-file mobile app (test build)
+   Data is saved in this browser's localStorage (section 8b) — no Firebase, no backend, no cookies.
+   Settings → Data & backup downloads / restores a backup file.
    ===================================================================== */
 'use strict';
 
@@ -608,7 +618,12 @@ function newState(example) {
   };
   for (const p of F.products) st.godown[p.id] = 0;
   for (const p of F.products) st.retail[p.id] = 0;
-  if (!example) st.settings.defaultCamera = '';
+  if (!example) {                                  // a real start: no placeholder agency, bank or UPI details
+    st.settings.defaultCamera = '';
+    st.settings.agency = { name: 'My Agency', addr: '', phone: '', note: '' };
+    st.settings.bank = { name: '', holder: '', acNo: '', ifsc: '', branch: '' };
+    st.settings.upi = { id: '', phone: '' };
+  }
   return st;
 }
 let S = newState();
@@ -715,7 +730,7 @@ function addCustomer(d) {
   if (!(a.street || '').trim() && !(a.landmark || '').trim()) fail('Enter a street address or a landmark.');
   const c = {
     id: nid('c') , name, shop, phone, type: d.type || 'SHOP', createdAt: new Date(),
-    addr: { street: (a.street || '').trim(), landmark: (a.landmark || '').trim(), area: a.area.trim(), city: (a.city || '').trim() || 'Demo City', lat: a.lat != null ? a.lat : null, lng: a.lng != null ? a.lng : null, acc: a.acc || null, src: a.src || null },
+    addr: { street: (a.street || '').trim(), landmark: (a.landmark || '').trim(), area: a.area.trim(), city: (a.city || '').trim(), lat: a.lat != null ? a.lat : null, lng: a.lng != null ? a.lng : null, acc: a.acc || null, src: a.src || null },
   };
   S.customers.push(c); log('CUSTOMER', 'New customer added: ' + (shop || name)); return c;
 }
@@ -1237,8 +1252,9 @@ function applyCount(pid, counted, reason, note, token) {
   if (diff === 0) { tokUse(token); log('STOCK', prod(pid).name + ' counted — matches the system (' + qtyText(prod(pid), counted) + ')'); return 0; }
   if (!reason) fail('Choose why the count is different.');
   tokUse(token);
-  moveGodown(pid, diff, 'Count correction', null, reason + (note ? ' — ' + note.trim() : ''));
-  log('STOCK', prod(pid).name + ' count corrected by ' + (diff > 0 ? '+' : '−') + qtyText(prod(pid), Math.abs(diff)) + ' (' + reason + ')');
+  const opening = reason === 'Opening count';
+  moveGodown(pid, diff, opening ? 'Opening count' : 'Count correction', null, opening ? 'Physical opening count' : reason + (note ? ' — ' + note.trim() : ''));
+  log('STOCK', prod(pid).name + (opening ? ' opening stock counted: ' + qtyText(prod(pid), counted) : ' count corrected by ' + (diff > 0 ? '+' : '−') + qtyText(prod(pid), Math.abs(diff)) + ' (' + reason + ')'));
   return diff;
 }
 
@@ -1699,6 +1715,8 @@ window.addEventListener('popstate', () => {
 document.addEventListener('keydown', ev => {                         // Enter on a one-question input = Continue
   if (ev.key === 'Enter' && ev.target.matches && ev.target.matches('input[data-enter]')) { const b = $('.screen:not(.leave) .foot .btn.primary:not(:disabled)'); if (b) { ev.preventDefault(); b.click(); } }
 });
+['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, ev => ev.preventDefault(), { passive: false }));   // iOS pinch-zoom (the viewport tag and touch-action stop double-tap zoom)
+document.addEventListener('dblclick', ev => { if (!(ev.target.matches && ev.target.matches('input,textarea,select'))) ev.preventDefault(); }, { passive: false });
 document.addEventListener('focusin', ev => {                         // keep the focused field visible above the on-screen keyboard
   const t = ev.target; if (t && t.matches && t.matches('input,textarea,select')) setTimeout(() => { try { t.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { /* ignore */ } }, 280);
 });
@@ -1766,6 +1784,18 @@ function attention() {
   return out;
 }
 
+/* first-run checklist on Today: the six things the agency needs before the first real order */
+function setupSteps() {
+  const prods = S.products.filter(x => x.active), counted = prods.some(x => S.moves.some(m => m.pid === x.id));
+  return [
+    { title: 'Add your products', sub: prods.length ? plural(prods.length, 'product') + ' added' : 'Name, packing and prices', done: prods.length > 0, go: () => nav.go('st.list') },
+    { title: 'Add opening stock', sub: counted ? 'Stock counted' : prods.length ? 'Count what is in the godown today' : 'After you add a product', done: counted, go: () => nav.go('st.list') },
+    { title: 'Add your areas', sub: S.areas.length ? plural(S.areas.length, 'area') + ' added' : 'Where you deliver', done: S.areas.length > 0, go: () => nav.go('set.area') },
+    { title: 'Add your customers', sub: realCustomers().length ? plural(realCustomers().length, 'customer') + ' added' : 'Shops, inside their area', done: realCustomers().length > 0, go: () => nav.go('cu.list') },
+    { title: 'Add a pickup vehicle', sub: S.vehicles.length ? plural(S.vehicles.length, 'vehicle') + ' added' : 'And the loading camera', done: S.vehicles.length > 0, go: () => nav.go('set.pickup') },
+    { title: 'Add staff and a driver', sub: S.staff.some(s => s.driver) ? plural(S.staff.length, 'person', 'people') + ' added' : 'Driver, helpers, Manager', done: S.staff.some(s => s.driver), go: () => nav.go('set.staff') },
+  ];
+}
 route('today', (p, E) => {
   const d = new Date();
   const hdr = h('header', { class: 'hdr nohdr-back root' }, h('div', { class: 'ttl' }, h('div', { class: 'eyebrow' }, 'Agency Pilot'), h('h1', { class: 'big', tabindex: '-1' }, 'Today'), h('div', { class: 'sub' }, weekday(d) + ', ' + fmtDY(d))));
@@ -1779,6 +1809,8 @@ route('today', (p, E) => {
   const drafts = activeDrafts();
   drafts.forEach(k => body.append(h('div', { class: 'resume mt16' }, h('div', null, h('b', null, 'Unfinished: '), DRAFTS[k].text(S.drafts[k])),
     h('div', { class: 'rr' }, Btn('RESUME', { kind: 'dark', cls: 'sm', onClick: () => DRAFTS[k].go(S.drafts[k]) }), Btn('DISCARD', { kind: 'link', cls: 'sm', onClick: () => discardDraft(k) })))));
+  const steps = setupSteps(), left = steps.filter(x => !x.done);
+  if (left.length) body.append(Sec('Set up your agency', h('span', null, (steps.length - left.length) + ' / ' + steps.length)), Pane(steps.map(x => Row({ title: x.title, sub: x.sub, chip: x.done ? 'DONE' : null, tone: 'ok', cls: x.done ? 'off' : '', onClick: x.go }))));
   const att = attention();
   body.append(Sec('Needs attention', att.length ? h('span', null, pad2(att.length)) : null));
   if (att.length) body.append(h('div', { class: 'attn-list' }, att.map(a => h('button', { class: 'attn', type: 'button', onClick: act(a.go) }, h('span', { class: 'n' + (a.tone === 'red' ? ' red' : '') }, pad2(a.n)), h('span', { class: 'l' }, a.text, a.sub ? h('small', null, a.sub) : null), ic('next')))));
@@ -1874,10 +1906,10 @@ const CARTS = {
 };
 function cartOf(mode) { return S.drafts[mode] || (S.drafts[mode] = { mode, partyId: null, lines: [], tok: nid('tok'), editId: null, extra: {} }); }
 function partiesFor(mode) {
-  const shops = S.customers.filter(c => c.type === 'SHOP'), agents = S.staff.filter(s => s.active && needsApprovalParty(s.id));
+  const shops = S.customers.filter(c => c.type === 'SHOP' && isActiveCust(c)), agents = S.staff.filter(s => s.active && needsApprovalParty(s.id));
   if (mode === 'order') return shops.concat(agents);
   if (mode === 'godown') return shops.concat(agents, S.customers.filter(c => c.type === 'OCCASIONAL'));
-  if (mode === 'ia') return S.customers.filter(c => c.type === 'AGENCY');
+  if (mode === 'ia') return S.customers.filter(c => c.type === 'AGENCY' && isActiveCust(c));
   return shops;
 }
 function cartRates(c) {                      // per-base rates used for this cart
@@ -1895,7 +1927,7 @@ route('cart.cust', (p, E) => {
       render: x => personRow(x, () => { c.partyId = x.id; c.extra = c.extra || {}; nav.go('cart.prod', { mode }); }) }));
   const foot = [];
   if (mode === 'godown') foot.push(Btn('OCCASIONAL BUYER (NAME ONLY)', { kind: 'dark', onClick: () => nav.go('ss.buyer', { forCart: mode }) }));
-  if (mode !== 'ia') foot.unshift(Btn('ADD NEW CUSTOMER', { kind: 'primary', onClick: () => { S.drafts.cust = S.drafts.cust || { name: '', shop: '', phone: '', addr: {}, tok: nid('tok') }; S.drafts.cust.then = mode; nav.go('cust.name'); } }));
+  foot.unshift(Btn(mode === 'ia' ? 'ADD NEW AGENCY' : 'ADD NEW CUSTOMER', { kind: 'primary', onClick: () => { S.drafts.cust = S.drafts.cust || { name: '', shop: '', phone: '', addr: {}, tok: nid('tok') }; S.drafts.cust.then = mode; S.drafts.cust.ret = null; S.drafts.cust.lockType = mode === 'ia'; S.drafts.cust.type = mode === 'ia' ? 'AGENCY' : (S.drafts.cust.type === 'AGENCY' ? 'SHOP' : S.drafts.cust.type || 'SHOP'); nav.go('cust.name'); } }));
   return { title: C.title, step: { label: C.label, n: 1, of: C.steps }, body, foot, help: ['You are choosing who this is for.', 'Nothing is saved until the last confirm. You can go back at any time.'] };
 });
 
@@ -1975,9 +2007,11 @@ nav.popTo = function (name) { const i = UI.stack.map(e => e.name).lastIndexOf(na
 const custDraft = () => S.drafts.cust || (S.drafts.cust = { name: '', shop: '', phone: '', addr: {}, tok: nid('tok') });
 route('cust.name', (p, E) => {
   const d = custDraft(), ok = d.name.trim().length >= 2;
-  const body = oneQuestion({ q: 'Customer name', value: d.name, placeholder: 'e.g. Ramesh', maxlength: 40, onInput: v => { d.name = v; E.st.btn.disabled = v.trim().length < 2; } });
+  const q = oneQuestion({ q: 'Customer name', value: d.name, placeholder: 'e.g. Ramesh', maxlength: 40, onInput: v => { d.name = v; E.st.btn.disabled = v.trim().length < 2; } });
+  const kind = d.lockType ? null : h('div', { class: 'mt24', style: { textAlign: 'left' } }, h('div', { class: 'lbl', style: { marginTop: 0 } }, 'Who is this?'), Seg([['SHOP', 'Shop'], ['AGENCY', 'Other agency']], d.type || 'SHOP', v => { d.type = v; }));
+  const body = h('div', null, q, kind);
   const btn = Btn('CONTINUE', { kind: 'primary', disabled: !ok, onClick: () => nav.go('cust.shop') }); E.st.btn = btn;
-  return { title: 'Add New Customer', step: { label: 'ADDING CUSTOMER', n: 1, of: 4 }, body, foot: [btn], center: true };
+  return { title: d.type === 'AGENCY' ? 'Add Other Agency' : 'Add New Customer', step: { label: 'ADDING CUSTOMER', n: 1, of: 4 }, body, foot: [btn], center: true };
 });
 route('cust.shop', (p, E) => {
   const d = custDraft();
@@ -2007,21 +2041,30 @@ route('cust.addr', (p, E) => {
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
   }
   const inp = (key, ph, label) => h('input', { class: 'input', id: 'ad-' + key, placeholder: ph, value: a[key] || '', maxlength: 80, 'aria-label': label, onInput: ev => { a[key] = ev.target.value; } });
-  const sel = h('div', { style: { marginTop: '8px' } }, h('input', { class: 'input', id: 'ad-area', list: 'ad-areas', maxlength: 30, placeholder: S.areas.length ? 'Choose, or type a new area' : 'e.g. Main Market', value: a.area || '', 'aria-label': 'Area', onInput: ev => { a.area = ev.target.value; } }), h('datalist', { id: 'ad-areas' }, S.areas.map(x => h('option', { value: x.name }))));
+  /* areas are chosen by tapping (a datalist is unreliable on iPhone); a new area can still be typed below */
+  const areaI = h('input', { class: 'input', id: 'ad-area', maxlength: 30, placeholder: S.areas.length ? 'Or type a new area' : 'e.g. Main Market', value: a.area || '', 'aria-label': 'Area', onInput: ev => { a.area = ev.target.value; markAreas(); } });
+  const chipBox = S.areas.length ? h('div', { class: 'seg', role: 'group', 'aria-label': 'Existing areas' }, S.areas.map(x => h('button', { type: 'button', 'data-area': x.name, 'aria-pressed': String((a.area || '').trim().toLowerCase() === x.name.toLowerCase()), onClick: () => { a.area = x.name; areaI.value = x.name; markAreas(); } }, x.name))) : null;
+  function markAreas() { if (chipBox) chipBox.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String((a.area || '').trim().toLowerCase() === b.dataset.area.toLowerCase()))); }
+  const sel = h('div', { style: { marginTop: '8px' } }, chipBox, h('div', { style: { marginTop: chipBox ? '10px' : 0 } }, areaI));
   const latI = h('input', { class: 'input', placeholder: 'Latitude', inputmode: 'decimal', value: a.lat != null ? a.lat : '', 'aria-label': 'Latitude' }), lngI = h('input', { class: 'input', placeholder: 'Longitude', inputmode: 'decimal', value: a.lng != null ? a.lng : '', 'aria-label': 'Longitude' });
   const manual = () => { const la = parseFloat(latI.value), ln = parseFloat(lngI.value); if (isFinite(la) && isFinite(ln) && la >= -90 && la <= 90 && ln >= -180 && ln <= 180) { a.lat = la; a.lng = ln; a.src = a.src === 'DEVICE' ? 'DEVICE' : 'MANUAL'; } else if (latI.value === '' && lngI.value === '') { if (a.src !== 'DEVICE') { a.lat = null; a.lng = null; a.src = null; } } };
   latI.addEventListener('input', manual); lngI.addEventListener('input', manual);
   drawLoc();
-  if (!a.city) a.city = 'Demo City';
+  if (a.city == null) a.city = '';
   const body = h('div', null,
     h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Address')), h('div', { class: 'mt12' }, locBox),
-    Field('Street address', inp('street', 'House / shop number, street', 'Street address')), Field('Landmark', inp('landmark', 'Near …', 'Landmark')), Field('Area', sel), Field('City', inp('city', 'City', 'City')),
+    h('div', null, h('div', { class: 'lbl' }, 'Area'), sel), Field('Street address', inp('street', 'House / shop number, street', 'Street address')), Field('Landmark', inp('landmark', 'Near …', 'Landmark')), Field('City', inp('city', 'City', 'City')),
     h('details', { class: 'mt16' }, h('summary', { style: { minHeight: '48px', display: 'flex', alignItems: 'center', fontWeight: 600 } }, '＋ Enter coordinates by hand (optional)'), h('div', { class: 'gap' }, latI, lngI, h('div', { class: 'mute', style: { fontSize: '13px' } }, 'Coordinates typed by hand are saved but are not treated as verified.'))));
   return { title: 'Add New Customer', step: { label: 'ADDING CUSTOMER', n: 4, of: 4 }, body, foot: [Btn('ADD DONE', { kind: 'primary', onClick: () => {
-    const c = addCustomer({ name: d.name, shop: d.shop, phone: d.phone, addr: a }); const then = d.then; delete S.drafts.cust;
+    const c = addCustomer({ name: d.name, shop: d.shop, phone: d.phone, type: d.type, addr: a }); const then = d.then, ret = d.ret; delete S.drafts.cust;
     const known = S.areas.find(x => x.name.toLowerCase() === c.addr.area.toLowerCase()); if (known) c.addr.area = known.name; else { S.areas.push({ id: nid('a'), name: c.addr.area }); log('CUSTOMER', 'New area added: ' + c.addr.area); }
+    if (ret) {                                                                       // came from Customers or an Area: go back to that list
+      toast((c.shop || c.name) + ' added to ' + c.addr.area);
+      if (UI.stack.some(e => e.name === ret)) { nav.popTo(ret); nav.refresh(); } else nav.reset([['more'], ['cu.list']], 'back');      // e.g. the draft was resumed from Today
+      return;
+    }
     const mode = then || 'order'; const cart = cartOf(mode); cart.partyId = c.id;
-    toast((c.shop || c.name) + ' added'); nav.popTo(mode === 'order' || mode === 'godown' ? 'cart.cust' : 'cart.cust'); nav.go('cart.prod', { mode });
+    toast((c.shop || c.name) + ' added'); nav.popTo('cart.cust'); nav.go(mode === 'ia' ? 'cart.prod' : 'cart.prod', { mode });
   } })], help: ['Street, landmark, area and city are saved with the customer.', 'The address is only marked “location verified” if you capture it with the pin button on the shop’s doorstep.'] };
 });
 
@@ -2252,7 +2295,7 @@ route('dl.challan', (p, E) => {
 const sideDraft = () => S.drafts.side;
 route('ss.cust', (p, E) => {
   const d = sideDraft(); if (!d) return { title: 'Sell', body: Empty('Nothing in progress') };
-  const body = h('div', null, h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Which shop is buying?')), pickList(E, { placeholder: 'Search customer', empty: 'No customer found.', items: () => S.customers.filter(c => c.type === 'SHOP'), text: c => [c.shop, c.name, c.addr.area].join(' '), render: c => personRow(c, () => { d.buyer = { partyId: c.id }; nav.go('ss.items'); }) }));
+  const body = h('div', null, h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Which shop is buying?')), pickList(E, { placeholder: 'Search customer', empty: 'No customer found.', items: () => S.customers.filter(c => c.type === 'SHOP' && isActiveCust(c)), text: c => [c.shop, c.name, c.addr.area].join(' '), render: c => personRow(c, () => { d.buyer = { partyId: c.id }; nav.go('ss.items'); }) }));
   return { title: 'Sell remaining goods', sub: tripOf(d.tid).no, step: { label: 'SELLING FROM PICKUP', n: 1, of: 4 }, body };
 });
 route('ss.buyer', (p, E) => {
@@ -2368,9 +2411,11 @@ function onlineScreen(kind) {
   return (p, E) => {
     const c = colCtx(p), st = E.st; if (!st.init) { st.init = 1; st.amt = String(c.due / 100).replace(/\.0+$/, ''); st.ref = ''; }
     const bk = S.settings.bank, up = S.settings.upi;
-    const info = kind === 'BANK'
-      ? h('div', { class: 'pane ink' }, h('div', { class: 'pad' }, h('div', { class: 'eyebrow' }, 'Agency bank details (demo)'), KV('Account name', bk.holder), KV('Account number', bk.acNo), KV('IFSC', bk.ifsc), KV('Bank', bk.name + ', ' + bk.branch)))
-      : h('div', { class: 'pane ink' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'Agency UPI (demo)'), h('div', { style: { fontSize: '24px', fontWeight: 700, margin: '6px 0' } }, up.id), h('div', null, '☎ UPI phone ' + up.phone), h('div', { class: 'mt8', style: { fontSize: '13px', opacity: .7 } }, 'Demonstration only — no real payment request is created.')));
+    const unset = kind === 'BANK' ? !bk.acNo : !up.id;
+    const info = unset ? h('div', { class: 'aside' }, 'The agency ' + (kind === 'BANK' ? 'bank' : 'UPI') + ' details are not set yet. Add them in More → Settings → Additional so you can show them to the customer. You can still record the payment below.')
+      : kind === 'BANK'
+      ? h('div', { class: 'pane ink' }, h('div', { class: 'pad' }, h('div', { class: 'eyebrow' }, 'Agency bank details'), KV('Account name', bk.holder), KV('Account number', bk.acNo), KV('IFSC', bk.ifsc), KV('Bank', [bk.name, bk.branch].filter(Boolean).join(', '))))
+      : h('div', { class: 'pane ink' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'Agency UPI'), h('div', { style: { fontSize: '24px', fontWeight: 700, margin: '6px 0' } }, up.id), up.phone ? h('div', null, '☎ UPI phone ' + up.phone) : null, h('div', { class: 'mt8', style: { fontSize: '13px', opacity: .7 } }, 'No payment request is sent from here — the customer pays using this UPI ID.')));
     const amtI = h('input', { class: 'input', id: 'amt', inputmode: 'decimal', value: st.amt, 'aria-label': 'Amount received', onInput: ev => { st.amt = ev.target.value; chk(); } });
     const refI = h('input', { class: 'input', id: 'ref', value: st.ref, placeholder: kind === 'BANK' ? 'Bank reference / UTR' : 'UPI transaction ID', maxlength: 40, 'aria-label': 'Payment reference', onInput: ev => { st.ref = ev.target.value; chk(); } });
     const btn = Btn('CONFIRM — ' + (kind === 'BANK' ? 'BANK' : 'UPI') + ' PAYMENT', { kind: 'primary', disabled: true, onClick: () => { const dr = colDraft(p.sid || p.pid); const pay = recordPayment({ partyId: c.pid, saleId: p.sid, method: kind, amount: parseRs(st.amt), collectorId: null, tripId: c.trip ? c.trip.id : null, details: { ref: st.ref.trim() }, token: dr.tok }); afterPayment(p, pay); } });
@@ -2429,7 +2474,7 @@ route('disc', (p, E) => {
   const inp = h('input', { class: 'a input', style: { textAlign: 'center', fontSize: '30px', minHeight: '64px' }, id: 'pct', inputmode: 'decimal', placeholder: '0.5', value: st.pct, maxlength: 5, 'aria-label': 'Discount percentage', 'data-autofocus': '1', onInput: ev => { st.pct = ev.target.value.replace(/[^\d.]/g, ''); ev.target.value = st.pct; nav.refresh(); } });
   const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Discount percentage'), h('div', { class: 'mt12' }, inp), h('div', { class: 'hint' }, 'e.g. 0.5 for half a percent')),
     h('div', { class: 'seg' }, ['0.5', '1', '2'].map(v => h('button', { type: 'button', 'aria-pressed': String(st.pct === v), onClick: () => { st.pct = v; nav.refresh(); } }, v + '%'))), box,
-    authBox('OWNER APPROVAL REQUIRED', 'Only the Owner can approve a billing discount. This is a future permission boundary — in this demo, simulating the approval needs no login.', 'SIMULATE OWNER APPROVAL', () => { if (!ok) fail('Enter a discount between 0.01 and 20 percent.'); applyDiscount(s.id, bp, 'dc-' + s.id + '-' + bp); nav.back(); toast('Owner approved ' + pctText(bp) + ' — new total ' + rs(saleTotal(s))); }));
+    authBox('OWNER APPROVAL REQUIRED', 'Only the Owner can approve a billing discount. This is a future permission boundary — in this test build, simulating the approval needs no login.', 'SIMULATE OWNER APPROVAL', () => { if (!ok) fail('Enter a discount between 0.01 and 20 percent.'); applyDiscount(s.id, bp, 'dc-' + s.id + '-' + bp); nav.back(); toast('Owner approved ' + pctText(bp) + ' — new total ' + rs(saleTotal(s))); }));
   return { title: 'Discount', sub: s.no + ' · ' + partyName(s.partyId), body, help: 'A billing discount lowers the bill before money is collected. It is different from an inter-agency special rate.' };
 });
 
@@ -2655,7 +2700,7 @@ route('customer.profile', (p, E) => {
     h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'CURRENT DUE'), h('div', { class: 'huge mt8' + (b < 0 ? ' red' : '') }, rs(Math.max(0, -b))), h('div', { class: 'eyebrow mt8', style: { color: 'var(--ink)' } }, b < 0 ? 'OWES AGENCY' : b > 0 ? 'AGENCY HAS TO PAY ' + rs(b) : 'ALL CLEAR'))),
     h('div', { class: 'card' }, h('b', { style: { fontWeight: 600 } }, c.name), c.phone ? h('div', null, '☎ ' + c.phone) : null, c.addr ? h('div', { class: 'mute', style: { fontSize: '14px' } }, addrLine(c) || 'No address saved') : null, c.addr ? h('div', { class: 'mute', style: { fontSize: '13px' } }, locStatus(c)) : null, c.addr && mapsUrl(c) ? h('div', { class: 'mt8' }, Btn('OPEN MAPS', { kind: 'ghost', cls: 'sm', icon: 'nav', onClick: () => openMaps(c) })) : null),
     h('div', { class: 'tiles' }, tiles.map(t => h('button', { class: 'tile', type: 'button', onClick: act(() => t[0] === 'khata' ? nav.go('kh.history', { pid }) : nav.go('customer.section', { pid, sec: t[0] })) }, h('b', null, t[2]), h('span', null, t[1])))));
-  return { title: c.shop || c.name, sub: partyKind(pid) + (c.addr && c.addr.area ? ' · ' + c.addr.area : ''), big: true, body, foot: [b < 0 ? Btn('RECORD PAYMENT', { kind: 'primary', onClick: () => nav.go('col.home', { pid }) }) : null, Btn('VIEW STATEMENT', { kind: 'ghost', icon: 'print', onClick: () => nav.go('statement', { pid }) })] };
+  return { title: c.shop || c.name, sub: partyKind(pid) + (c.addr && c.addr.area ? ' · ' + c.addr.area : '') + (isActiveCust(c) ? '' : ' · HIDDEN'), big: true, body, foot: [!isActiveCust(c) ? Btn('SHOW CUSTOMER AGAIN', { kind: 'primary', onClick: () => { setCustomerHidden(pid, false); nav.refresh(); toast('Shown again'); } }) : b < 0 ? Btn('RECORD PAYMENT', { kind: 'primary', onClick: () => nav.go('col.home', { pid }) }) : c.type !== 'SHOP' ? null : Btn('TAKE ORDER', { kind: 'primary', icon: 'plus', onClick: () => { const dr = S.drafts.order; if (dr && dr.lines.length && dr.partyId !== pid) fail('Finish or discard the unfinished order on Today first.'); cartOf('order').partyId = pid; nav.go('cart.prod', { mode: 'order' }); } }), Btn('VIEW STATEMENT', { kind: 'ghost', icon: 'print', onClick: () => nav.go('statement', { pid }) }), c.type !== 'OCCASIONAL' ? h('div', { class: 'linkrow' }, Btn('EDIT DETAILS', { kind: 'link', onClick: () => nav.go('cu.edit', { pid }) }), isActiveCust(c) ? Btn('DELETE OR HIDE', { kind: 'link', cls: 'neg', onClick: () => customerRemoveSheet(c) }) : Btn('DELETE', { kind: 'link', cls: 'neg', onClick: () => customerRemoveSheet(c) })) : null] };
 });
 route('customer.section', (p, E) => {
   const pid = p.pid, sec = p.sec, titles = { orders: 'Recent orders', deliveries: 'Deliveries', payments: 'Payments', returns: 'Returns' }; let rows = [], empty = 'Nothing here yet.';
@@ -2781,9 +2826,11 @@ const stTone = s => s === 'OK' ? 'ok' : s === 'LOW' ? 'warn' : 'bad';
 const stLabel = s => s === 'OK' ? 'IN STOCK' : s === 'LOW' ? 'LOW' : 'OUT';
 /* ===================== STOCK ===================== */
 route('st.list', (p, E) => {
-  const body = pickList(E, { placeholder: 'Search product', empty: S.products.length ? 'No product found.' : 'No products yet. Add a product, then receive stock for it.', items: () => S.products.filter(x => x.active), text: x => prodLabel(x) + ' ' + x.nick,
-    render: x => { const s = stockStatus(x.id); return Row({ title: prodLabel(x), sub: qtyText(x, avail(x.id)), right: Chip(stLabel(s), s === 'OK' ? 'ok' : s === 'LOW' ? '' : 'bad'), onClick: () => nav.go('st.product', { pid: x.id }) }); } });
-  return { title: 'Stock', sub: 'What is in the godown', body, foot: S.products.length ? [Btn('RECEIVE STOCK', { kind: 'primary', onClick: () => nav.go('st.receive') }), Btn('ADD PRODUCT', { kind: 'ghost', onClick: () => startProduct('st.list') })] : [Btn('ADD PRODUCT', { kind: 'primary', onClick: () => startProduct('st.list') })] };
+  const body = pickList(E, { placeholder: 'Search product', empty: S.products.length ? 'No product found.' : 'No products yet. Add a product, then count your opening stock.', items: () => S.products.filter(x => x.active), text: x => prodLabel(x) + ' ' + x.nick,
+    render: x => { const s = stockStatus(x.id), fresh = !S.moves.some(m => m.pid === x.id) && avail(x.id) === 0; return Row({ title: prodLabel(x), sub: fresh ? 'No stock counted yet' : qtyText(x, avail(x.id)), right: fresh ? Chip('ADD STOCK') : Chip(stLabel(s), s === 'OK' ? 'ok' : s === 'LOW' ? '' : 'bad'), onClick: () => nav.go('st.product', { pid: x.id }) }); } });
+  const act_ = S.products.filter(x => x.active), low = act_.filter(x => stockStatus(x.id) === 'LOW' && S.moves.some(m => m.pid === x.id)).length, out = act_.filter(x => stockStatus(x.id) === 'OUT' && S.moves.some(m => m.pid === x.id)).length;
+  const sum = act_.length ? h('div', { class: 'aside', style: { marginBottom: '14px' } }, plural(act_.length, 'product'), low ? ' · ' + low + ' low' : '', out ? ' · ' + out + ' out' : '', ' · ', h('span', { class: 'mute' }, 'tap a product to add opening stock, receive or count')) : null;
+  return { title: 'Stock', sub: 'What is in the godown', body: h('div', null, sum, body), foot: S.products.length ? [Btn('RECEIVE STOCK', { kind: 'primary', onClick: () => nav.go('st.receive') }), Btn('ADD PRODUCT', { kind: 'ghost', icon: 'plus', onClick: () => startProduct('st.list') })] : [Btn('ADD PRODUCT', { kind: 'primary', icon: 'plus', onClick: () => startProduct('st.list') })] };
 });
 route('st.product', (p, E) => {
   const pr = prod(p.pid), s = stockStatus(pr.id), mv = S.moves.filter(m => m.pid === pr.id).slice(-4).reverse(), hold = holdOf(pr.id);
@@ -2791,7 +2838,11 @@ route('st.product', (p, E) => {
     hold || S.retail[pr.id] ? h('div', { class: 'aside' }, hold ? h('div', null, h('b', null, 'Held (not sellable): '), qtyText(pr, hold) + ' — ' + Array.from(new Set(S.hold.filter(x => x.pid === pr.id).map(x => x.kind.toLowerCase()))).join(', ')) : null, S.retail[pr.id] ? h('div', null, h('b', null, 'At retail counter: '), qtyText(pr, S.retail[pr.id])) : null) : null,
     h('div', { class: 'aside' }, h('b', null, 'How it is counted: '), pr.levels.map(l => '1 ' + l.u + ' = ' + l.n + ' ' + pr.base.toLowerCase() + 's').join(' · ')),
     Sec('Recent movement'), mv.length ? Pane(mv.map(m => Row({ title: m.reason, sub: fmtDT(m.at) + (m.ref ? ' · ' + m.ref : ''), right: (m.delta > 0 ? '+' : '−') + qtyText(pr, Math.abs(m.delta)) }))) : Pane(Empty('No movement yet.')));
-  return { title: pr.name, sub: 'MRP ' + rs(pr.mrp) + ' · buy ' + (pr.buy ? rs(pr.buy) : '—') + ' · sell ' + rs(pr.sell) + ' per ' + unitWord(pr.base, 1), body, foot: [Btn('RECEIVE STOCK', { kind: 'primary', onClick: () => nav.go('st.receive') }), Btn('COUNT STOCK', { kind: 'dark', onClick: () => nav.go('st.count', { pid: pr.id }) }), Btn('VIEW HISTORY', { kind: 'link', onClick: () => nav.go('st.hist', { pid: pr.id }) })] };
+  const fresh = !S.moves.some(m => m.pid === pr.id) && avail(pr.id) === 0;
+  const foot = fresh ? [Btn('ADD OPENING STOCK', { kind: 'primary', icon: 'plus', onClick: () => nav.go('st.count', { pid: pr.id, opening: true }), sub: 'Count what is on the shelves today' }), Btn('RECEIVE STOCK FROM A SUPPLIER', { kind: 'ghost', onClick: () => nav.go('st.receive') })]
+    : [Btn('RECEIVE STOCK', { kind: 'primary', onClick: () => nav.go('st.receive') }), Btn('COUNT STOCK', { kind: 'dark', onClick: () => nav.go('st.count', { pid: pr.id }) })];
+  foot.push(h('div', { class: 'linkrow' }, Btn('VIEW HISTORY', { kind: 'link', onClick: () => nav.go('st.hist', { pid: pr.id }) }), Btn('EDIT PRODUCT', { kind: 'link', onClick: () => nav.go('set.prod', { pid: pr.id }) })));
+  return { title: pr.name, sub: 'MRP ' + rs(pr.mrp) + ' · buy ' + (pr.buy ? rs(pr.buy) : '—') + ' · sell ' + rs(pr.sell) + ' per ' + unitWord(pr.base, 1), body, foot };
 });
 route('st.hist', (p, E) => {
   const pr = p.pid ? prod(p.pid) : null, mv = S.moves.filter(m => !pr || m.pid === pr.id).slice().reverse();
@@ -2899,13 +2950,17 @@ route('st.recv.confirm', (p, E) => {
 route('st.count', (p, E) => {
   const pr = prod(p.pid), u = E.st.u || (E.st.u = {}), inf = h('div', { class: 'center mt12' });
   if (E.st.init == null) { E.st.init = 1; breakdown(pr, avail(pr.id)).forEach(x => u[x[0]] = 0); }
-  const btn = Btn('CONTINUE', { kind: 'primary', onClick: () => { E.st.counted = toBase(pr, u); nav.go('st.count.fix', { pid: pr.id, counted: toBase(pr, u) }); } });
-  const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Count ' + pr.name), h('div', { class: 'hint' }, 'Count the goods on the shelves and enter what you really see. The system will not show you its number first.')), unitsEditor(pr, u, { onChange: b => { inf.textContent = 'You counted ' + qtyText(pr, b); } }), inf);
+  const btn = Btn('CONTINUE', { kind: 'primary', onClick: () => { E.st.counted = toBase(pr, u); nav.go('st.count.fix', { pid: pr.id, counted: toBase(pr, u), opening: p.opening }); } });
+  const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, (p.opening ? 'Opening stock of ' : 'Count ') + pr.name), h('div', { class: 'hint' }, p.opening ? 'Count the goods on the shelves today and enter what you really see — BOX, LADI and PACKET can be mixed. This becomes your starting stock.' : 'Count the goods on the shelves and enter what you really see. The system will not show you its number first.')), unitsEditor(pr, u, { onChange: b => { inf.textContent = 'You counted ' + qtyText(pr, b); } }), inf);
   inf.textContent = 'You counted ' + qtyText(pr, toBase(pr, u));
-  return { title: 'Count stock', sub: pr.name, step: { label: 'COUNTING STOCK', n: 1, of: 2 }, body, foot: [btn] };
+  return { title: p.opening ? 'Opening stock' : 'Count stock', sub: pr.name, step: { label: p.opening ? 'OPENING STOCK' : 'COUNTING STOCK', n: 1, of: 2 }, body, foot: [btn] };
 });
 route('st.count.fix', (p, E) => {
-  const pr = prod(p.pid), diff = p.counted - avail(pr.id), st = E.st; if (!st.init) { st.init = 1; st.reason = ''; st.note = ''; st.tok = nid('tok'); }
+  const pr = prod(p.pid), diff = p.counted - avail(pr.id), st = E.st; if (!st.init) { st.init = 1; st.reason = p.opening ? 'Opening count' : ''; st.note = ''; st.tok = nid('tok'); }
+  const opening = !!p.opening && avail(pr.id) === 0;
+  if (opening && p.counted === 0) return { title: 'Opening stock', sub: pr.name, step: { label: 'OPENING STOCK', n: 2, of: 2 }, body: Empty('You counted nothing. The product starts with zero stock — go back to count again, or receive stock from a supplier.'), foot: [Btn('COUNT AGAIN', { kind: 'primary', onClick: () => nav.back() })] };
+  if (opening) return { title: 'Opening stock', sub: pr.name, step: { label: 'OPENING STOCK', n: 2, of: 2 }, body: h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'STARTING STOCK'), h('div', { class: 'big' }, qtyText(pr, p.counted)), h('div', { class: 'mute' }, '= ' + baseText(pr, p.counted)))), h('div', { class: 'aside' }, 'This is saved as the opening count. From now on, stock changes only through purchases, loading, returns and counts — and every change stays in the history.')),
+    foot: [Btn('SAVE OPENING STOCK', { kind: 'primary', onClick: () => { applyCount(pr.id, p.counted, 'Opening count', '', st.tok); nav.popTo('st.product'); nav.refresh(); toast('Opening stock saved — ' + qtyText(pr, p.counted)); } })] };
   const btn = Btn(diff === 0 ? 'CONFIRM — IT MATCHES' : 'RECORD CORRECTION', { kind: 'primary', disabled: diff !== 0 && !st.reason, onClick: () => { applyCount(pr.id, p.counted, st.reason, st.note, st.tok); nav.popTo('st.product'); nav.refresh(); toast(diff === 0 ? 'Count matches' : 'Stock corrected'); } });
   const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad' }, KV('System says', qtyText(pr, avail(pr.id))), KV('You counted', qtyText(pr, p.counted)), KV(diff === 0 ? 'Difference' : diff < 0 ? 'Missing' : 'Extra', diff === 0 ? '✓ none' : qtyText(pr, Math.abs(diff)), 'tot'))),
     diff !== 0 ? h('div', { class: 'gap' }, Field('Why is it different?', h('select', { class: 'select', 'aria-label': 'Reason', onChange: ev => { st.reason = ev.target.value; btn.disabled = !st.reason; } }, h('option', { value: '' }, 'Choose a reason'), COUNT_REASONS.map(r => h('option', { value: r }, r)))), Field('Note (optional)', h('input', { class: 'input', maxlength: 80, onInput: ev => { st.note = ev.target.value; } })),
@@ -3075,7 +3130,7 @@ route('ia.rates', (p, E) => {
   const changed = () => c.lines.some(l => { const v = parse(l.pid); return v != null && v !== prod(l.pid).sell; });
   const bad = () => c.lines.some(l => !(parse(l.pid) > 0));
   const btn = Btn('CONTINUE', { kind: 'primary', onClick: () => { const rates = {}; c.lines.forEach(l => rates[l.pid] = parse(l.pid)); c.extra.rates = rates; c.extra.authed = st.authed && changed(); nav.go('cart.review', { mode: 'ia' }); } });
-  const upd = () => { btn.disabled = bad() || (changed() && !st.authed); setKids(authWrap, changed() ? (st.authed ? h('div', { class: 'card' }, '✓ Owner authorised these special rates') : authBox('OWNER AUTHORIZATION REQUIRED', 'A negotiated rate below the normal Sell-to-Shop price needs the Owner. This is a special inter-agency rate — not a billing discount. (Simulated: no login in this demo.)', 'SIMULATE OWNER APPROVAL', () => { if (bad()) fail('Enter a rate for every product.'); st.authed = true; c.extra.authed = true; approve('OWNER_SPECIAL_RATE', 'Owner authorised special inter-agency rates for ' + partyName(c.partyId)); upd(); })) : null); };
+  const upd = () => { btn.disabled = bad() || (changed() && !st.authed); setKids(authWrap, changed() ? (st.authed ? h('div', { class: 'card' }, '✓ Owner authorised these special rates') : authBox('OWNER AUTHORIZATION REQUIRED', 'A negotiated rate below the normal Sell-to-Shop price needs the Owner. This is a special inter-agency rate — not a billing discount. (Simulated: no login in this test build.)', 'SIMULATE OWNER APPROVAL', () => { if (bad()) fail('Enter a rate for every product.'); st.authed = true; c.extra.authed = true; approve('OWNER_SPECIAL_RATE', 'Owner authorised special inter-agency rates for ' + partyName(c.partyId)); upd(); })) : null); };
   const authWrap = h('div');
   const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Agreed rate'), h('div', { class: 'hint' }, 'Rate per ' + 'single unit (packet / piece). Leave it as it is for the normal price.')),
     c.lines.map(l => { const pr = prod(l.pid); return h('div', { class: 'card' }, h('b', null, prodLabel(pr)), h('div', { class: 'mute', style: { fontSize: '14px' } }, qtyText(pr, l.base) + ' · normal ₹' + (pr.sell / 100) + ' per ' + pr.base.toLowerCase()),
@@ -3187,26 +3242,27 @@ route('more', (p, E) => {
   const sec = (t, rows) => h('div', null, Sec(t), Pane(rows));
   const body = h('div', null,
     sec('Sell', [Row({ title: 'Godown sale', sub: 'Customer comes to the godown', onClick: () => startCart('godown') }), Row({ title: 'Retail sale', sub: 'Single packets at the counter', onClick: () => { const d = S.drafts.retail; if (d && d.pid) openSheet({ title: 'Unfinished retail sale', sub: prod(d.pid).name, body: h('div'), actions: [Btn('RESUME IT', { kind: 'primary', onClick: () => { closeSheet(); nav.go('rl.qty'); } }), Btn('START NEW', { kind: 'ghost', onClick: () => { closeSheet(); delete S.drafts.retail; nav.go('rl.prod'); } }), sheetClose('CANCEL')] }); else nav.go('rl.prod'); } }), Row({ title: 'Inter-agency sale', sub: 'Another Balaji agency buys goods', onClick: () => startCart('ia') })]),
-    sec('Operate', [Row({ title: 'Pickups', sub: 'Loading, on the road, returns', onClick: () => nav.go('pk.list') }), Row({ title: 'Stock', sub: 'Search, receive, count', onClick: () => nav.go('st.list') }), Row({ title: 'Staff', sub: 'Attendance, duty, earnings', onClick: () => nav.go('sf.list') }), Row({ title: 'Returns & expired goods', sub: 'What came back, and money for it', onClick: () => nav.go('rtn.start') })]),
+    sec('Operate', [Row({ title: 'Pickups', sub: 'Loading, on the road, returns', onClick: () => nav.go('pk.list') }), Row({ title: 'Stock', sub: S.products.length ? plural(S.products.filter(x => x.active).length, 'product') + ' · search, receive, count' : 'Add products, receive and count stock', onClick: () => nav.go('st.list') }),
+      Row({ title: 'Customers', sub: S.customers.length ? plural(S.customers.filter(c => c.type !== 'OCCASIONAL').length, 'customer') + ' · ' + plural(S.areas.length, 'area') : 'Add shops and areas', onClick: () => nav.go('cu.list') }),
+      Row({ title: 'Staff', sub: 'Attendance, duty, earnings', onClick: () => nav.go('sf.list') }), Row({ title: 'Returns & expired goods', sub: 'What came back, and money for it', onClick: () => nav.go('rtn.start') })]),
     sec('Money', [Row({ title: 'Cash / Day close', sub: 'Cash ' + rs(cbal('CASH')) + ' · Bank ' + rs(cbal('BANK')), onClick: () => nav.go('cash.home') }), Row({ title: 'Pending verification', sub: 'Money waiting to be checked', right: pend ? Chip(String(pend), 'bad') : '✓', onClick: () => nav.go('cash.pend') })]),
-    sec('Setup', [Row({ title: 'Settings', sub: 'Staff · Area · Stock · Pickup', onClick: () => nav.go('set.home') }), Row({ title: 'History', sub: 'Everything that happened', onClick: () => nav.go('hist') })]),
-    h('div', { class: 'center mt24' }, Btn('RESET DEMO', { kind: 'link', onClick: () => confirmSheet({ title: 'Reset the demo?', sub: 'Everything entered in this session is removed — products, customers, staff, stock, orders, Khata and cash. The app starts empty again.', yes: 'YES, RESET', danger: true, no: 'KEEP MY CHANGES', onYes: () => { resetDemo(); nav.reset([['today']], 'none'); toast('Demo reset — the app is empty'); } }) })),
-    h('div', { class: 'center mute', style: { fontSize: '12px', marginBottom: '12px' } }, 'Agency Pilot V2 · prototype · nothing is saved'));
+    sec('Setup', [Row({ title: 'Areas', sub: S.areas.length ? S.areas.map(a => a.name).slice(0, 3).join(', ') + (S.areas.length > 3 ? '…' : '') : 'Add the areas you deliver to', onClick: () => nav.go('set.area') }), Row({ title: 'Settings', sub: 'Staff · Area · Stock · Pickup', onClick: () => nav.go('set.home') }), Row({ title: 'Data & backup', sub: saveStatusText(), right: STORE.ok && !STORE.error ? null : Chip('NOT SAVING', 'bad'), onClick: () => nav.go('set.data') }), Row({ title: 'History', sub: 'Everything that happened', onClick: () => nav.go('hist') })]),
+    h('div', { class: 'center mute mt24', style: { fontSize: '12px', marginBottom: '12px' } }, 'Agency Pilot V2 · test build · ' + saveStatusText()));
   return { title: 'More', body };
 });
 
 /* ===================== SETTINGS ===================== */
 route('set.home', (p, E) => {
   const big = (t, r) => h('button', { class: 'row', type: 'button', style: { color: 'var(--ink)', borderBottom: '1px solid var(--line)', minHeight: '76px', padding: '10px 4px' }, onClick: act(() => nav.go(r)) }, h('div', { class: 'l' }, h('div', { style: { fontSize: '26px', fontWeight: 500, letterSpacing: '-.02em' } }, t)), ic('next', 'chev'));
-  return { title: 'Settings', body: h('div', null, big('STAFF', 'set.staff'), big('AREA', 'set.area'), big('STOCK', 'set.stock'), big('PICKUP', 'set.pickup'), Sec('Additional'), Pane([Row({ title: 'Payments, expenses & agency', sub: 'Payment methods · expense types · agency details · print', onClick: () => nav.go('set.more') })]),
+  return { title: 'Settings', body: h('div', null, big('STAFF', 'set.staff'), big('AREA', 'set.area'), big('STOCK', 'set.stock'), big('PICKUP', 'set.pickup'), Sec('Additional'), Pane([Row({ title: 'Data & backup', sub: saveStatusText(), onClick: () => nav.go('set.data') })]), Pane([Row({ title: 'Payments, expenses & agency', sub: 'Payment methods · expense types · agency details · print', onClick: () => nav.go('set.more') })]),
     Sec('Sample data for testing'), Pane([
-      Row({ title: 'Load sample data', sub: '10 products with stock, 8 customers, 9 staff, 3 pickup vehicles, orders waiting, a pickup on the road and some dues', onClick: () => confirmSheet({ title: 'Load sample data?', sub: 'Everything entered so far is replaced by the fictional sample agency. RESET DEMO in More makes the app empty again.', yes: 'LOAD SAMPLE DATA', no: 'CANCEL', onYes: () => { loadExample(); nav.reset([['today']], 'none'); toast('Sample data loaded'); } }) }),
+      Row({ title: 'Load sample data', sub: '10 products with stock, 8 customers, 9 staff, 3 pickup vehicles, orders waiting, a pickup on the road and some dues', onClick: () => confirmSheet({ title: 'Replace your data with sample data?', sub: 'This REPLACES everything on this phone with a fictional sample agency. Download a backup first (Data & backup). “Erase all data” makes the app empty again.', yes: 'REPLACE WITH SAMPLE', danger: true, no: 'CANCEL', onYes: () => { loadExample(); saveNow(); nav.reset([['today']], 'none'); toast('Sample data loaded'); } }) }),
       Row({ title: 'Example scenarios', sub: 'Jump straight to one situation: delivery, partial payment, pickup return, Agent Khata, day close…', onClick: () => nav.go('scen') })]),
     h('div', { class: 'aside mt16' }, 'The app normally starts empty. Sample data is fictional and is never mixed with what you enter — loading it replaces everything.')) };
 });
-route('set.staff', (p, E) => ({ title: 'Staff settings', body: h('div', { class: 'gap' }, Pane(S.staff.map(s => Row({ title: s.name, sub: posLabel[s.position] + (s.driver ? ' · can drive' : '') + (s.areas.length ? ' · ' + s.areas.join(', ') : '') + (!s.active ? ' · not active' : ''), cls: s.active ? '' : 'off', onClick: () => nav.go('set.staff.edit', { sid: s.id }) }))),
-  h('div', { class: 'aside' }, h('b', null, 'Photos & ID documents: '), 'staff photo and Aadhaar upload (Cloudinary) are future integrations. This demo stores no photos and no personal documents.')),
-  foot: [Btn('ADD STAFF', { kind: 'primary', onClick: () => editSheet({ title: 'Add staff', save: 'ADD', fields: [{ key: 'name', label: 'Name', placeholder: 'Name', maxlength: 30 }, { key: 'position', label: 'Position', type: 'select', value: 'HELPER', options: Object.keys(posLabel).filter(k => k !== 'CEO').map(k => [k, posLabel[k]]) }], onSave: v => { const s = addStaff({ name: v.name, position: v.position }); toast(s.name + ' added'); } }) })] }));
+route('set.staff', (p, E) => ({ title: 'Staff settings', body: h('div', { class: 'gap' }, S.staff.length ? null : Pane(Empty('No staff yet. Tap ADD STAFF — add the Manager, helpers and at least one driver.')), Pane(S.staff.map(s => Row({ title: s.name, sub: posLabel[s.position] + (s.driver ? ' · can drive' : '') + (s.areas.length ? ' · ' + s.areas.join(', ') : '') + (!s.active ? ' · not active' : ''), cls: s.active ? '' : 'off', onClick: () => nav.go('set.staff.edit', { sid: s.id }) }))),
+  h('div', { class: 'aside' }, h('b', null, 'Photos & ID documents: '), 'staff photos and Aadhaar copies are not stored in this version.')),
+  foot: [Btn('ADD STAFF', { kind: 'primary', onClick: () => editSheet({ title: 'Add staff', save: 'ADD', fields: [{ key: 'name', label: 'Name', placeholder: 'Name', maxlength: 30 }, { key: 'position', label: 'Position', type: 'select', value: 'HELPER', options: Object.keys(posLabel).filter(k => k !== 'CEO').map(k => [k, posLabel[k]]) }, { key: 'driver', label: 'Can drive a pickup?', type: 'select', value: '0', options: [['0', 'No'], ['1', 'Yes — can be the driver']] }], onSave: v => { const s = addStaff({ name: v.name, position: v.position, driver: v.driver === '1' }); toast(s.name + ' added'); } }) })] }));
 route('set.staff.edit', (p, E) => {
   const s = staffOf(p.sid), agentish = ['AGENT', 'PERSONAL_AGENT'].includes(s.position);
   const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'big' }, s.name), h('div', { class: 'mt8' }, Chip(posLabel[s.position].toUpperCase())))),
@@ -3218,19 +3274,118 @@ route('set.staff.edit', (p, E) => {
   return { title: s.name, sub: 'Staff settings', body, foot: [Btn('CHANGE POSITION', { kind: 'dark', onClick: () => editSheet({ title: 'Position — ' + s.name, sub: 'Earlier earnings and history are kept. Pay and duty are set separately.', fields: [{ key: 'pos', label: 'New position', type: 'select', value: s.position, options: Object.keys(posLabel).map(k => [k, posLabel[k]]) }], onSave: v => { if (v.pos === s.position) return; if (busyStaff(s.id)) fail(s.name + ' is on a pickup right now.'); changePosition(s.id, v.pos, 'Position changed in Settings'); toast(s.name + ' is now ' + posLabel[v.pos]); } }) }),
     Btn('RENAME', { kind: 'ghost', onClick: () => editSheet({ title: 'Rename', fields: [{ key: 'name', label: 'Name', value: s.name, maxlength: 30 }], onSave: v => { if (v.name.trim().length < 2) fail('Enter a name.'); s.name = v.name.trim(); } }) })] };
 });
-route('set.area', (p, E) => ({ title: 'Areas', body: h('div', { class: 'gap' }, Pane(S.areas.map(a => { const n = S.customers.filter(c => c.addr.area === a.name).length, ag = S.staff.filter(s => s.areas.includes(a.name)).map(s => s.name); return Row({ title: a.name, sub: plural(n, 'customer') + (ag.length ? ' · Agent: ' + ag.join(', ') : ''), onClick: () => nav.go('set.area.one', { id: a.id }) }); }))),
-  foot: [Btn('ADD AREA', { kind: 'primary', onClick: () => editSheet({ title: 'Add area', save: 'ADD', fields: [{ key: 'name', label: 'Area name', maxlength: 30 }], onSave: v => { const n = v.name.trim(); if (n.length < 2) fail('Enter the area name.'); if (S.areas.some(a => a.name.toLowerCase() === n.toLowerCase())) fail('That area already exists.'); S.areas.push({ id: nid('a'), name: n }); } }) })] }));
+/* ---- delete / hide: a customer or product with history can never be deleted (the records must stay); it can be hidden instead ---- */
+const isActiveCust = c => c.active !== false;
+const realCustomers = () => S.customers.filter(c => c.type !== 'OCCASIONAL' && isActiveCust(c));
+const hiddenCustomers = () => S.customers.filter(c => c.type !== 'OCCASIONAL' && !isActiveCust(c));
+const OPEN_ORDER = ['WAITING', 'LOADING', 'LOADED', 'ON_ROAD'];
+function customerHistory(pid) {
+  const n = [], add = (k, a, b) => { if (k) n.push(plural(k, a, b)); };
+  add(S.orders.filter(x => x.partyId === pid).length, 'order'); add(S.sales.filter(x => x.partyId === pid).length, 'bill'); add(S.payments.filter(x => x.partyId === pid).length, 'payment');
+  add(S.returns.filter(x => x.partyId === pid).length, 'return'); add(S.challans.filter(x => x.partyId === pid).length, 'challan'); add(kentries(pid).length, 'Khata entry', 'Khata entries');
+  return n;
+}
+function dropDraftsFor(match) { for (const k of Object.keys(S.drafts)) { const d = S.drafts[k]; if (d && typeof d === 'object' && match(d)) delete S.drafts[k]; } }
+function removeCustomer(pid) {
+  const c = cust(pid); if (!c) fail('Customer not found.');
+  const hist = customerHistory(pid); if (hist.length) fail((c.shop || c.name) + ' has ' + hist.join(', ') + ' — it cannot be deleted. Hide it instead.');
+  S.customers = S.customers.filter(x => x.id !== pid); dropDraftsFor(d => d.partyId === pid || (d.buyer && d.buyer.partyId === pid));
+  log('CUSTOMER', 'Customer deleted: ' + (c.shop || c.name));
+}
+function setCustomerHidden(pid, hide) {
+  const c = cust(pid); if (!c) fail('Customer not found.');
+  if (hide) { const open = S.orders.filter(o => o.partyId === pid && OPEN_ORDER.includes(o.status)).length; if (open) fail((c.shop || c.name) + ' has ' + plural(open, 'order') + ' still open. Deliver or cancel ' + (open === 1 ? 'it' : 'them') + ' first.'); dropDraftsFor(d => d.partyId === pid); }
+  c.active = !hide; log('CUSTOMER', (c.shop || c.name) + (hide ? ' hidden — old bills and Khata stay' : ' shown again'));
+}
+function customerRemoveSheet(c) {
+  const name = c.shop || c.name, hist = customerHistory(c.id), due = partyDue(c.id);
+  if (!hist.length) return confirmSheet({ title: 'Delete ' + name + '?', sub: 'There are no orders, bills or payments for this customer, so nothing is lost.', yes: 'YES, DELETE', danger: true, no: 'KEEP IT', onYes: () => { removeCustomer(c.id); nav.reset([['more'], ['cu.list']], 'back'); toast(name + ' deleted'); } });
+  openSheet({ title: name + ' cannot be deleted', sub: 'It has ' + hist.join(', ') + '. Those records must stay for your accounts.', body: h('div', { class: 'gap' }, h('div', { class: 'aside' }, isActiveCust(c) ? h('b', null, 'Hide instead: ') : h('b', null, 'Already hidden. '), 'the customer disappears from lists and new orders. Old bills, payments and the Khata stay exactly as they are. You can show the customer again any time.'), due > 0 ? h('div', { class: 'aside bad' }, name + ' still owes ' + rs(due) + '. It stays in the Khata.') : null),
+    actions: [!isActiveCust(c) ? null : Btn('HIDE CUSTOMER', { kind: 'primary', onClick: () => { setCustomerHidden(c.id, true); closeSheet(); nav.reset([['more'], ['cu.list']], 'back'); toast(name + ' hidden'); } }), sheetClose('CANCEL')] });
+}
+function productHistory(pid) {
+  const n = [], add = (k, a, b) => { if (k) n.push(plural(k, a, b)); };
+  add(S.moves.filter(m => m.pid === pid).length, 'stock movement'); add(S.orders.filter(o => o.lines.some(l => l.pid === pid)).length, 'order'); add(S.sales.filter(s => s.lines.some(l => l.pid === pid)).length, 'bill');
+  add(S.invoices.filter(i => i.lines.some(l => l.pid === pid)).length, 'purchase'); add(S.returns.filter(r => r.pid === pid).length, 'return'); add(S.hold.filter(x => x.pid === pid).length, 'held entry', 'held entries');
+  if (!n.length && ((S.godown[pid] || 0) > 0 || (S.retail[pid] || 0) > 0)) n.push('stock on the shelves');
+  return n;
+}
+function removeProduct(pid) {
+  const x = prod(pid); if (!x) fail('Product not found.');
+  const hist = productHistory(pid); if (hist.length) fail(x.name + ' has ' + hist.join(', ') + ' — it cannot be deleted. Hide it instead.');
+  S.products = S.products.filter(q => q.id !== pid); delete S.godown[pid]; delete S.retail[pid];
+  for (const k of Object.keys(S.drafts)) { const d = S.drafts[k]; if (d && Array.isArray(d.lines)) d.lines = d.lines.filter(l => l.pid !== pid); }
+  log('STOCK', 'Product deleted: ' + x.name);
+}
+function setProductHidden(pid, hide) {
+  const x = prod(pid); if (!x) fail('Product not found.');
+  if (hide) { const open = S.orders.filter(o => OPEN_ORDER.includes(o.status) && o.lines.some(l => l.pid === pid)).length; if (open) fail(x.name + ' is on ' + plural(open, 'open order') + '. Deliver or cancel ' + (open === 1 ? 'it' : 'them') + ' first.'); }
+  x.active = !hide; log('STOCK', x.name + (hide ? ' hidden — it cannot be ordered' : ' shown again'));
+}
+function productRemoveSheet(x) {
+  const hist = productHistory(x.id);
+  if (!hist.length) return confirmSheet({ title: 'Delete ' + x.name + '?', sub: 'It has no stock, orders or bills, so nothing is lost.', yes: 'YES, DELETE', danger: true, no: 'KEEP IT', onYes: () => { removeProduct(x.id); nav.reset([['more'], ['st.list']], 'back'); toast(x.name + ' deleted'); } });
+  openSheet({ title: x.name + ' cannot be deleted', sub: 'It has ' + hist.join(', ') + '. Those records must stay.', body: h('div', { class: 'aside' }, h('b', null, 'Hide instead: '), 'the product disappears from Stock and new orders. Old bills and stock history stay. Show it again any time from Settings → Stock.'),
+    actions: [x.active ? Btn('HIDE PRODUCT', { kind: 'primary', onClick: () => { setProductHidden(x.id, true); closeSheet(); nav.back(); toast(x.name + ' hidden'); } }) : null, sheetClose('CANCEL')] });
+}
+const customersIn = name => realCustomers().filter(c => (c.addr.area || '').toLowerCase() === name.toLowerCase());
+const addAreaSheet = after => editSheet({ title: 'Add area', sub: 'A part of town, a market or a village you deliver to.', save: 'ADD AREA', fields: [{ key: 'name', label: 'Area name', placeholder: 'e.g. Main Market', maxlength: 30 }],
+  onSave: v => { const n = v.name.trim().replace(/\s+/g, ' '); if (n.length < 2) fail('Enter the area name.'); if (S.areas.some(a => a.name.toLowerCase() === n.toLowerCase())) fail('That area already exists.'); const a = { id: nid('a'), name: n }; S.areas.push(a); log('AREA', 'Area added: ' + n); toast(n + ' added'); if (after) after(a); } });
+function startCustomerIn(area, ret) { S.drafts.cust = { name: '', shop: '', phone: '', addr: area ? { area } : {}, tok: nid('tok'), type: 'SHOP', lockType: false, ret: ret || null, then: null }; nav.go('cust.name'); }
+route('set.area', (p, E) => ({ title: 'Areas', sub: S.areas.length ? plural(S.areas.length, 'area') + ' · ' + plural(realCustomers().length, 'customer') : 'Where you deliver', body: h('div', { class: 'gap' },
+  S.areas.length ? Pane(S.areas.map(a => { const n = customersIn(a.name).length, ag = S.staff.filter(s => s.areas.includes(a.name)).map(s => s.name); return Row({ title: a.name, sub: plural(n, 'customer') + (ag.length ? ' · Agent: ' + ag.join(', ') : ''), onClick: () => nav.go('set.area.one', { id: a.id }) }); }))
+    : h('div', { class: 'gap' }, Pane(Empty('No areas yet.')), h('div', { class: 'aside' }, 'Areas group your shops by place, so you can see who is where. Add an area first, then add customers inside it. You can also type a new area while adding a customer.'))),
+  foot: [Btn('ADD AREA', { kind: 'primary', icon: 'plus', onClick: () => addAreaSheet() }), S.areas.length ? Btn('ALL CUSTOMERS', { kind: 'ghost', onClick: () => nav.go('cu.list') }) : null] }));
 route('set.area.one', (p, E) => {
-  const a = byId(S.areas, p.id), cs = S.customers.filter(c => c.addr.area === a.name);
-  return { title: a.name, sub: 'Customers in this area', body: cs.length ? Pane(cs.map(c => Row({ title: c.shop || c.name, sub: 'Tap to move to another area', onClick: () => editSheet({ title: 'Move ' + (c.shop || c.name), fields: [{ key: 'area', label: 'New area', type: 'select', value: a.name, options: S.areas.map(x => [x.name, x.name]) }], onSave: v => { c.addr.area = v.area; toast('Moved to ' + v.area); } }) }))) : Pane(Empty('No customers here yet.')),
-    foot: [Btn('RENAME AREA', { kind: 'ghost', onClick: () => editSheet({ title: 'Rename area', fields: [{ key: 'name', label: 'Area name', value: a.name }], onSave: v => { const n = v.name.trim(); if (n.length < 2) fail('Enter a name.'); const old = a.name; a.name = n; S.customers.forEach(c => { if (c.addr.area === old) c.addr.area = n; }); S.staff.forEach(s => { s.areas = s.areas.map(x => x === old ? n : x); }); } }) })] };
+  const a = byId(S.areas, p.id); if (!a) return { title: 'Area', body: Empty('This area no longer exists.'), foot: [Btn('BACK', { kind: 'primary', onClick: () => nav.back() })] };
+  const cs = customersIn(a.name), ag = S.staff.filter(s => s.areas.includes(a.name));
+  return { title: a.name, sub: plural(cs.length, 'customer') + (ag.length ? ' · Agent: ' + ag.map(s => s.name).join(', ') : ''), big: true,
+    body: h('div', { class: 'gap' }, cs.length ? Pane(cs.map(c => personRow(c, () => nav.go('customer.profile', { pid: c.id }), (() => { const b = partyDue(c.id); return b > 0 ? h('span', { class: 'red' }, rs(b)) : null; })()))) : h('div', { class: 'gap' }, Pane(Empty('No customers in ' + a.name + ' yet.')), h('div', { class: 'aside' }, 'Tap ADD CUSTOMER — the area is already filled in.'))),
+    foot: [Btn('ADD CUSTOMER', { kind: 'primary', icon: 'plus', onClick: () => startCustomerIn(a.name, 'set.area.one') }),
+      h('div', { class: 'linkrow' }, Btn('RENAME AREA', { kind: 'link', onClick: () => editSheet({ title: 'Rename area', fields: [{ key: 'name', label: 'Area name', value: a.name }], onSave: v => { const n = v.name.trim().replace(/\s+/g, ' '); if (n.length < 2) fail('Enter a name.'); if (S.areas.some(x => x !== a && x.name.toLowerCase() === n.toLowerCase())) fail('That area already exists.'); const old = a.name; a.name = n; S.customers.forEach(c => { if (c.addr.area === old) c.addr.area = n; }); S.staff.forEach(s => { s.areas = s.areas.map(x => x === old ? n : x); }); toast('Renamed to ' + n); } }) }),
+        !cs.length && !ag.length ? Btn('DELETE AREA', { kind: 'link', cls: 'neg', onClick: () => confirmSheet({ title: 'Delete ' + a.name + '?', sub: 'It has no customers.', yes: 'YES, DELETE', danger: true, no: 'KEEP IT', onYes: () => { S.areas = S.areas.filter(x => x !== a); nav.back(); toast('Area deleted'); } }) }) : null)] };
+});
+
+/* ===================== CUSTOMERS (directory · edit) ===================== */
+route('cu.list', (p, E) => {
+  const area = E.st.area || '', all = realCustomers(), hid = hiddenCustomers();
+  const areas = S.areas.map(a => [a.name, a.name + ' (' + customersIn(a.name).length + ')']);
+  const noArea = all.filter(c => !(c.addr.area || '').trim()).length;
+  const sel = h('select', { class: 'select', 'aria-label': 'Filter by area', onChange: ev => { E.st.area = ev.target.value; nav.refresh(); } }, h('option', { value: '' }, 'All areas (' + all.length + ')'), areas.map(o => h('option', { value: o[0], selected: area === o[0] }, o[1])), noArea ? h('option', { value: '__none', selected: area === '__none' }, 'No area (' + noArea + ')') : null, hid.length ? h('option', { value: '__hidden', selected: area === '__hidden' }, 'Hidden (' + hid.length + ')') : null);
+  const list = pickList(E, { placeholder: 'Search name, shop, phone or area', empty: all.length ? 'No customer found.' : 'No customers yet. Tap ADD CUSTOMER to add the first shop.',
+    items: () => (area === '__hidden' ? hid : all).filter(c => !area || area === '__hidden' || (area === '__none' ? !(c.addr.area || '').trim() : (c.addr.area || '').toLowerCase() === area.toLowerCase())).sort((a, b) => (a.shop || a.name).localeCompare(b.shop || b.name)),
+    text: c => [c.shop, c.name, c.phone, c.addr.area].join(' '), render: c => { const b = partyDue(c.id); return Row({ title: c.shop || c.name, sub: [c.shop ? c.name : null, c.addr.area, c.phone].filter(Boolean).join(' · '), chip: !isActiveCust(c) ? 'HIDDEN' : c.type === 'AGENCY' ? 'AGENCY' : null, right: b > 0 ? h('span', { class: 'red' }, rs(b)) : null, rightSub: b > 0 ? 'owes' : null, onClick: () => nav.go('customer.profile', { pid: c.id }) }); } });
+  const body = h('div', { class: 'gap' }, (all.length && S.areas.length) || hid.length ? sel : null, list, !S.areas.length && !all.length ? h('div', { class: 'aside' }, 'Tip: add your areas first (More → Areas), then add customers inside each area. You can also type a new area while adding a customer.') : null);
+  return { title: 'Customers', sub: all.length ? plural(all.length, 'customer') + ' · ' + plural(S.areas.length, 'area') : 'Shops you sell to', body,
+    foot: [Btn('ADD CUSTOMER', { kind: 'primary', icon: 'plus', onClick: () => startCustomerIn(area && area !== '__none' && area !== '__hidden' ? area : '', 'cu.list') }), Btn('AREAS', { kind: 'ghost', onClick: () => nav.go('set.area') })] };
+});
+function updateCustomer(pid, v) {
+  const c = cust(pid); if (!c) fail('Customer not found.');
+  const name = (v.name || '').trim(), shop = (v.shop || '').trim(), phone = (v.phone || '').replace(/\D/g, ''), area = (v.area || '').trim();
+  if (name.length < 2) fail('Please enter the customer name.'); if (name.length > 40 || shop.length > 50) fail('Name is too long.');
+  if (c.type !== 'OCCASIONAL' || phone) { if (phone.length !== 10) fail('Phone number must be 10 digits.'); const dup = S.customers.find(x => x.id !== c.id && x.phone === phone); if (dup) fail('Another customer already has this phone: ' + (dup.shop || dup.name) + '.'); }
+  if (!area) fail('Please choose the area.'); if (!(v.street || '').trim() && !(v.landmark || '').trim()) fail('Enter a street address or a landmark.');
+  const known = S.areas.find(x => x.name.toLowerCase() === area.toLowerCase());
+  if (known) c.addr.area = known.name; else { S.areas.push({ id: nid('a'), name: area }); c.addr.area = area; log('AREA', 'Area added: ' + area); }
+  Object.assign(c, { name, shop, phone }); Object.assign(c.addr, { street: v.street.trim(), landmark: (v.landmark || '').trim(), city: (v.city || '').trim() || c.addr.city });
+  log('CUSTOMER', 'Customer details changed: ' + (shop || name));
+}
+route('cu.edit', (p, E) => {
+  const c = cust(p.pid); if (!c) return { title: 'Customer', body: Empty('Not found') };
+  const st = E.st; if (!st.v) st.v = { name: c.name, shop: c.shop || '', phone: c.phone || '', area: c.addr.area || '', street: c.addr.street || '', landmark: c.addr.landmark || '', city: c.addr.city || '' };
+  const v = st.v, inp = (key, label, o) => Field(label, h('input', Object.assign({ class: 'input', value: v[key], maxlength: 80, 'aria-label': label, onInput: ev => { v[key] = o && o.digits ? ev.target.value.replace(/\D/g, '').slice(0, 10) : ev.target.value; if (o && o.digits) ev.target.value = v[key]; } }, o && o.attrs)));
+  const areaSel = h('select', { class: 'select', 'aria-label': 'Area', onChange: ev => { v.area = ev.target.value; } }, !S.areas.some(a => a.name === v.area) && v.area ? h('option', { value: v.area, selected: true }, v.area) : null, !v.area ? h('option', { value: '' }, 'Choose area') : null, S.areas.map(a => h('option', { value: a.name, selected: v.area === a.name }, a.name)));
+  const body = h('div', { class: 'gap' }, inp('name', 'Customer name'), inp('shop', 'Shop name (optional)'), inp('phone', 'Phone number (10 digits)', { digits: true, attrs: { type: 'tel', inputmode: 'numeric', maxlength: 10 } }), Field('Area', areaSel),
+    inp('street', 'Street address'), inp('landmark', 'Landmark'), inp('city', 'City'), h('div', { class: 'aside' }, 'To add a brand-new area, use More → Areas. Changing details never changes bills, payments or the Khata.'));
+  return { title: 'Edit customer', sub: c.shop || c.name, body, foot: [Btn('SAVE CHANGES', { kind: 'primary', onClick: () => { updateCustomer(c.id, v); nav.back(); toast('Saved'); } })] };
 });
 route('set.stock', (p, E) => ({ title: 'Stock settings', body: h('div', { class: 'gap' }, S.products.length ? null : Pane(Empty('No products yet. Tap ADD PRODUCT to create the first one.')), Pane(S.products.map(x => Row({ title: prodLabel(x), sub: x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(' · ') + ' ' + x.base.toLowerCase() + 's · buys ' + (x.buy ? rs(x.buy) : '—') + ' · sells ' + rs(x.sell), cls: x.active ? '' : 'off', onClick: () => nav.go('set.prod', { pid: x.id }) }))), Pane([Row({ title: 'Movement reasons', sub: S.settings.reasons.length + ' reasons', onClick: () => nav.go('set.reasons') })])),
   foot: [Btn('ADD PRODUCT', { kind: 'primary', onClick: () => startProduct('set.stock') })] }));
 route('set.prod', (p, E) => {
   const x = prod(p.pid);
   return { title: x.name, sub: 'Product settings', body: h('div', { class: 'gap' }, h('div', { class: 'card' }, KV('Printed MRP', rs(x.mrp)), KV('Buying price (per ' + x.base.toLowerCase() + ')', x.buy ? rs(x.buy) : 'Not set'), KV('Sell-to-Shop (per ' + x.base.toLowerCase() + ')', rs(x.sell)), KV('Retail counter (per ' + x.base.toLowerCase() + ')', rs(x.retail)), x.buy ? KV('Margin per BOX', h('span', { class: x.sell < x.buy ? 'red' : '' }, rs((x.sell - x.buy) * x.levels[0].n, { plus: true }))) : null, KV('Packing', x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(', ') + ' ' + x.base.toLowerCase() + 's')),
-    h('div', { class: 'card' }, Toggle('Active', 'Hidden products cannot be ordered', x.active, v => { x.active = v; })),
+    h('div', { class: 'card' }, Toggle('Active', 'Hidden products cannot be ordered', x.active, v => { setProductHidden(x.id, !v); })),
+    h('div', { class: 'linkrow' }, Btn('DELETE PRODUCT', { kind: 'link', cls: 'neg', onClick: () => productRemoveSheet(x) }), Btn('RENAME PRODUCT', { kind: 'link', onClick: () => editSheet({ title: 'Rename product', fields: [{ key: 'name', label: 'Product name', value: x.name, maxlength: 40 }], onSave: v => { const n = v.name.trim(); if (n.length < 2) fail('Enter the product name.'); if (S.products.some(q => q !== x && q.name.toLowerCase() === n.toLowerCase())) fail('A product called ' + n + ' already exists.'); x.name = n; x.nick = n.toLowerCase(); log('STOCK', 'Product renamed to ' + n); toast('Renamed'); } }) })),
     h('div', { class: 'aside' }, 'Stock is kept as one number in ' + x.base.toLowerCase() + 's. Changing a price affects new orders only — orders already taken keep their price.')),
     foot: [Btn('CHANGE PACKAGING', { kind: 'dark', onClick: () => editSheet({ title: 'Packaging — ' + x.name, sub: 'Stock is kept as one number in ' + x.base.toLowerCase() + 's, so the stock quantity does not change.', fields: x.levels.map((l, i) => ({ key: 'l' + i, label: '1 ' + l.u + ' = how many ' + x.base.toLowerCase() + 's?', type: 'num', value: String(l.n) })), onSave: v => { const ns = x.levels.map((l, i) => parseInt(v['l' + i], 10)); if (ns.some(n => !(n > 0))) fail('Enter a number for every unit.'); for (let i = 1; i < ns.length; i++) if (ns[i] >= ns[i - 1]) fail('Each smaller unit must hold fewer ' + x.base.toLowerCase() + 's than the one above.'); x.levels.forEach((l, i) => { l.n = ns[i]; }); log('STOCK', x.name + ' packaging changed: ' + x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(', ') + ' (future entries only)'); toast('Packaging saved'); } }) }),
     Btn('CHANGE PRICES', { kind: 'primary', onClick: () => editSheet({ title: 'Prices — ' + x.name, fields: [{ key: 'mrp', label: 'Printed MRP per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.mrp / 100) }, { key: 'buy', label: 'Buying price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: x.buy ? String(x.buy / 100) : '' }, { key: 'sell', label: 'Sell-to-Shop price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.sell / 100) }, { key: 'retail', label: 'Retail counter price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.retail / 100) }], onSave: v => { const m = parseRs(v.mrp), u = parseRs(v.buy), a = parseRs(v.sell), b = parseRs(v.retail); if (!(m > 0) || !(u > 0) || !(a > 0) || !(b > 0)) fail('Enter all four prices.'); if (a > m || b > m) fail('A selling price cannot be more than the MRP (' + rs(m) + ').'); x.mrp = m; x.buy = u; x.sell = a; x.retail = b; log('STOCK', x.name + ' prices changed: MRP ' + rs(m) + ', buy ' + rs(u) + ', sell ' + rs(a) + ', retail ' + rs(b)); } }) })] };
@@ -3306,20 +3461,48 @@ route('pr.price', (p, E) => {
 });
 route('set.reasons', (p, E) => ({ title: 'Movement reasons', body: Pane(S.settings.reasons.map(r => Row({ title: r }))), foot: [Btn('ADD REASON', { kind: 'primary', onClick: () => editSheet({ title: 'Add reason', save: 'ADD', fields: [{ key: 'r', label: 'Reason' }], onSave: v => { const r = v.r.trim(); if (r.length < 3) fail('Enter a reason.'); S.settings.reasons.push(r); } }) })] }));
 route('set.pickup', (p, E) => ({ title: 'Pickup settings', body: h('div', { class: 'gap' },
-  Sec('Pickups'), Pane(S.vehicles.map(v => Row({ title: v.reg, sub: v.label + (v.active ? '' : ' · not active'), cls: v.active ? '' : 'off', onClick: () => editSheet({ title: v.reg, fields: [{ key: 'label', label: 'Description', value: v.label }, { key: 'active', label: 'Status', type: 'select', value: v.active ? '1' : '0', options: [['1', 'Active'], ['0', 'Not active']] }], onSave: val => { if (val.active === '0' && busyVehicle(v.id)) fail(v.reg + ' is on a job right now.'); v.label = val.label.trim() || v.label; v.active = val.active === '1'; } }) }))),
+  Sec('Pickups'), S.vehicles.length ? null : Pane(Empty('No pickup vehicle yet.')), Pane(S.vehicles.map(v => Row({ title: v.reg, sub: v.label + (v.active ? '' : ' · not active'), cls: v.active ? '' : 'off', onClick: () => editSheet({ title: v.reg, fields: [{ key: 'label', label: 'Description', value: v.label }, { key: 'active', label: 'Status', type: 'select', value: v.active ? '1' : '0', options: [['1', 'Active'], ['0', 'Not active']] }], onSave: val => { if (val.active === '0' && busyVehicle(v.id)) fail(v.reg + ' is on a job right now.'); v.label = val.label.trim() || v.label; v.active = val.active === '1'; } }) }))),
   Btn('ADD PICKUP VEHICLE', { kind: 'dark', onClick: () => editSheet({ title: 'Add pickup', save: 'ADD', fields: [{ key: 'reg', label: 'Registration', placeholder: 'RJ35-0000' }, { key: 'label', label: 'Description', placeholder: 'e.g. Tata Ace' }], onSave: v => { const r = v.reg.trim().toUpperCase(); if (r.length < 4) fail('Enter the registration.'); if (S.vehicles.some(x => x.reg === r)) fail('That vehicle already exists.'); S.vehicles.push({ id: nid('v'), reg: r, label: v.label.trim() || 'Pickup', active: true }); } }) }),
-  Sec('Cameras'), Pane(S.cameras.map(c => Row({ title: c.id, sub: c.desc + (c.active ? '' : ' · not active'), cls: c.active ? '' : 'off', onClick: () => editSheet({ title: c.id, fields: [{ key: 'desc', label: 'Where it looks', value: c.desc }, { key: 'active', label: 'Status', type: 'select', value: c.active ? '1' : '0', options: [['1', 'Active'], ['0', 'Not active']] }], onSave: v => { c.desc = v.desc.trim() || c.desc; c.active = v.active === '1'; if (S.settings.defaultCamera === c.id && !c.active) S.settings.defaultCamera = (S.cameras.find(x => x.active) || {}).id || ''; } }) }))),
+  Sec('Cameras'), S.cameras.length ? null : Pane(Empty('No camera yet. A camera is only a reference number to find the loading video later.')), Pane(S.cameras.map(c => Row({ title: c.id, sub: c.desc + (c.active ? '' : ' · not active'), cls: c.active ? '' : 'off', onClick: () => editSheet({ title: c.id, fields: [{ key: 'desc', label: 'Where it looks', value: c.desc }, { key: 'active', label: 'Status', type: 'select', value: c.active ? '1' : '0', options: [['1', 'Active'], ['0', 'Not active']] }], onSave: v => { c.desc = v.desc.trim() || c.desc; c.active = v.active === '1'; if (S.settings.defaultCamera === c.id && !c.active) S.settings.defaultCamera = (S.cameras.find(x => x.active) || {}).id || ''; } }) }))),
   Btn('ADD CAMERA', { kind: 'dark', onClick: () => editSheet({ title: 'Add camera', save: 'ADD', fields: [{ key: 'desc', label: 'Where it looks', placeholder: 'e.g. Godown back door' }], onSave: v => { if (v.desc.trim().length < 3) fail('Describe the camera.'); const id = 'CN-' + String(S.cameras.length + 1).padStart(2, '0'); S.cameras.push({ id, desc: v.desc.trim(), active: true }); toast(id + ' added'); } }) }),
   Sec('Default loading details'), h('div', { class: 'card' }, h('div', { class: 'lbl', style: { marginTop: 0 } }, 'Usual camera'), Seg(S.cameras.filter(c => c.active).map(c => [c.id, c.id]), S.settings.defaultCamera, v => { S.settings.defaultCamera = v; }), Toggle('A helper is required', 'Otherwise the helper step can be skipped', S.settings.helperRequired, v => { S.settings.helperRequired = v; }))) }));
 route('set.more', (p, E) => {
   const pm = S.settings.pay, ag = S.settings.agency, bk = S.settings.bank, up = S.settings.upi;
   const body = h('div', { class: 'gap' }, Sec('Payment methods'), h('div', { class: 'card' }, ['CASH', 'UPI', 'BANK', 'CHEQUE'].map(k => Toggle(PAY_LABEL[k], null, pm[k], v => { const next = Object.assign({}, pm, { [k]: v }); if (!Object.values(next).some(Boolean)) { nav.refresh(); fail('At least one payment method must stay on.'); } pm[k] = v; }))),
     Sec('Expense types'), Pane(S.expenseCats.map(c => Row({ title: c }))), Btn('ADD EXPENSE TYPE', { kind: 'dark', cls: 'sm', onClick: () => editSheet({ title: 'Add expense type', save: 'ADD', fields: [{ key: 'n', label: 'Name' }], onSave: v => { const n = v.n.trim(); if (n.length < 2) fail('Enter a name.'); if (S.expenseCats.includes(n)) fail('Already there.'); S.expenseCats.push(n); } }) }),
-    Sec('Agency details (fictional)'), Pane([Row({ title: ag.name, sub: ag.addr + ' · ☎ ' + ag.phone, onClick: () => editSheet({ title: 'Agency details', fields: [{ key: 'name', label: 'Agency name', value: ag.name }, { key: 'addr', label: 'Address', value: ag.addr, maxlength: 90 }, { key: 'phone', label: 'Phone', value: ag.phone, maxlength: 12 }], onSave: v => { if (v.name.trim().length < 2) fail('Enter the agency name.'); Object.assign(ag, { name: v.name.trim(), addr: v.addr.trim(), phone: v.phone.trim() }); } }) }),
-      Row({ title: 'Bank details shown to customers', sub: bk.name + ' · ' + bk.acNo + ' · UPI ' + up.id, onClick: () => editSheet({ title: 'Bank & UPI (demo)', fields: [{ key: 'name', label: 'Bank', value: bk.name }, { key: 'acNo', label: 'Account number', value: bk.acNo }, { key: 'ifsc', label: 'IFSC', value: bk.ifsc }, { key: 'upi', label: 'UPI id', value: up.id }], onSave: v => { bk.name = v.name; bk.acNo = v.acNo; bk.ifsc = v.ifsc; up.id = v.upi; } }) })]),
+    Sec('Agency details'), Pane([Row({ title: ag.name, sub: [ag.addr, ag.phone ? '☎ ' + ag.phone : ''].filter(Boolean).join(' · ') || 'Add your agency address and phone — they print on every bill', onClick: () => editSheet({ title: 'Agency details', fields: [{ key: 'name', label: 'Agency name', value: ag.name }, { key: 'addr', label: 'Address', value: ag.addr, maxlength: 90 }, { key: 'phone', label: 'Phone', value: ag.phone, maxlength: 12 }], onSave: v => { if (v.name.trim().length < 2) fail('Enter the agency name.'); Object.assign(ag, { name: v.name.trim(), addr: v.addr.trim(), phone: v.phone.trim() }); } }) }),
+      Row({ title: 'Bank details shown to customers', sub: [bk.name, bk.acNo, up.id ? 'UPI ' + up.id : ''].filter(Boolean).join(' · ') || 'Not set — add your bank account and UPI ID', onClick: () => editSheet({ title: 'Bank & UPI', fields: [{ key: 'name', label: 'Bank', value: bk.name }, { key: 'acNo', label: 'Account number', value: bk.acNo }, { key: 'ifsc', label: 'IFSC', value: bk.ifsc }, { key: 'upi', label: 'UPI id', value: up.id }], onSave: v => { bk.name = v.name; bk.acNo = v.acNo; bk.ifsc = v.ifsc; up.id = v.upi; } }) })]),
     Sec('Print'), h('div', { class: 'card' }, h('div', { class: 'lbl', style: { marginTop: 0 } }, 'Usual paper size'), Seg([['A4', 'A4'], ['80', '80 mm'], ['58', '58 mm']], S.settings.paper === 'A4' ? 'A4' : S.settings.paper, v => { S.settings.paper = v; })),
     Sec('Amounts'), Pane([Row({ title: 'Off-duty unloading fee', sub: 'Per job, paid once to one coordinator', right: rs(S.settings.unloadFee), onClick: () => editSheet({ title: 'Unloading fee', fields: [{ key: 'v', label: 'Amount per job (₹)', type: 'money', value: String(S.settings.unloadFee / 100) }], onSave: v => { const a = parseRs(v.v); if (!(a > 0)) fail('Enter an amount.'); S.settings.unloadFee = a; } }) }), Row({ title: 'Usual Agent commission', sub: 'For new Agents', right: pctText(S.settings.agentBp), onClick: () => editSheet({ title: 'Agent commission', fields: [{ key: 'v', label: 'Percent', type: 'num', value: String(S.settings.agentBp / 100) }], onSave: v => { const b = Math.round(parseFloat(v.v) * 100); if (!(b > 0 && b <= 2000)) fail('Enter 0.01 to 20.'); S.settings.agentBp = b; } }) })]));
   return { title: 'Additional', sub: 'Payments, expenses, agency, print', body };
+});
+
+/* ===================== DATA & BACKUP ===================== */
+function saveStatusText() {
+  if (!STORE.ok) return 'Saving is OFF in this browser';
+  if (STORE.error) return 'Could not save — download a backup';
+  return STORE.savedAt ? 'Saved on this phone · ' + fmtT(STORE.savedAt) : 'Saved on this phone';
+}
+function downloadBackup() {
+  const blob = new Blob([backupFileText()], { type: 'application/json' }), url = URL.createObjectURL(blob);
+  const a = h('a', { href: url, download: 'AgencyPilot-backup-' + ymd(new Date()) + '.json' }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000);
+  toast('Backup downloaded');
+}
+route('set.data', (p, E) => {
+  const fileI = h('input', { type: 'file', accept: 'application/json,.json', hidden: true, onChange: ev => {
+    const f = ev.target.files && ev.target.files[0]; if (!f) return;
+    const rd = new FileReader(); rd.onerror = () => toast('Could not read that file.', true);
+    rd.onload = () => { try { JSON.parse(String(rd.result)); } catch (e) { toast('That file is not an Agency Pilot backup.', true); return; }
+      confirmSheet({ title: 'Replace everything with this backup?', sub: 'All data on this phone is replaced by the file “' + f.name + '”.', yes: 'YES, RESTORE', danger: true, no: 'KEEP MY DATA', onYes: () => { try { restoreFromText(String(rd.result)); nav.reset([['today']], 'none'); toast('Backup restored'); } catch (err) { handleErr(err); } } }); };
+    rd.readAsText(f); ev.target.value = ''; } });
+  const n = (k, a) => KV(k, String(a));
+  const body = h('div', { class: 'gap' },
+    h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'DATA ON THIS DEVICE'), h('div', { class: 'big mt8' + (STORE.ok && !STORE.error ? '' : ' red') }, saveStatusText()), STORE.ok && !STORE.error ? h('div', { class: 'mute mt8' }, 'Every change is saved automatically. Closing the app or refreshing does not lose anything.') : h('div', { class: 'mt8' }, STORE.ok ? 'The phone refused the last save (storage may be full).' : 'This browser blocks saving (private mode?). Open the app in a normal tab.'))),
+    h('div', { class: 'card' }, n('Products', S.products.length), n('Customers', realCustomers().length), n('Areas', S.areas.length), n('Staff', S.staff.length), n('Orders', S.orders.length), n('Bills', S.sales.length), n('Khata entries', S.khata.length)),
+    h('div', { class: 'aside' }, h('b', null, 'On iPhone: '), 'Safari can delete the data of a website that has not been opened for about a week. To be safe, tap Share → Add to Home Screen and open the app from the icon, and download a backup now and then.'),
+    fileI);
+  return { title: 'Data & backup', sub: 'Your data lives on this phone', body, foot: [Btn('DOWNLOAD BACKUP', { kind: 'primary', icon: 'print', onClick: downloadBackup }), Btn('RESTORE FROM A BACKUP FILE', { kind: 'ghost', onClick: () => fileI.click() }),
+    Btn('ERASE ALL DATA', { kind: 'link', cls: 'neg', onClick: () => confirmSheet({ title: 'Erase everything?', sub: 'Products, customers, stock, orders, Khata, cash and staff are all removed from this phone. Download a backup first if you may need it.', yes: 'YES, ERASE ALL', danger: true, no: 'KEEP MY DATA', onYes: () => { S = newState(false); storeWipe(); saveNow(); nav.reset([['today']], 'none'); toast('All data erased — starting fresh'); } }) })] };
 });
 
 /* ===================== HISTORY ===================== */
@@ -3370,7 +3553,7 @@ const PAPERS = { A4: ['a4', 'A4'], '80': ['t80', '80 mm'], '58': ['t58', '58 mm'
 const kvp = (l, r, cls) => h('div', { class: 'kvp ' + (cls || '') }, h('span', null, l), h('b', null, r));
 function docHead(title, no, extra, noLabel) {
   const ag = S.settings.agency;
-  return h('div', null, h('h2', null, ag.name), h('div', { class: 'note' }, ag.addr + ' · ☎ ' + ag.phone), h('div', { class: 'hr' }), h('div', { class: 'big' }, title), kvp(noLabel || 'No.', no), extra || null, h('div', { class: 'hr' }));
+  return h('div', null, h('h2', null, ag.name), [ag.addr, ag.phone ? '☎ ' + ag.phone : ''].filter(Boolean).length ? h('div', { class: 'note' }, [ag.addr, ag.phone ? '☎ ' + ag.phone : ''].filter(Boolean).join(' · ')) : null, h('div', { class: 'hr' }), h('div', { class: 'big' }, title), kvp(noLabel || 'No.', no), extra || null, h('div', { class: 'hr' }));
 }
 function lineQty(r) { const pr = prod(r.pid); return r.units && Object.keys(r.units).length ? unitsText(r.units) : qtyText(pr, r.base); }
 function docDC(id, paper) {
@@ -3395,7 +3578,7 @@ function docBill(id, paper) {
     h('table', null, h('thead', null, h('tr', null, h('th', null, 'Product'), h('th', { class: 'r' }, 'Amount'))), h('tbody', null, rows)),
     s.waived ? kvp('Items', rs(s.items)) : null, s.waived ? kvp('Paise waived', '−' + rs(s.waived)) : null, s.discount ? kvp('Discount ' + pctText(s.discount.bp) + ' (Owner approved)', '−' + rs(s.discount.amt)) : null,
     h('div', { class: 'hr' }), kvp('TOTAL', rs(saleTotal(s)), 'big'), kvp('Paid', rs(salePaid(s, false))), kvp('Due', rs(due)),
-    h('div', { class: 'note', style: { marginTop: '8px' } }, 'Demo bill — fictional data. Not a tax invoice.'));
+    h('div', { class: 'note', style: { marginTop: '8px' } }, 'Not a GST tax invoice.'));
 }
 function docManifest(id, paper) {
   const t = tripOf(id), needs = t.status === 'LOADING' || t.status === 'CANCELLED' ? tripNeeds(t) : (Object.keys(t.loaded).length ? t.loaded : tripNeeds(t));
@@ -3439,15 +3622,87 @@ route('print', (p, E) => {
 route('statement', (p, E) => ({ title: 'Statement', sub: partyName(p.pid), body: h('div', { class: 'gap' }, h('div', { class: 'aside' }, 'Everything recorded for ' + partyName(p.pid) + ', in order. Print it or save it as a PDF through the browser’s print window.'), docStatement(p.pid, S.settings.paper || 'A4')),
   foot: [Btn('PRINT / SAVE AS PDF', { kind: 'primary', icon: 'print', onClick: () => nav.go('print', { docs: [['STATEMENT', p.pid]], start: 0, autoprint: true }) })] }));
 
+/* ---------- 80-storage.js ---------- */
+/* ---------------------------------------------------------------------
+   8b. LOCAL SAVING — the whole state is written to this browser's localStorage after every change,
+   so a refresh, a closed tab or a dead battery never loses the owner's data.
+   - Dates and the token Set survive the round trip (tagged JSON).
+   - The previous good snapshot is kept as a second copy and used if the main copy is damaged.
+   - Settings → Data & backup can download / restore a backup file (Safari can clear site data
+     that has not been opened for a week; a backup file and "Add to Home Screen" protect against that).
+   --------------------------------------------------------------------- */
+const STORE = { key: 'agencyPilotV2.data.v1', bak: 'agencyPilotV2.data.v1.bak', ver: 1, ok: false, last: '', savedAt: null, bakAt: 0, error: null, timer: null, loaded: null, warned: false };
+function storeProbe() { try { const k = 'agencyPilotV2.probe'; localStorage.setItem(k, '1'); localStorage.removeItem(k); return true; } catch (e) { return false; } }
+function storeReplacer(key, value) {                       // `this[key]` is the raw value (Date.toJSON has already run on `value`)
+  const raw = this[key];
+  if (raw instanceof Date) return { $d: isNaN(raw.getTime()) ? 0 : raw.getTime() };
+  if (raw instanceof Set) return { $set: Array.from(raw) };
+  return value;
+}
+function storeReviver(key, value) {
+  if (value && typeof value === 'object') { if ('$d' in value && Object.keys(value).length === 1) return new Date(value.$d); if ('$set' in value && Object.keys(value).length === 1) return new Set(value.$set); }
+  return value;
+}
+const stateText = () => JSON.stringify(S, storeReplacer);
+function validState(s) { return !!s && typeof s === 'object' && ['products', 'customers', 'staff', 'orders', 'khata', 'cash', 'areas', 'vehicles'].every(k => Array.isArray(s[k])) && s.godown && s.day && s.seq && s.nums; }
+function hydrate(saved) {                                  // fill anything a newer version of the app added, keep everything saved
+  const base = newState(false), s = Object.assign(base, saved);
+  s.settings = Object.assign(FIX.settings(), saved.settings || {}); s.settings.pay = Object.assign({ CASH: true, UPI: true, BANK: true, CHEQUE: true }, (saved.settings || {}).pay || {});
+  if (!(s.tokens instanceof Set)) s.tokens = new Set(); if (!s.drafts || typeof s.drafts !== 'object') s.drafts = {};
+  return s;
+}
+function storeRead() {
+  for (const k of [STORE.key, STORE.bak]) {
+    try { const raw = localStorage.getItem(k); if (!raw) continue; const o = JSON.parse(raw, storeReviver); if (o && o.v === STORE.ver && validState(o.state)) return { state: hydrate(o.state), savedAt: o.savedAt, fromBackup: k === STORE.bak }; } catch (e) { /* try the next copy */ }
+  }
+  return null;
+}
+function saveNow() {
+  if (!STORE.ok) return false;
+  clearTimeout(STORE.timer); STORE.timer = null;
+  try {
+    const text = stateText(); if (text === STORE.last) return true;
+    const now = Date.now(), prev = localStorage.getItem(STORE.key);
+    if (prev && now - STORE.bakAt > 120000) { localStorage.setItem(STORE.bak, prev); STORE.bakAt = now; }      // second copy, refreshed at most every 2 minutes
+    localStorage.setItem(STORE.key, '{"v":' + STORE.ver + ',"savedAt":' + now + ',"state":' + text + '}');
+    STORE.last = text; STORE.savedAt = new Date(now); STORE.error = null; return true;
+  } catch (e) {
+    STORE.error = e;
+    if (!STORE.warned) { STORE.warned = true; try { toast('Could not save on this phone. Open Settings → Data & backup and download a backup.', true); } catch (x) { /* ignore */ } }
+    return false;
+  }
+}
+function scheduleSave() { if (STORE.ok && !STORE.timer) STORE.timer = setTimeout(saveNow, 350); }
+function storeWipe() { try { localStorage.removeItem(STORE.key); localStorage.removeItem(STORE.bak); } catch (e) { /* ignore */ } STORE.last = ''; STORE.savedAt = null; STORE.bakAt = 0; }
+function backupFileText() { return '{"app":"agencyPilotV2","v":' + STORE.ver + ',"savedAt":' + Date.now() + ',"state":' + stateText() + '}'; }
+function restoreFromText(text) {
+  let o; try { o = JSON.parse(text, storeReviver); } catch (e) { fail('That file is not an Agency Pilot backup.'); }
+  if (!o || o.app !== 'agencyPilotV2' || !validState(o.state)) fail('That file is not an Agency Pilot backup.');
+  S = hydrate(o.state); saveNow(); return S;
+}
+function bootState() {
+  STORE.ok = storeProbe();
+  const got = STORE.ok ? storeRead() : null;
+  if (got) { S = got.state; STORE.loaded = got; STORE.last = ''; STORE.savedAt = got.savedAt ? new Date(got.savedAt) : null; } else S = newState(false);
+  /* a fresh load always starts from the Today screen; unfinished work stays in S.drafts and is offered there */
+  S.tokens = S.tokens || new Set();
+  if (STORE.ok) { saveNow(); try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* ignore */ } }
+}
+['click', 'input', 'change', 'keyup', 'touchend'].forEach(t => document.addEventListener(t, scheduleSave, true));
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveNow(); });
+window.addEventListener('pagehide', saveNow); window.addEventListener('beforeunload', saveNow);
+setInterval(() => { if (STORE.ok) scheduleSave(); }, 4000);
+
 /* ---------- 90-boot.js ---------- */
 /* ---------------------------------------------------------------------
-   9. BOOT — fresh fictional data every time the page loads. Nothing is saved anywhere.
+   9. BOOT — load the saved data (or start empty the first time).
    --------------------------------------------------------------------- */
 (function boot() {
-  resetDemo();
+  bootState();
   nav.reset([['today']], 'none');
+  if (STORE.loaded && STORE.loaded.fromBackup) toast('Your main save was damaged, so the backup copy was opened.', true);
   /* read-only inspection handle for the person demonstrating / testing in the console */
-  window.AP = { get state() { return S; }, nav, UI, ROUTES, resetDemo, rs, qtyText };
+  window.AP = { get state() { return S; }, nav, UI, ROUTES, STORE, saveNow, resetDemo, rs, qtyText };
 })();
 
 </script>
