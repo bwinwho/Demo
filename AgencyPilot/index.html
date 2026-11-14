@@ -530,15 +530,16 @@ function cleanPhone(raw) {
   while (d.length > 10) { if (d.startsWith('00')) d = d.slice(2); else if (d.startsWith('0')) d = d.slice(1); else if (d.startsWith('91') && d.length >= 12) d = d.slice(2); else break; }
   return d.slice(0, 10);
 }
-/* a per-unit BUYING price can have up to 4 decimals (Balaji's real cost is e.g. ₹4.1861 a packet). Result is paise, possibly fractional. */
+/* a per-unit RATE (buying, sell-to-shop, retail) can have up to 8 decimals: the company's real cost is e.g. ₹803.73 a BOX of 192 = ₹4.18609375 a packet. Result is paise, possibly fractional. */
 function parseRate(str) {
   const s = String(str == null ? '' : str).replace(/[₹,\s]/g, '');
-  if (!/^\d+(\.\d{1,4})?$/.test(s)) return null;
+  if (!/^\d+(\.\d{1,8})?$/.test(s)) return null;
   const parts = s.split('.');
-  return parseInt(parts[0], 10) * 100 + parseInt(((parts[1] || '') + '0000').slice(0, 4), 10) / 100;
+  return parseInt(parts[0], 10) * 100 + parseInt(((parts[1] || '') + '00000000').slice(0, 8), 10) / 1e6;
 }
-const rsr = p => Math.abs(p - Math.round(p)) < 1e-9 ? rs(p) : (p < 0 ? '−' : '') + '₹' + Number((Math.abs(p) / 100).toFixed(4));   // ₹4.1861 — extra decimals only when there are some
-const rateStr = p => Number((p / 100).toFixed(4)).toString();
+const rsr = p => Math.abs(p - Math.round(p)) < 1e-9 ? rs(p) : (p < 0 ? '−' : '') + '₹' + Number((Math.abs(p) / 100).toFixed(8));   // ₹4.18609375 — extra decimals only when there are some
+const rateStr = p => Number((p / 100).toFixed(8)).toString();
+const rsm = p => Math.abs(p - Math.round(p)) < 1e-9 ? rs(p, { plus: true }) : (p < 0 ? '−' : '+') + '₹' + Number((Math.abs(p) / 100).toFixed(4));          // a margin per packet, e.g. +₹0.3139
 const pctText = bp => Number((bp / 100).toFixed(2)) + '%';
 const pctOf = (paise, bp) => Math.floor((paise * bp + 5000) / 10000);   // integer, round half up to the paise
 const cap = s => s.charAt(0) + s.slice(1).toLowerCase();
@@ -1853,6 +1854,8 @@ function attention() {
   collect.forEach(s => out.push({ n: 1, text: 'Delivered — collect money', sub: partyName(s.partyId) + ' · ' + rs(saleDue(s)), tone: 'red', go: () => nav.go('col.home', { sid: s.id }) }));
   const pend = pendingPayments(); if (pend.length) out.push({ n: pend.length, text: pend.length === 1 ? 'Payment needs verification' : 'Payments need verification', sub: 'Not counted as money until checked', go: () => nav.go('cash.pend') });
   const inc = S.staff.filter(profileIncomplete).length; if (inc) out.push({ n: inc, text: inc === 1 ? 'Staff profile incomplete' : 'Staff profiles incomplete', sub: 'Phone, email, Aadhaar, PAN, photos, family contact', go: () => nav.go('sf.list') });
+  const vAl = []; S.vehicles.filter(vehLive).forEach(v => vehAlerts(v).forEach(a => vAl.push(v.reg + ' · ' + a.text))); if (vAl.length) out.push({ n: vAl.length, text: vAl.length === 1 ? 'Vehicle paper needs attention' : 'Vehicle papers need attention', tone: 'red', sub: vAl[0] + (vAl.length > 1 ? ' +' + (vAl.length - 1) + ' more' : ''), go: () => nav.go('set.vehicles') });
+  const vInc = S.vehicles.filter(v => vehLive(v) && vehMissing(v).length).length; if (vInc) out.push({ n: vInc, text: vInc === 1 ? 'Vehicle profile incomplete' : 'Vehicle profiles incomplete', sub: 'Chassis number, RC, insurance, PUC', go: () => nav.go('set.vehicles') });
   return out;
 }
 
@@ -2050,7 +2053,7 @@ route('cart.qty', (p, E) => {
   } });
   const body = h('div', null,
     h('div', { class: 'oq' }, h('div', { class: 'q' }, 'HOW MANY?'), h('div', { class: 'big mt8' }, prodLabel(pr)), stockMode ? h('div', { class: 'mute mt8' }, 'In godown: ' + qtyText(pr, avail(pr.id))) : null),
-    h('div', { class: 'pane mt16' }, unitList(pr).map(u => h('div', { class: 'unitrow' }, h('div', { class: 'u' }, h('b', null, u), h('span', null, u === pr.base ? '₹' + (rate / 100).toFixed(2).replace(/\.00$/, '') + ' each' : '₹' + INR.format(unitSize(pr, u) * rate / 100) + ' per ' + u + ' (' + unitSize(pr, u) + ' ' + pr.base.toLowerCase() + 's)')),
+    h('div', { class: 'pane mt16' }, unitList(pr).map(u => h('div', { class: 'unitrow' }, h('div', { class: 'u' }, h('b', null, u), h('span', null, u === pr.base ? rsr(rate) + ' each' : rs(unitSize(pr, u) * rate) + ' per ' + u + ' (' + unitSize(pr, u) + ' ' + pr.base.toLowerCase() + 's)')),
       stepper({ value: units[u] || 0, max: cap_ != null ? Math.floor(cap_ / unitSize(pr, u)) : 99999, label: u + ' quantity', onChange: v => { units[u] = v; upd(); } })))),
     h('div', { class: 'center mt16' }, totalEl, subEl, errEl));
   upd();
@@ -2402,7 +2405,7 @@ route('ss.qty', (p, E) => {
   const tot = h('div', { class: 'big' }), sub = h('div', { class: 'mute' });
   const upd = b => { tot.textContent = rs(b * pr.sell); sub.textContent = b ? qtyText(pr, b) : 'Choose how many'; add.disabled = b <= 0 || b > free; };
   const add = Btn('ADD', { kind: 'primary', disabled: true, onClick: () => { const l = mkLine(pr.id, E.st.u); if (l.base > free) fail('Only ' + qtyText(pr, free) + ' is free.'); const i = d.lines.findIndex(x => x.pid === pr.id); if (i >= 0) d.lines[i] = l; else d.lines.push(l); nav.back(); } });
-  const body = h('div', null, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'HOW MANY?'), h('div', { class: 'big mt8' }, prodLabel(pr)), h('div', { class: 'mute mt8' }, 'Free on pickup: ' + qtyText(pr, free) + ' · price ' + rs(pr.sell) + ' per ' + pr.base.toLowerCase())), h('div', { class: 'mt16' }, unitsEditor(pr, E.st.u, { max: free, onChange: upd })), h('div', { class: 'center mt16' }, tot, sub));
+  const body = h('div', null, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'HOW MANY?'), h('div', { class: 'big mt8' }, prodLabel(pr)), h('div', { class: 'mute mt8' }, 'Free on pickup: ' + qtyText(pr, free) + ' · price ' + rsr(pr.sell) + ' per ' + pr.base.toLowerCase())), h('div', { class: 'mt16' }, unitsEditor(pr, E.st.u, { max: free, onChange: upd })), h('div', { class: 'center mt16' }, tot, sub));
   upd(toBase(pr, E.st.u));
   return { title: 'Sell remaining goods', step: { label: 'SELLING FROM PICKUP', n: 3, of: 4 }, body, foot: [add, line ? Btn('REMOVE', { kind: 'link', onClick: () => { d.lines = d.lines.filter(x => x.pid !== pr.id); nav.back(); } }) : null] };
 });
@@ -2923,7 +2926,7 @@ route('st.product', (p, E) => {
   const foot = fresh ? [Btn('ADD OPENING STOCK', { kind: 'primary', icon: 'plus', onClick: () => nav.go('st.count', { pid: pr.id, opening: true }), sub: 'Count what is on the shelves today' }), Btn('RECEIVE STOCK FROM A SUPPLIER', { kind: 'ghost', onClick: () => nav.go('st.receive') })]
     : [Btn('RECEIVE STOCK', { kind: 'primary', onClick: () => nav.go('st.receive') }), Btn('COUNT STOCK', { kind: 'dark', onClick: () => nav.go('st.count', { pid: pr.id }) })];
   foot.push(h('div', { class: 'linkrow' }, Btn('VIEW HISTORY', { kind: 'link', onClick: () => nav.go('st.hist', { pid: pr.id }) }), Btn('EDIT PRODUCT', { kind: 'link', onClick: () => nav.go('set.prod', { pid: pr.id }) })));
-  return { title: pr.name, sub: 'MRP ' + rs(pr.mrp) + ' · buy ' + (pr.buy ? rsr(pr.buy) : '—') + ' · sell ' + rs(pr.sell) + ' per ' + unitWord(pr.base, 1), body, foot };
+  return { title: pr.name, sub: 'MRP ' + rs(pr.mrp) + ' · buy ' + (pr.buy ? rsr(pr.buy) : '—') + ' · sell ' + rsr(pr.sell) + ' per ' + unitWord(pr.base, 1), body, foot };
 });
 route('st.hist', (p, E) => {
   const pr = p.pid ? prod(p.pid) : null, mv = S.moves.filter(m => !pr || m.pid === pr.id).slice().reverse();
@@ -3162,6 +3165,51 @@ function viewDocPhoto(s, slot, then) {
 }
 const docTile = (s, slot, then) => h('button', { class: 'doctile', type: 'button', 'aria-label': docLabel(slot) + (staffDocs(s)[slot] ? ' — open' : ' — add photo'), onClick: act(() => staffDocs(s)[slot] ? viewDocPhoto(s, slot, then) : pickDocPhoto(s, slot, then)) }, docThumb(s, slot), h('span', { class: 'dl' }, docLabel(slot)));
 
+/* ---- add staff: step 1 basics → step 2 ALL personal details + photos (so nothing has to be asked again later) ---- */
+const POS_OPTIONS = ['MANAGER', 'HELPER', 'AGENT', 'PERSONAL_AGENT', 'RETAILER'];
+route('sf.add', (p, E) => {
+  const st = E.st; if (!st.v) st.v = { name: '', position: 'HELPER', driver: '0', joined: todayStr() };
+  const v = st.v, btn = Btn('CONTINUE', { kind: 'primary', disabled: v.name.trim().length < 2, onClick: () => { const s = addStaff({ name: v.name, position: v.position, driver: v.driver === '1', joined: v.joined }); nav.replace('sf.details', { sid: s.id, fresh: true }); } });
+  const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Who is joining?')),
+    Field('Full name', h('input', { class: 'input', id: 'sf-name', value: v.name, maxlength: 30, placeholder: 'e.g. Shubham Labana', 'data-autofocus': '1', 'aria-label': 'Full name', onInput: ev => { v.name = ev.target.value; btn.disabled = v.name.trim().length < 2; } })),
+    h('div', null, h('div', { class: 'lbl', style: { marginTop: 0 } }, 'Position'), Seg(POS_OPTIONS.map(k => [k, posLabel[k]]), v.position, x => { v.position = x; })),
+    h('div', null, h('div', { class: 'lbl', style: { marginTop: 0 } }, 'Can this person drive a pickup?'), Seg([['0', 'No'], ['1', 'Yes — can be the driver']], v.driver, x => { v.driver = x; })),
+    Field('Joining date', h('input', { class: 'input', type: 'date', value: v.joined, max: todayStr(), 'aria-label': 'Joining date', onInput: ev => { v.joined = ev.target.value || todayStr(); } })),
+    h('div', { class: 'aside' }, 'Next you fill in phone numbers, email, address, Aadhaar, PAN and photos of the documents — all at once, while the person is with you.'));
+  return { title: 'Add staff', step: { label: 'NEW STAFF', n: 1, of: 2 }, body, foot: [btn] };
+});
+
+/* ---- delete a staff member for good: only when nothing else in the books depends on them ---- */
+function staffBlockers(s) {
+  const n = [], add = (k, a, b) => { if (k) n.push(plural(k, a, b)); };
+  add(S.trips.filter(t => t.driverId === s.id || t.helperId === s.id).length, 'pickup');
+  add(S.orders.filter(o => o.partyId === s.id).length, 'order'); add(S.sales.filter(x => x.partyId === s.id).length, 'bill');
+  add(S.payments.filter(y => y.partyId === s.id || y.collectorId === s.id).length, 'payment'); add(S.handovers.filter(x => x.collectorId === s.id).length, 'cash handover');
+  add(S.returns.filter(r => r.partyId === s.id).length, 'return'); add(S.jobs.filter(j => j.coordinatorId === s.id).length, 'unloading job');
+  return n;
+}
+function removeStaff(sid) {
+  const s = staffOf(sid); if (!s) fail('Staff member not found.');
+  if (busyStaff(sid)) fail(s.name + ' is on a pickup right now.');
+  const bl = staffBlockers(s); if (bl.length) fail(s.name + ' has ' + bl.join(', ') + ' — keep the profile as inactive instead.');
+  const bal = kbal(sid); if (bal !== 0) fail(s.name + ' still has a Khata balance of ' + rs(Math.abs(bal)) + (bal > 0 ? ' to be paid' : ' to be received') + '. Settle it first.');
+  DOC_SLOTS.forEach(d => dropPhotoKey(sid + ':' + d[0]));
+  S.khata = S.khata.filter(e => e.pid !== sid); S.staff = S.staff.filter(x => x.id !== sid); dropDraftsFor(d => d.partyId === sid);
+  log('STAFF', s.name + ' deleted permanently');
+}
+function staffRemoveSheet(s) {
+  const bl = staffBlockers(s), bal = kbal(s.id), days = Object.keys(s.att || {}).length;
+  const why = [];
+  if (busyStaff(s.id)) why.push(s.name + ' is on a pickup right now.');
+  if (bl.length) why.push('Records exist: ' + bl.join(', ') + '. They must stay for your accounts.');
+  if (bal !== 0) why.push('Khata balance is not clear (' + rs(Math.abs(bal)) + (bal > 0 ? ' still to pay' : ' still to receive') + ').');
+  if (why.length) return openSheet({ title: s.name + ' cannot be deleted yet', sub: 'Not while other records depend on this person.', body: h('div', { class: 'gap' }, why.map(x => h('div', { class: 'aside bad' }, x)),
+    h('div', { class: 'aside' }, h('b', null, 'Person left the job? '), 'Set the profile to inactive. The history stays, and the person no longer appears for work, attendance or pickups.')),
+    actions: [s.active ? Btn('SET INACTIVE', { kind: 'primary', onClick: () => { if (busyStaff(s.id)) fail(s.name + ' is on a pickup right now.'); s.active = false; log('STAFF', s.name + ' set inactive'); closeSheet(); nav.refresh(); toast(s.name + ' is inactive now'); } }) : null, sheetClose('CLOSE')] });
+  confirmSheet({ title: 'Delete ' + s.name + ' for good?', sub: 'Their profile, personal details, document photos' + (days ? ', ' + plural(days, 'attendance day') : '') + ' and wage entries are erased. Money already paid stays in the CashBook. This cannot be undone.', yes: 'YES, DELETE FOR GOOD', danger: true, no: 'KEEP THE PROFILE',
+    onYes: () => { removeStaff(s.id); nav.reset([['more'], ['set.home'], ['set.staff']], 'back'); toast(s.name + ' deleted'); } });
+}
+
 /* ---- personal details: several phone numbers, email, home address, Aadhaar / PAN / licence numbers and photos, family contacts ---- */
 const RELATIONS = ['Father', 'Mother', 'Wife', 'Husband', 'Brother', 'Sister', 'Son', 'Daughter', 'Other relative', 'Friend', 'Neighbour'];
 const PHONE_LABELS = ['Mobile', 'WhatsApp', 'Home', 'Work', 'Other'];
@@ -3249,7 +3297,8 @@ route('sf.details', (p, E) => {
       h('div', { class: 'mt12' }, Btn('ADD FAMILY CONTACT', { kind: 'dark', icon: 'plus', onClick: () => familySheet(v, null) }))),
     h('div', { class: 'aside' }, 'Aadhaar, PAN and card photos are private. They are saved only on this phone (and in your backup file). Aadhaar is shown hidden, like XXXX XXXX 1234, everywhere except this screen.'));
   aadHint();
-  return { title: 'Personal details', sub: s.name, body, foot: [Btn('SAVE DETAILS', { kind: 'primary', onClick: () => { saveStaffDetails(s.id, v); nav.back(); toast('Details saved'); } })] };
+  const fresh = !!p.fresh, done = msg => { nav.reset([['more'], ['set.staff']], 'back'); toast(msg); };
+  return { title: fresh ? 'Staff details' : 'Personal details', sub: s.name, step: fresh ? { label: 'NEW STAFF', n: 2, of: 2 } : null, body, foot: [Btn(fresh ? 'SAVE & FINISH' : 'SAVE DETAILS', { kind: 'primary', onClick: () => { saveStaffDetails(s.id, v); if (fresh) done(s.name + ' added' + (profileMissing(s).length ? ' — profile still incomplete' : '')); else { nav.back(); toast('Details saved'); } } }), fresh ? Btn('SKIP — FILL THE REST LATER', { kind: 'link', onClick: () => done(s.name + ' added — details still missing') }) : null] };
 });
 function detailsCard(s) {
   const fam = staffFamily(s), ph = staffPhones(s), d = staffDocs(s), have = DOC_SLOTS.filter(x => d[x[0]]);
@@ -3560,8 +3609,8 @@ route('set.home', (p, E) => {
     h('div', { class: 'aside mt16' }, 'The app normally starts empty. Sample data is fictional and is never mixed with what you enter — loading it replaces everything.')) };
 });
 route('set.staff', (p, E) => ({ title: 'Staff settings', body: h('div', { class: 'gap' }, S.staff.length ? null : Pane(Empty('No staff yet. Tap ADD STAFF — add the Manager, helpers and at least one driver.')), Pane(S.staff.map(s => Row({ title: s.name, sub: posLabel[s.position] + (profileIncomplete(s) ? ' · profile incomplete' : '') + (s.driver ? ' · can drive' : '') + (s.areas.length ? ' · ' + s.areas.join(', ') : '') + (!s.active ? ' · not active' : ''), cls: s.active ? '' : 'off', onClick: () => nav.go('set.staff.edit', { sid: s.id }) }))),
-  h('div', { class: 'aside' }, h('b', null, 'Photos & ID documents: '), 'staff photos and Aadhaar copies are not stored in this version.')),
-  foot: [Btn('ADD STAFF', { kind: 'primary', onClick: () => editSheet({ title: 'Add staff', save: 'ADD', fields: [{ key: 'name', label: 'Name', placeholder: 'Name', maxlength: 30 }, { key: 'phone', label: 'Phone number (optional)', placeholder: '98XXXXXXXX', maxlength: 24, type: 'tel' }, { key: 'email', label: 'Email address', placeholder: 'name@gmail.com', maxlength: 80 }, { key: 'joined', label: 'Joining date', type: 'date', value: todayStr(), max: todayStr() }, { key: 'position', label: 'Position', type: 'select', value: 'HELPER', options: Object.keys(posLabel).filter(k => k !== 'CEO').map(k => [k, posLabel[k]]) }, { key: 'driver', label: 'Can be the driver?', type: 'select', value: '0', options: [['0', 'No'], ['1', 'Yes — can drive a pickup']] }], onSave: v => { const s = addStaff({ name: v.name, phone: v.phone, email: v.email, joined: v.joined, position: v.position, driver: v.driver === '1' }); toast(s.name + ' added'); } }) })] }));
+  h('div', { class: 'aside' }, 'Open a person to add phone numbers, Aadhaar, PAN and licence details with photos of the documents, and family contacts.')),
+  foot: [Btn('ADD STAFF', { kind: 'primary', icon: 'plus', onClick: () => nav.go('sf.add') })] }));
 route('set.staff.edit', (p, E) => {
   const s = staffOf(p.sid), agentish = ['AGENT', 'PERSONAL_AGENT'].includes(s.position);
   const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'big' }, s.name), h('div', { class: 'mt8' }, Chip(posLabel[s.position].toUpperCase())))),
@@ -3573,7 +3622,8 @@ route('set.staff.edit', (p, E) => {
     h('div', { class: 'card' }, KV('Earning', earningText(s)), h('div', { class: 'mt8' }, Btn('CHANGE EARNING MODEL', { kind: 'dark', cls: 'sm', onClick: () => nav.go('sf.earn', { sid: s.id }) }))),
     h('div', { class: 'aside' }, 'A Personal Agent gets a basic salary and may earn commission later. An independent Agent works only in the given areas and earns commission. The lowest staff level can update deliveries and payments.'));
   return { title: s.name, sub: 'Staff settings', body, foot: [Btn('CHANGE POSITION', { kind: 'dark', onClick: () => editSheet({ title: 'Position — ' + s.name, sub: 'Earlier earnings and history are kept. Pay and duty are set separately.', fields: [{ key: 'pos', label: 'New position', type: 'select', value: s.position, options: Object.keys(posLabel).map(k => [k, posLabel[k]]) }], onSave: v => { if (v.pos === s.position) return; if (busyStaff(s.id)) fail(s.name + ' is on a pickup right now.'); changePosition(s.id, v.pos, 'Position changed in Settings'); toast(s.name + ' is now ' + posLabel[v.pos]); } }) }),
-    Btn('RENAME', { kind: 'ghost', onClick: () => editSheet({ title: 'Rename', fields: [{ key: 'name', label: 'Name', value: s.name, maxlength: 30 }], onSave: v => { if (v.name.trim().length < 2) fail('Enter a name.'); s.name = v.name.trim(); } }) })] };
+    Btn('RENAME', { kind: 'ghost', onClick: () => editSheet({ title: 'Rename', fields: [{ key: 'name', label: 'Name', value: s.name, maxlength: 30 }], onSave: v => { if (v.name.trim().length < 2) fail('Enter a name.'); s.name = v.name.trim(); } }) }),
+    h('div', { class: 'linkrow' }, Btn('DELETE STAFF', { kind: 'link', cls: 'neg', onClick: () => staffRemoveSheet(s) }))] };
 });
 /* ---- delete / hide: a customer or product with history can never be deleted (the records must stay); it can be hidden instead ---- */
 const isActiveCust = c => c.active !== false;
@@ -3680,19 +3730,19 @@ route('cu.edit', (p, E) => {
     inp('street', 'Street address'), inp('landmark', 'Landmark'), inp('city', 'City'), h('div', { class: 'aside' }, 'To add a brand-new area, use More → Areas. Changing details never changes bills, payments or the Khata.'));
   return { title: 'Edit customer', sub: c.shop || c.name, body, foot: [Btn('SAVE CHANGES', { kind: 'primary', onClick: () => { updateCustomer(c.id, v); nav.back(); toast('Saved'); } })] };
 });
-route('set.stock', (p, E) => ({ title: 'Stock settings', body: h('div', { class: 'gap' }, S.products.length ? null : Pane(Empty('No products yet. Tap ADD PRODUCT to create the first one.')), Pane(S.products.map(x => Row({ title: prodLabel(x), sub: x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(' · ') + ' ' + x.base.toLowerCase() + 's · buys ' + (x.buy ? rsr(x.buy) : '—') + ' · sells ' + rs(x.sell), cls: x.active ? '' : 'off', onClick: () => nav.go('set.prod', { pid: x.id }) }))), Pane([Row({ title: 'Movement reasons', sub: S.settings.reasons.length + ' reasons', onClick: () => nav.go('set.reasons') })])),
+route('set.stock', (p, E) => ({ title: 'Stock settings', body: h('div', { class: 'gap' }, S.products.length ? null : Pane(Empty('No products yet. Tap ADD PRODUCT to create the first one.')), Pane(S.products.map(x => Row({ title: prodLabel(x), sub: x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(' · ') + ' ' + x.base.toLowerCase() + 's · buys ' + (x.buy ? rsr(x.buy) : '—') + ' · sells ' + rsr(x.sell), cls: x.active ? '' : 'off', onClick: () => nav.go('set.prod', { pid: x.id }) }))), Pane([Row({ title: 'Movement reasons', sub: S.settings.reasons.length + ' reasons', onClick: () => nav.go('set.reasons') })])),
   foot: [Btn('ADD PRODUCT', { kind: 'primary', onClick: () => startProduct('set.stock') })] }));
 route('set.prod', (p, E) => {
   const x = prod(p.pid);
-  return { title: x.name, sub: 'Product settings', body: h('div', { class: 'gap' }, h('div', { class: 'card' }, KV('Printed MRP', rs(x.mrp)), KV('Buying price (per ' + x.base.toLowerCase() + ')', x.buy ? rsr(x.buy) : 'Not set'), KV('Sell-to-Shop (per ' + x.base.toLowerCase() + ')', rs(x.sell)), KV('Retail counter (per ' + x.base.toLowerCase() + ')', rs(x.retail)), x.buy ? KV('Margin per BOX', h('span', { class: x.sell < x.buy ? 'red' : '' }, rs((x.sell - x.buy) * x.levels[0].n, { plus: true }))) : null, KV('Packing', x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(', ') + ' ' + x.base.toLowerCase() + 's')),
+  return { title: x.name, sub: 'Product settings', body: h('div', { class: 'gap' }, h('div', { class: 'card' }, KV('Printed MRP', rs(x.mrp)), KV('Buying price (per ' + x.base.toLowerCase() + ')', x.buy ? rsr(x.buy) : 'Not set'), KV('Sell-to-Shop (per ' + x.base.toLowerCase() + ')', rsr(x.sell)), KV('Retail counter (per ' + x.base.toLowerCase() + ')', rsr(x.retail)), x.buy ? [x.levels.map(l => KV('Margin per ' + l.u, h('span', { class: x.sell < x.buy ? 'red' : '' }, rs((x.sell - x.buy) * l.n, { plus: true })))), KV('Margin per ' + x.base.toLowerCase(), h('span', { class: x.sell < x.buy ? 'red' : '' }, rsm(x.sell - x.buy)))] : null, KV('Packing', x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(', ') + ' ' + x.base.toLowerCase() + 's')),
     h('div', { class: 'card' }, Toggle('Active', 'Hidden products cannot be ordered', x.active, v => { setProductHidden(x.id, !v); })),
     h('div', { class: 'linkrow' }, Btn('DELETE PRODUCT', { kind: 'link', cls: 'neg', onClick: () => productRemoveSheet(x) }), Btn('RENAME PRODUCT', { kind: 'link', onClick: () => editSheet({ title: 'Rename product', fields: [{ key: 'name', label: 'Product name', value: x.name, maxlength: 40 }], onSave: v => { const n = v.name.trim(); if (n.length < 2) fail('Enter the product name.'); if (S.products.some(q => q !== x && q.name.toLowerCase() === n.toLowerCase())) fail('A product called ' + n + ' already exists.'); x.name = n; x.nick = n.toLowerCase(); log('STOCK', 'Product renamed to ' + n); toast('Renamed'); } }) })),
     h('div', { class: 'aside' }, 'Stock is kept as one number in ' + x.base.toLowerCase() + 's. Changing a price affects new orders only — orders already taken keep their price.')),
     foot: [Btn('CHANGE PACKAGING', { kind: 'dark', onClick: () => editSheet({ title: 'Packaging — ' + x.name, sub: 'Stock is kept as one number in ' + x.base.toLowerCase() + 's, so the stock quantity does not change.', fields: x.levels.map((l, i) => ({ key: 'l' + i, label: '1 ' + l.u + ' = how many ' + x.base.toLowerCase() + 's?', type: 'num', value: String(l.n) })), onSave: v => { const ns = x.levels.map((l, i) => parseInt(v['l' + i], 10)); if (ns.some(n => !(n > 0))) fail('Enter a number for every unit.'); for (let i = 1; i < ns.length; i++) if (ns[i] >= ns[i - 1]) fail('Each smaller unit must hold fewer ' + x.base.toLowerCase() + 's than the one above.'); x.levels.forEach((l, i) => { l.n = ns[i]; }); log('STOCK', x.name + ' packaging changed: ' + x.levels.map(l => '1 ' + l.u + ' = ' + l.n).join(', ') + ' (future entries only)'); toast('Packaging saved'); } }) }),
-    Btn('CHANGE PRICES', { kind: 'primary', onClick: () => editSheet({ title: 'Prices — ' + x.name, fields: [{ key: 'mrp', label: 'Printed MRP per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.mrp / 100) }, { key: 'buy', label: 'Buying price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: x.buy ? rateStr(x.buy) : '' }, { key: 'sell', label: 'Sell-to-Shop price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.sell / 100) }, { key: 'retail', label: 'Retail counter price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.retail / 100) }], onSave: v => { const m = parseRs(v.mrp), u = parseRate(v.buy), a = parseRs(v.sell), b = parseRs(v.retail); if (!(m > 0) || !(u > 0) || !(a > 0) || !(b > 0)) fail('Enter all four prices.'); if (a > m || b > m) fail('A selling price cannot be more than the MRP (' + rs(m) + ').'); x.mrp = m; x.buy = u; x.sell = a; x.retail = b; log('STOCK', x.name + ' prices changed: MRP ' + rs(m) + ', buy ' + rsr(u) + ', sell ' + rs(a) + ', retail ' + rs(b)); } }) })] };
+    Btn('CHANGE PRICES', { kind: 'primary', onClick: () => { const nb = x.levels[0].n, bx = p => Number((p * nb / 100).toFixed(8)).toString(), iBuyBox = bx(x.buy || 0), iSellBox = bx(x.sell); return editSheet({ title: 'Prices — ' + x.name, sub: 'Type up to 8 digits after the dot. Or fill the BOX price and the ' + x.base.toLowerCase() + ' price is worked out.', fields: [{ key: 'mrp', label: 'Printed MRP per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.mrp / 100) }, { key: 'buy', label: 'Buying price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: x.buy ? rateStr(x.buy) : '' }, { key: 'buyBox', label: 'OR buying price per BOX (₹)', type: 'money', value: iBuyBox }, { key: 'sell', label: 'Sell-to-Shop price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: rateStr(x.sell) }, { key: 'sellBox', label: 'OR Sell-to-Shop price per BOX (₹)', type: 'money', value: iSellBox }, { key: 'retail', label: 'Retail counter price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: rateStr(x.retail) }], onSave: v => { const m = parseRs(v.mrp); let u = parseRate(v.buy), a = parseRate(v.sell), b = parseRate(v.retail); if (v.buyBox !== iBuyBox) { const q = parseRate(v.buyBox); if (!(q > 0)) fail('Enter the buying price per BOX.'); u = q / nb; } if (v.sellBox !== iSellBox) { const q = parseRate(v.sellBox); if (!(q > 0)) fail('Enter the Sell-to-Shop price per BOX.'); a = q / nb; } if (!(m > 0) || !(u > 0) || !(a > 0) || !(b > 0)) fail('Enter all four prices (MRP up to 2 decimals, the others up to 8).'); if (a > m || b > m) fail('A selling price cannot be more than the MRP (' + rs(m) + ').'); x.mrp = m; x.buy = u; x.sell = a; x.retail = b; log('STOCK', x.name + ' prices changed: MRP ' + rs(m) + ', buy ' + rsr(u) + ', sell ' + rsr(a) + ', retail ' + rsr(b)); } }); } })] };
 });
 /* ---- add a product: name → packing → prices. Every price is per smallest unit (packet / piece); BOX and LADI prices are worked out. ---- */
-const emptyProd = () => ({ name: '', base: 'PACKET', box: '', mid: 'LADI', midN: '', mrp: '', buy: '', sell: '', retail: '' });
+const emptyProd = () => ({ name: '', base: 'PACKET', box: '', mid: 'LADI', midN: '', mrp: '', buy: '', sell: '', retail: '', priceBy: 'UNIT' });
 function startProduct(from) { const d = S.drafts.prod; if (!d || !d.name) S.drafts.prod = Object.assign(emptyProd(), { from }); else d.from = from; nav.go('pr.name'); }
 const prodDraft = () => S.drafts.prod || (S.drafts.prod = emptyProd());
 const unitWord = (base, n) => base === 'PCS' ? (n === 1 ? 'piece' : 'pieces') : (n === 1 ? 'packet' : 'packets');
@@ -3706,7 +3756,7 @@ function packLevels(d) {
 function addProduct(d) {
   const name = (d.name || '').trim(); if (name.length < 2) fail('Enter the product name.');
   if (S.products.some(p => p.name.toLowerCase() === name.toLowerCase())) fail('A product called ' + name + ' already exists.');
-  const levels = packLevels(d), mrp = parseRs(d.mrp), buy = parseRate(d.buy), sell = parseRs(d.sell), retail = (d.retail || '') === '' ? mrp : parseRs(d.retail);
+  const levels = packLevels(d), mrp = parseRs(d.mrp), conv = s => { const r = parseRate(s); return r == null ? null : d.priceBy === 'BOX' ? r / levels[0].n : r; }, buy = conv(d.buy), sell = conv(d.sell), retail = (d.retail || '') === '' ? mrp : conv(d.retail);
   if (!(mrp > 0)) fail('Enter the printed MRP.');
   if (!(buy > 0)) fail('Enter the buying price.');
   if (!(sell > 0)) fail('Enter the Sell-to-Shop price.');
@@ -3743,37 +3793,152 @@ route('pr.pack', (p, E) => {
     help: 'Example: Simply Salted comes 192 packets to a BOX, and 12 packets to a LADI. Orders can then mix BOX, LADI and PACKET freely.' };
 });
 route('pr.price', (p, E) => {
-  const d = prodDraft(), levels = packLevels(d), unit = unitWord(d.base, 1);
+  const d = prodDraft(), levels = packLevels(d), unit = unitWord(d.base, 1), per = d.priceBy === 'BOX' ? 'BOX' : 'UNIT', boxN = levels[0].n, perWord = per === 'BOX' ? 'BOX' : unit;
+  const toUnit = s => { const r = parseRate(s); return r == null ? null : per === 'BOX' ? r / boxN : r; };
   const sum = h('div');
   const upd = () => {
-    const mrp = parseRs(d.mrp), buy = parseRate(d.buy), sell = parseRs(d.sell), retail = (d.retail || '') === '' ? mrp : parseRs(d.retail), rows = [];
-    levels.forEach(l => { if (buy > 0 || sell > 0) rows.push(KV('1 ' + l.u + ' (' + l.n + ')', [buy > 0 ? 'buy ' + rs(buy * l.n) : null, sell > 0 ? 'sell ' + rs(sell * l.n) : null].filter(Boolean).join(' · '))); });
-    if (buy > 0 && sell > 0) rows.push(KV('Margin per BOX', h('span', { class: sell < buy ? 'red' : '' }, rs((sell - buy) * levels[0].n, { plus: true }) + ' (' + Math.round((sell - buy) * 1000 / buy) / 10 + '%)'), 'tot'));
+    const mrp = parseRs(d.mrp), buy = toUnit(d.buy), sell = toUnit(d.sell), retail = (d.retail || '') === '' ? mrp : toUnit(d.retail), rows = [];
+    const sizes = levels.map(l => [l.u, l.n]).concat([[unit.toUpperCase(), 1]]);
+    sizes.forEach(([u, k]) => { if (buy > 0 || sell > 0) rows.push(KV('1 ' + u + (k > 1 ? ' (' + k + ')' : ''), [buy > 0 ? 'buy ' + (k === 1 ? rsr(buy) : rs(buy * k)) : null, sell > 0 ? 'sell ' + (k === 1 ? rsr(sell) : rs(sell * k)) : null].filter(Boolean).join(' · '))); });
+    if (buy > 0 && sell > 0) sizes.forEach(([u, k]) => rows.push(KV('Margin per ' + u, h('span', { class: sell < buy ? 'red' : '' }, (k === 1 ? rsm((sell - buy)) : rs((sell - buy) * k, { plus: true })) + ' (' + Math.round((sell - buy) * 1000 / buy) / 10 + '%)'), 'tot')));
     const warn = mrp > 0 && (sell > mrp || retail > mrp) ? 'A selling price cannot be more than the MRP.' : buy > 0 && sell > 0 && sell < buy ? 'The Sell-to-Shop price is below the buying price — every sale would lose money.' : '';
     setKids(sum, rows.length ? h('div', { class: 'pane' }, h('div', { class: 'pad', style: { paddingBottom: 0 } }, rows)) : null, warn ? h('div', { class: 'errtxt mt8' }, warn) : null);
   };
-  /* the buying price accepts up to 4 decimals (₹4.1861); the other prices up to 2. A price that cannot be read is said so — it is never silently ignored. */
+  /* rates take up to 8 decimals (the exact company rate fits); MRP up to 2. A price that cannot be read is said so — never silently ignored. */
   const money = (key, label, ph) => {
-    const dec = key === 'buy' ? 4 : 2, parse = key === 'buy' ? parseRate : parseRs, err = h('div', { class: 'errtxt' });
-    const check = () => { err.textContent = d[key] !== '' && d[key] != null && parse(d[key]) == null ? 'Use numbers only, with at most ' + dec + ' digits after the dot.' : ''; };
-    const inp = h('input', { class: 'input' + (key === 'buy' ? ' ' : ''), id: 'pp-' + key, inputmode: 'decimal', maxlength: 12, placeholder: ph, value: d[key], onInput: ev => { ev.target.value = ev.target.value.replace(/[^\d.]/g, ''); d[key] = ev.target.value; check(); upd(); } });
+    const isRate = key !== 'mrp', parse = isRate ? parseRate : parseRs, err = h('div', { class: 'errtxt' });
+    const check = () => { err.textContent = d[key] !== '' && d[key] != null && parse(d[key]) == null ? 'Use numbers only, with at most ' + (isRate ? 8 : 2) + ' digits after the dot.' : ''; };
+    const inp = h('input', { class: 'input', id: 'pp-' + key, inputmode: 'decimal', maxlength: 16, placeholder: ph, value: d[key], 'aria-label': label, onInput: ev => { ev.target.value = ev.target.value.replace(/[^\d.]/g, ''); d[key] = ev.target.value; check(); upd(); } });
     check(); return Field(label, inp, null, err);
   };
-  const body = h('div', null, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Prices for one ' + unit), h('div', { class: 'hint' }, 'Enter each price for a single ' + unit + '. BOX' + (levels[1] ? ' and ' + levels[1].u : '') + ' prices are worked out below.')),
-    money('mrp', 'Printed MRP (₹)', 'e.g. 5'), money('buy', 'Buying price — what the agency pays (₹)', 'e.g. 4.1861'), money('sell', 'Sell-to-Shop price (₹)', 'e.g. 4.50'), money('retail', 'Retail counter price (₹)', 'Blank = same as MRP'),
+  const switchTo = v => { if (v === per) return; for (const k of ['buy', 'sell', 'retail']) { const r = parseRate(d[k]); if (r != null && d[k] !== '') d[k] = Number(((v === 'BOX' ? r * boxN : r / boxN) / 100).toFixed(8)).toString(); } d.priceBy = v; nav.refresh(); };
+  const body = h('div', null, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Prices'), h('div', { class: 'hint' }, 'Type the rates the way the company gives them — per ' + unit + ' or per BOX. BOX, ' + (levels[1] ? levels[1].u + ' ' : '') + 'and ' + unit + ' prices and margins are worked out below.')),
+    h('div', { class: 'mt16' }, h('div', { class: 'lbl', style: { marginTop: 0 } }, 'Enter the buying, selling and retail prices per'), Seg([['UNIT', cap(unit.toUpperCase())], ['BOX', 'BOX (' + boxN + ')']], per, switchTo)),
+    money('mrp', 'Printed MRP per ' + unit + ' (₹)', 'e.g. 5'), money('buy', 'Buying price per ' + perWord + ' — what the agency pays (₹)', per === 'BOX' ? 'e.g. 803.73' : 'e.g. 4.18609375'), money('sell', 'Sell-to-Shop price per ' + perWord + ' (₹)', per === 'BOX' ? 'e.g. 864' : 'e.g. 4.50'), money('retail', 'Retail counter price per ' + perWord + ' (₹)', 'Blank = same as MRP'),
     h('div', { class: 'mt24' }, sum));
   upd();
-  return { title: 'Add product', sub: d.name, step: PR_STEP(3), body, help: ['MRP is the price printed on the packet. Buying price is what the agency pays the supplier. Sell-to-Shop is what shops pay the agency. Retail counter is for single packets sold at the godown.', 'Prices can be changed later in Settings → Stock. Orders already taken keep their price.'],
+  return { title: 'Add product', sub: d.name, step: PR_STEP(3), body, help: ['MRP is the price printed on the packet. Buying price is what the agency pays the supplier. Sell-to-Shop is what shops pay the agency. Retail counter is for single packets sold at the godown.', 'You can enter the price per ' + unit + ' or per BOX — the other is worked out. Up to 8 digits after the dot are kept, so the exact company rate fits.', 'Prices can be changed later in Settings → Stock. Orders already taken keep their price.'],
     foot: [Btn('ADD PRODUCT', { kind: 'primary', onClick: () => { const pr = addProduct(d), from = d.from; delete S.drafts.prod; if (from) nav.popTo(from); else nav.reset([['more'], ['st.list']]); nav.go('st.product', { pid: pr.id }); toast(pr.name + ' added — stock is zero'); } })] };
 });
 route('set.reasons', (p, E) => ({ title: 'Movement reasons', body: Pane(S.settings.reasons.map(r => Row({ title: r }))), foot: [Btn('ADD REASON', { kind: 'primary', onClick: () => editSheet({ title: 'Add reason', save: 'ADD', fields: [{ key: 'r', label: 'Reason' }], onSave: v => { const r = v.r.trim(); if (r.length < 3) fail('Enter a reason.'); S.settings.reasons.push(r); } }) })] }));
-/* ===================== VEHICLES ===================== */
-route('set.vehicles', (p, E) => ({ title: 'Vehicles', sub: S.vehicles.length ? plural(S.vehicles.length, 'vehicle') : 'Trucks, pickups and tempos', body: h('div', { class: 'gap' },
-  S.vehicles.length ? Pane(S.vehicles.map(v => Row({ title: v.reg, sub: v.label + (v.active ? '' : ' · not active'), cls: v.active ? '' : 'off', onClick: () => editSheet({ title: v.reg, fields: [{ key: 'label', label: 'Description', value: v.label }, { key: 'active', label: 'Status', type: 'select', value: v.active ? '1' : '0', options: [['1', 'Active'], ['0', 'Not active']] }], onSave: val => { if (val.active === '0' && busyVehicle(v.id)) fail(v.reg + ' is on a job right now.'); v.label = val.label.trim() || v.label; v.active = val.active === '1'; } }) })))
-    : h('div', { class: 'gap' }, Pane(Empty('No vehicle yet.')), h('div', { class: 'aside' }, 'Add every vehicle that carries goods to shops. When you prepare a pickup you choose one of these.')),
-  Sec('Loading rule'), h('div', { class: 'card' }, Toggle('A helper is required', 'Otherwise the helper step can be skipped', S.settings.helperRequired, v => { S.settings.helperRequired = v; })),
-  h('div', { class: 'aside' }, 'Cameras have their own page: More → Settings → Cameras.')),
-  foot: [Btn('ADD VEHICLE', { kind: 'primary', icon: 'plus', onClick: () => editSheet({ title: 'Add vehicle', save: 'ADD VEHICLE', fields: [{ key: 'reg', label: 'Registration number', placeholder: 'RJ35-0000' }, { key: 'label', label: 'Description', placeholder: 'e.g. Tata Ace' }], onSave: v => { const r = v.reg.trim().toUpperCase(); if (r.length < 4) fail('Enter the registration number.'); if (S.vehicles.some(x => x.reg === r)) fail('That vehicle already exists.'); S.vehicles.push({ id: nid('v'), reg: r, label: v.label.trim() || 'Vehicle', active: true }); toast(r + ' added'); } }) })] }));
+/* ===================== VEHICLES — a profile like a staff profile: details, papers (RC, insurance, PUC …) with photos and expiry dates ===================== */
+const VEH_DOCS = [['RC', 'Registration certificate (RC)', true, true], ['INSURANCE', 'Insurance', true, true], ['PUC', 'PUC (pollution certificate)', true, true], ['FITNESS', 'Fitness certificate', true, false], ['PERMIT', 'Permit', true, false], ['TAX', 'Road tax', true, false], ['OTHER', 'Other paper', false, false]];   // [slot, label, has expiry date, essential]
+const vehDocLabel = k => (VEH_DOCS.find(x => x[0] === k) || [k, k])[1];
+const vehShort = k => vehDocLabel(k).split(' (')[0];
+const vehDocs = v => (v.docs && typeof v.docs === 'object') ? v.docs : {};
+const vehKey = (vid, slot) => 'veh:' + vid + ':' + slot;
+const FUELS = ['Diesel', 'Petrol', 'CNG', 'Electric', 'Other'];
+function daysUntil(dstr) { if (!dstr) return null; return Math.round((parseYmd(dstr) - parseYmd(ymd(new Date()))) / 86400000); }
+function vehDocState(v, slot) { const d = vehDocs(v)[slot] || {}, days = daysUntil(d.expiry); return { no: d.no || '', expiry: d.expiry || '', photo: !!d.photo, days, expired: days != null && days < 0, soon: days != null && days >= 0 && days <= 30 }; }
+function vehMissing(v) {
+  const m = []; if (!v.chassisNo) m.push('Chassis number');
+  for (const x of VEH_DOCS) { if (!x[3]) continue; const s = vehDocState(v, x[0]); if (x[0] === 'RC') { if (!s.photo) m.push('RC photo'); } else { if (!s.expiry) m.push(vehShort(x[0]) + ' expiry date'); if (!s.photo) m.push(vehShort(x[0]) + ' photo'); } }
+  return m;
+}
+function vehAlerts(v) {
+  const a = [];
+  for (const x of VEH_DOCS) { if (!x[2]) continue; const s = vehDocState(v, x[0]); if (s.expired) a.push({ slot: x[0], kind: 'expired', text: vehShort(x[0]) + ' expired ' + (s.days === -1 ? 'yesterday' : -s.days + ' days ago') }); else if (s.soon) a.push({ slot: x[0], kind: 'soon', text: vehShort(x[0]) + ' expires ' + (s.days === 0 ? 'today' : s.days === 1 ? 'tomorrow' : 'in ' + s.days + ' days') }); }
+  return a;
+}
+const vehLive = v => v.active !== false && !v.sold;
+function vehicleUsed(vid) { return S.trips.filter(t => t.vehicleId === vid && t.status !== 'CANCELLED').length; }
+function vehicleChip(v) { return v.sold ? 'SOLD' : !v.active ? 'NOT ACTIVE' : vehAlerts(v).some(a => a.kind === 'expired') ? 'PAPERS EXPIRED' : vehAlerts(v).length ? 'PAPERS EXPIRING' : vehMissing(v).length ? 'PROFILE INCOMPLETE' : null; }
+
+function saveVehicle(vid, v) {
+  const reg = (v.reg || '').trim().toUpperCase().replace(/\s+/g, ' '), label = (v.label || '').trim(), chassis = (v.chassisNo || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase(), engine = (v.engineNo || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  if (reg.length < 4) fail('Enter the registration number.'); if (reg.length > 16) fail('The registration number is too long.');
+  if (S.vehicles.some(x => x.id !== vid && x.reg === reg)) fail('A vehicle with this registration already exists.');
+  if (chassis && chassis.length < 6) fail('The chassis number looks too short.'); if (engine && engine.length < 4) fail('The engine number looks too short.');
+  if (chassis && S.vehicles.some(x => x.id !== vid && x.chassisNo === chassis)) fail('This chassis number is already saved for another vehicle.');
+  if (v.bought && (!/^\d{4}-\d{2}-\d{2}$/.test(v.bought) || v.bought > ymd(new Date()))) fail('The purchase date cannot be in the future.');
+  const data = { reg, label: label || 'Vehicle', chassisNo: chassis, engineNo: engine, bought: v.bought || '', owner: (v.owner || '').trim().slice(0, 60), fuel: v.fuel || '', note: (v.note || '').trim().slice(0, 160) };
+  if (!vid) { const x = Object.assign({ id: nid('v'), active: true, docs: {} }, data); S.vehicles.push(x); log('VEHICLE', 'Vehicle added: ' + reg); return x; }
+  const x = byId(S.vehicles, vid); Object.assign(x, data); log('VEHICLE', 'Vehicle details changed: ' + reg); return x;
+}
+function setVehDoc(v, slot, patch) { v.docs = Object.assign({}, vehDocs(v), { [slot]: Object.assign({}, vehDocs(v)[slot] || {}, patch) }); scheduleSave(); }
+async function savePhotoKey(key, file) {
+  if (!file || !/^image\//.test(file.type || 'image/jpeg')) throw new Biz('Please choose a photo (JPG or PNG).');
+  if (file.size > 30 * 1024 * 1024) throw new Biz('That photo is too large (30 MB at most).');
+  const blob = await compressImage(file); await filePut(key, blob);
+  const old = FILES.urls.get(key); if (old) { try { URL.revokeObjectURL(old); } catch (e) { /* ignore */ } FILES.urls.delete(key); }
+  return blob.size;
+}
+async function dropPhotoKey(key) { try { await fileDel(key); } catch (e) { /* gone either way */ } const old = FILES.urls.get(key); if (old) { try { URL.revokeObjectURL(old); } catch (e) { /* ignore */ } FILES.urls.delete(key); } }
+function pickPhoto(o) {                                                    // o: { title, sub, onFile(file) → Promise, then() }
+  const go = cam => { const i = h('input', { type: 'file', accept: 'image/*', capture: cam ? 'environment' : null, style: { display: 'none' } });
+    i.addEventListener('change', () => { const f = i.files && i.files[0]; i.remove(); if (!f) return; closeSheet(); toast('Saving photo…'); o.onFile(f).then(() => { toast('Photo saved'); o.then(); }).catch(err => handleErr(err)); });
+    document.body.append(i); i.click(); };
+  openSheet({ title: o.title, sub: o.sub, body: h('div', { class: 'aside' }, 'Take a clear photo of the paper, flat and well lit, or choose one from the gallery. It is saved only on this phone (and in your backup file).'),
+    actions: [Btn('TAKE PHOTO', { kind: 'primary', icon: 'camera', onClick: () => go(true) }), Btn('CHOOSE FROM GALLERY', { kind: 'ghost', onClick: () => go(false) }), sheetClose('CANCEL')] });
+}
+function viewPhoto(o) {                                                    // o: { title, key, replace(), remove() → Promise, then() }
+  fileUrl(o.key).then(u => {
+    if (!u) { toast('This photo is not on this phone any more. Add it again.', true); return o.replace(); }
+    openViewer({ title: o.title, url: u, actions: [{ label: 'REPLACE', onClick: () => { closeViewer(); o.replace(); } },
+      { label: 'DELETE', danger: true, onClick: () => { closeViewer(); confirmSheet({ title: 'Delete this photo?', sub: o.title, yes: 'YES, DELETE', danger: true, no: 'KEEP IT', onYes: () => { o.remove().then(() => { o.then(); toast('Photo deleted'); }); } }); } }] });
+  }).catch(err => handleErr(err));
+}
+function vehPhotoActions(v, slot, then) {
+  const key = vehKey(v.id, slot), title = v.reg + ' · ' + vehDocLabel(slot);
+  const replace = () => pickPhoto({ title: vehDocLabel(slot), sub: v.reg, onFile: async f => { const size = await savePhotoKey(key, f); setVehDoc(v, slot, { photo: true, at: new Date(), size }); log('VEHICLE', v.reg + ': ' + vehDocLabel(slot) + ' photo saved'); }, then });
+  return { replace, view: () => viewPhoto({ title, key, replace, remove: async () => { await dropPhotoKey(key); setVehDoc(v, slot, { photo: false }); }, then }) };
+}
+function vehDocSheet(v, slot, then) {
+  const cur = vehDocs(v)[slot] || {}, f = { no: cur.no || '', expiry: cur.expiry || '' }, def = VEH_DOCS.find(x => x[0] === slot), pa = vehPhotoActions(v, slot, then);
+  const body = h('div', null,
+    Field(slot === 'INSURANCE' ? 'Policy number' : 'Document number', h('input', { class: 'input', value: f.no, maxlength: 30, autocapitalize: 'characters', placeholder: 'Optional', 'aria-label': 'Document number', onInput: ev => { f.no = ev.target.value; } })),
+    def[2] ? Field(slot === 'RC' ? 'Valid till (optional)' : 'Expiry date', h('input', { class: 'input', type: 'date', value: f.expiry, 'aria-label': 'Expiry date', onInput: ev => { f.expiry = ev.target.value; } })) : null,
+    h('div', { class: 'hint', style: { marginTop: '8px' } }, def[2] ? 'The app warns you on Today 30 days before this date.' : ''));
+  const save = (after) => { if (f.expiry && !/^\d{4}-\d{2}-\d{2}$/.test(f.expiry)) fail('Enter a valid date.'); setVehDoc(v, slot, { no: f.no.trim(), expiry: f.expiry || '' }); log('VEHICLE', v.reg + ': ' + vehDocLabel(slot) + ' details saved'); if (after) after(); };
+  openSheet({ title: vehDocLabel(slot), sub: v.reg, body, actions: [
+    Btn('SAVE', { kind: 'primary', onClick: () => { save(); closeSheet(); then(); toast('Saved'); } }),
+    Btn(cur.photo ? 'SAVE & VIEW PHOTO' : 'SAVE & ADD PHOTO', { kind: 'dark', icon: 'camera', onClick: () => { save(); closeSheet(); then(); (cur.photo ? pa.view : pa.replace)(); } }),
+    cur.no || cur.expiry || cur.photo ? Btn('REMOVE THIS PAPER', { kind: 'link', cls: 'neg', onClick: () => { closeSheet(); confirmSheet({ title: 'Remove ' + vehShort(slot) + '?', sub: 'The number, expiry date and photo are deleted.', yes: 'YES, REMOVE', danger: true, no: 'KEEP IT', onYes: () => { dropPhotoKey(vehKey(v.id, slot)).then(() => { const d = Object.assign({}, vehDocs(v)); delete d[slot]; v.docs = d; scheduleSave(); then(); toast('Removed'); }); } }); } }) : null,
+    sheetClose('CANCEL')] });
+}
+function vehRemoveSheet(v) {
+  const used = vehicleUsed(v.id);
+  if (used) return openSheet({ title: v.reg + ' cannot be deleted', sub: 'It was used on ' + plural(used, 'pickup') + '. Those records must stay.', body: h('div', { class: 'aside' }, h('b', null, 'Sold or not used any more? '), 'Mark it as sold. It disappears from pickup lists, but old pickups, challans and its papers stay as they are.'),
+    actions: [v.sold ? null : Btn('MARK AS SOLD', { kind: 'primary', onClick: () => { if (busyVehicle(v.id)) fail(v.reg + ' is on a job right now.'); v.sold = true; v.soldAt = ymd(new Date()); v.active = false; log('VEHICLE', v.reg + ' marked as sold'); closeSheet(); nav.refresh(); toast(v.reg + ' marked as sold'); } }), sheetClose('CLOSE')] });
+  confirmSheet({ title: 'Delete ' + v.reg + '?', sub: 'It was never used on a pickup. Its details, papers and photos are deleted for good.', yes: 'YES, DELETE', danger: true, no: 'KEEP IT', onYes: () => {
+    VEH_DOCS.forEach(x => dropPhotoKey(vehKey(v.id, x[0]))); S.vehicles = S.vehicles.filter(x => x !== v); log('VEHICLE', v.reg + ' deleted'); nav.reset([['more'], ['set.home'], ['set.vehicles']], 'back'); toast(v.reg + ' deleted'); } });
+}
+route('set.vehicles', (p, E) => {
+  const live = S.vehicles.filter(vehLive), gone = S.vehicles.filter(v => !vehLive(v));
+  const row = v => Row({ title: v.reg, sub: [v.label, v.sold ? 'sold ' + fmtDY(parseYmd(v.soldAt || ymd(new Date()))) : null].filter(Boolean).join(' · '), chip: vehicleChip(v), tone: vehicleChip(v) && /EXPIR|INCOMPLETE/.test(vehicleChip(v)) ? 'bad' : '', cls: vehLive(v) ? '' : 'off', onClick: () => nav.go('veh.view', { vid: v.id }) });
+  return { title: 'Vehicles', sub: S.vehicles.length ? plural(live.length, 'vehicle') : 'Trucks, pickups and tempos', body: h('div', { class: 'gap' },
+    S.vehicles.length ? h('div', { class: 'gap' }, live.length ? Pane(live.map(row)) : null, gone.length ? h('div', null, Sec('Sold / not active'), Pane(gone.map(row))) : null)
+      : h('div', { class: 'gap' }, Pane(Empty('No vehicle yet.')), h('div', { class: 'aside' }, 'Add every vehicle that carries goods to shops: its number, chassis number and papers like insurance and PUC. When you prepare a pickup you choose one of these.'))),
+    foot: [Btn('ADD VEHICLE', { kind: 'primary', icon: 'plus', onClick: () => nav.go('veh.edit', {}) })] };
+});
+route('veh.view', (p, E) => {
+  const v = byId(S.vehicles, p.vid); if (!v) return { title: 'Vehicle', body: Empty('This vehicle no longer exists.'), foot: [Btn('BACK', { kind: 'primary', onClick: () => nav.back() })] };
+  const again = () => nav.refresh(), alerts = vehAlerts(v), miss = vehMissing(v);
+  const kv = (k, val) => KV(k, val || '—');
+  const docRow = x => { const s = vehDocState(v, x[0]); const bits = [s.no ? '#' + s.no : null, s.expiry ? (x[0] === 'RC' ? 'valid till ' : 'expires ') + fmtDY(parseYmd(s.expiry)) : null, s.photo ? 'photo ✓' : null].filter(Boolean);
+    return Row({ title: x[1], sub: bits.length ? bits.join(' · ') : 'Not added — tap to add', chip: s.expired ? 'EXPIRED' : s.soon ? (s.days === 0 ? 'EXPIRES TODAY' : s.days + (s.days === 1 ? ' DAY LEFT' : ' DAYS LEFT')) : (x[3] && !(bits.length)) ? 'NEEDED' : null, tone: s.expired || s.soon || (x[3] && !bits.length) ? 'bad' : 'ok', onClick: () => vehDocSheet(v, x[0], again) }); };
+  const body = h('div', { class: 'gap' },
+    alerts.length ? h('div', { class: 'aside bad' }, h('b', null, 'Papers need attention — '), alerts.map(a => a.text).join('; ') + '.') : null,
+    miss.length ? h('div', { class: 'aside bad' }, h('b', null, 'Profile incomplete — '), 'missing: ' + miss.join(', ') + '.') : null,
+    h('div', { class: 'card' }, kv('Description', v.label), kv('Registration', v.reg), kv('Chassis number', v.chassisNo), kv('Engine number', v.engineNo), kv('Fuel', v.fuel), kv('Bought on', v.bought ? fmtDY(parseYmd(v.bought)) : ''), kv('Owner name', v.owner), v.note ? kv('Note', v.note) : null,
+      v.sold ? kv('Sold on', fmtDY(parseYmd(v.soldAt || ymd(new Date())))) : null),
+    h('div', null, Sec('Papers'), Pane(VEH_DOCS.map(docRow))),
+    v.sold ? h('div', { class: 'card' }, h('b', null, 'This vehicle is marked as sold.'), h('div', { class: 'mt8' }, Btn('USE THIS VEHICLE AGAIN', { kind: 'dark', cls: 'sm', onClick: () => { v.sold = false; v.soldAt = ''; v.active = true; log('VEHICLE', v.reg + ' is in use again'); nav.refresh(); toast('Vehicle is active again'); } })))
+      : h('div', { class: 'card' }, Toggle('Active', 'Inactive vehicles cannot be picked for a pickup', v.active !== false, on => { if (!on && busyVehicle(v.id)) fail(v.reg + ' is on a job right now.'); v.active = on; log('VEHICLE', v.reg + (on ? ' set active' : ' set not active')); })));
+  return { title: v.reg, sub: v.label + (v.sold ? ' · sold' : ''), big: true, body, foot: [Btn('EDIT DETAILS', { kind: 'primary', onClick: () => nav.go('veh.edit', { vid: v.id }) }), h('div', { class: 'linkrow' }, Btn('DELETE OR MARK AS SOLD', { kind: 'link', cls: 'neg', onClick: () => vehRemoveSheet(v) }))] };
+});
+route('veh.edit', (p, E) => {
+  const cur = p.vid ? byId(S.vehicles, p.vid) : null; if (p.vid && !cur) return { title: 'Vehicle', body: Empty('Not found') };
+  const st = E.st; if (!st.v) st.v = { reg: cur ? cur.reg : '', label: cur ? cur.label : '', chassisNo: cur ? cur.chassisNo || '' : '', engineNo: cur ? cur.engineNo || '' : '', bought: cur ? cur.bought || '' : '', owner: cur ? cur.owner || '' : '', fuel: cur ? cur.fuel || '' : 'Diesel', note: cur ? cur.note || '' : '' };
+  const v = st.v, txt = (label, key, attrs, clean) => Field(label, h('input', Object.assign({ class: 'input', value: v[key], maxlength: 60, 'aria-label': label, onInput: ev => { v[key] = clean ? clean(ev.target.value) : ev.target.value; if (clean && ev.target.value !== v[key]) ev.target.value = v[key]; } }, attrs)));
+  const body = h('div', { class: 'gap' },
+    txt('Registration number', 'reg', { placeholder: 'RJ35-0000', autocapitalize: 'characters', maxlength: 16 }), txt('Description (make and model)', 'label', { placeholder: 'e.g. Tata Ace' }),
+    txt('Chassis number', 'chassisNo', { placeholder: 'on the RC book', autocapitalize: 'characters', autocomplete: 'off', maxlength: 25 }, x => x.replace(/[^A-Za-z0-9]/g, '').toUpperCase()), txt('Engine number (optional)', 'engineNo', { autocapitalize: 'characters', autocomplete: 'off', maxlength: 25 }, x => x.replace(/[^A-Za-z0-9]/g, '').toUpperCase()),
+    h('div', null, h('div', { class: 'lbl', style: { marginTop: 0 } }, 'Fuel'), Seg(FUELS.map(f => [f, f]), v.fuel, x => { v.fuel = x; })),
+    txt('Bought on (optional)', 'bought', { type: 'date', max: todayStr() }), txt('Owner name (optional)', 'owner', { placeholder: 'Name on the RC' }), txt('Note (optional)', 'note', { maxlength: 160, placeholder: 'e.g. second-hand, bought from …' }),
+    h('div', { class: 'aside' }, cur ? 'Insurance, PUC and other papers are added on the vehicle page.' : 'After saving you can add the papers — RC, insurance, PUC — with photos and expiry dates.'));
+  return { title: cur ? 'Edit vehicle' : 'Add vehicle', sub: cur ? cur.reg : null, step: cur ? null : { label: 'NEW VEHICLE', n: 1, of: 2 }, body, foot: [Btn(cur ? 'SAVE CHANGES' : 'SAVE & ADD PAPERS', { kind: 'primary', onClick: () => { const x = saveVehicle(p.vid || null, v); if (cur) { nav.back(); toast('Saved'); } else { nav.replace('veh.view', { vid: x.id }); toast(x.reg + ' added — now add its papers'); } } })] };
+});
 
 /* ===================== CAMERAS — a camera is only a number + a note that helps find the loading video later ===================== */
 const cameraUsed = id => S.trips.some(t => t.cameraId === id);
@@ -3820,6 +3985,7 @@ route('set.more', (p, E) => {
     Sec('Agency details'), Pane([Row({ title: ag.name, sub: [ag.addr, ag.phone ? '☎ ' + ag.phone : ''].filter(Boolean).join(' · ') || 'Add your agency address and phone — they print on every bill', onClick: () => editSheet({ title: 'Agency details', fields: [{ key: 'name', label: 'Agency name', value: ag.name }, { key: 'addr', label: 'Address', value: ag.addr, maxlength: 90 }, { key: 'phone', label: 'Phone', value: ag.phone, maxlength: 12 }], onSave: v => { if (v.name.trim().length < 2) fail('Enter the agency name.'); Object.assign(ag, { name: v.name.trim(), addr: v.addr.trim(), phone: v.phone.trim() }); } }) }),
       Row({ title: 'Bank details shown to customers', sub: [bk.name, bk.acNo, up.id ? 'UPI ' + up.id : ''].filter(Boolean).join(' · ') || 'Not set — add your bank account and UPI ID', onClick: () => editSheet({ title: 'Bank & UPI', fields: [{ key: 'name', label: 'Bank', value: bk.name }, { key: 'acNo', label: 'Account number', value: bk.acNo }, { key: 'ifsc', label: 'IFSC', value: bk.ifsc }, { key: 'upi', label: 'UPI id', value: up.id }], onSave: v => { bk.name = v.name; bk.acNo = v.acNo; bk.ifsc = v.ifsc; up.id = v.upi; } }) })]),
     Sec('Print'), h('div', { class: 'card' }, h('div', { class: 'lbl', style: { marginTop: 0 } }, 'Usual paper size'), Seg([['A4', 'A4'], ['80', '80 mm'], ['58', '58 mm']], S.settings.paper === 'A4' ? 'A4' : S.settings.paper, v => { S.settings.paper = v; })),
+    Sec('Pickup loading'), h('div', { class: 'card' }, Toggle('A helper is required for every pickup', 'Otherwise the helper step can be skipped', S.settings.helperRequired, v => { S.settings.helperRequired = v; })),
     Sec('Amounts'), Pane([Row({ title: 'Off-duty unloading fee', sub: 'Per job, paid once to one coordinator', right: rs(S.settings.unloadFee), onClick: () => editSheet({ title: 'Unloading fee', fields: [{ key: 'v', label: 'Amount per job (₹)', type: 'money', value: String(S.settings.unloadFee / 100) }], onSave: v => { const a = parseRs(v.v); if (!(a > 0)) fail('Enter an amount.'); S.settings.unloadFee = a; } }) }), Row({ title: 'Usual Agent commission', sub: 'For new Agents', right: pctText(S.settings.agentBp), onClick: () => editSheet({ title: 'Agent commission', fields: [{ key: 'v', label: 'Percent', type: 'num', value: String(S.settings.agentBp / 100) }], onSave: v => { const b = Math.round(parseFloat(v.v) * 100); if (!(b > 0 && b <= 2000)) fail('Enter 0.01 to 20.'); S.settings.agentBp = b; } }) })]));
   return { title: 'Additional', sub: 'Payments, expenses, agency, print', body };
 });
