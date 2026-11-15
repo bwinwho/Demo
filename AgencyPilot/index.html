@@ -1117,7 +1117,6 @@ function recordPayment(o) {
   const maxDue = sale ? saleDueIncl(sale) : (partyId ? partyDueIncl(partyId) : amount);
   if (amount > maxDue) { fail('That is more than the ' + rs(maxDue) + ' still due.'); }
   const d = details || {};
-  if ((method === 'UPI' || method === 'BANK') && !(d.ref || '').trim()) { fail('Enter the payment reference number.'); }
   if (method === 'CHEQUE' && (!(d.no || '').trim() || !(d.date || '').trim() || !(d.bank || '').trim())) { fail('Cheque number, date and bank are all needed.'); }
   tokUse(token);
   const agent = partyId && isAgent(partyId);
@@ -2554,11 +2553,11 @@ function onlineScreen(kind) {
       ? h('div', { class: 'pane ink' }, h('div', { class: 'pad' }, h('div', { class: 'eyebrow' }, 'Agency bank details'), KV('Account name', bk.holder), KV('Account number', bk.acNo), KV('IFSC', bk.ifsc), KV('Bank', [bk.name, bk.branch].filter(Boolean).join(', '))))
       : h('div', { class: 'pane ink' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'Agency UPI'), h('div', { style: { fontSize: '24px', fontWeight: 700, margin: '6px 0' } }, up.id), up.phone ? h('div', null, '☎ UPI phone ' + up.phone) : null, h('div', { class: 'mt8', style: { fontSize: '13px', opacity: .7 } }, 'No payment request is sent from here — the customer pays using this UPI ID.')));
     const amtI = h('input', { class: 'input', id: 'amt', inputmode: 'decimal', value: st.amt, placeholder: 'How much did they pay?', 'aria-label': 'Amount received', onInput: ev => { st.amt = ev.target.value; chk(); } });
-    const refI = h('input', { class: 'input', id: 'ref', value: st.ref, placeholder: kind === 'BANK' ? 'Bank reference / UTR' : 'UPI transaction ID', maxlength: 40, 'aria-label': 'Payment reference', onInput: ev => { st.ref = ev.target.value; chk(); } });
+    const refI = h('input', { class: 'input', id: 'ref', value: st.ref, placeholder: kind === 'BANK' ? 'Bank reference / UTR (optional)' : 'UPI transaction ID (optional)', maxlength: 40, 'aria-label': 'Payment reference', onInput: ev => { st.ref = ev.target.value; chk(); } });
     const btn = Btn('CONFIRM — ' + (kind === 'BANK' ? 'BANK' : 'UPI') + ' PAYMENT', { kind: 'primary', disabled: true, onClick: () => { const dr = colDraft(p.sid || p.pid); const pay = recordPayment({ partyId: c.pid, saleId: p.sid, method: kind, amount: parseRs(st.amt), collectorId: null, tripId: c.trip ? c.trip.id : null, details: { ref: st.ref.trim() }, token: dr.tok }); afterPayment(p, pay); } });
-    const chk = () => { const a = parseRs(st.amt); btn.disabled = !(a > 0 && a <= c.due && st.ref.trim().length >= 4); };
+    const chk = () => { const a = parseRs(st.amt); btn.disabled = !(a > 0 && a <= c.due); };
     chk();
-    return { title: kind === 'BANK' ? 'Bank transfer' : 'UPI', sub: c.label, body: h('div', { class: 'gap' }, info, Field('Amount received (₹)', amtI), Btn('FILL THE FULL DUE ' + rs(c.due), { kind: 'link', cls: 'sm', onClick: () => { st.amt = String(c.due / 100).replace(/\.0+$/, ''); amtI.value = st.amt; chk(); } }), Field('Reference number', refI), h('div', { class: 'mute', style: { fontSize: '14px' } }, 'This payment is recorded as “waiting for office check”. It is not counted as agency money until someone confirms it in the bank.')), foot: [btn] };
+    return { title: kind === 'BANK' ? 'Bank transfer' : 'UPI', sub: c.label, body: h('div', { class: 'gap' }, info, Field('Amount received (₹)', amtI), Btn('FILL THE FULL DUE ' + rs(c.due), { kind: 'link', cls: 'sm', onClick: () => { st.amt = String(c.due / 100).replace(/\.0+$/, ''); amtI.value = st.amt; chk(); } }), Field('Reference number (optional)', refI), h('div', { class: 'mute', style: { fontSize: '14px' } }, 'This payment is recorded as “waiting for office check”. It is not counted as agency money until someone confirms it in the bank.')), foot: [btn] };
   };
 }
 route('col.bank', onlineScreen('BANK')); route('col.upi', onlineScreen('UPI'));
@@ -3588,8 +3587,8 @@ route('rl.qty', (p, E) => {
 route('rl.pay', (p, E) => {
   const d = S.drafts.retail; if (!d || !d.base) return { title: 'Retail Sale', body: Empty('Nothing to pay'), foot: [Btn('START AGAIN', { kind: 'primary', onClick: () => nav.replace('rl.prod') })] };
   const pr = prod(d.pid), total = d.base * pr.retail, st = E.st;
-  const refBox = h('div'), btn = Btn('MONEY RECEIVED — CONFIRM', { kind: 'primary', onClick: () => { if (d.method === 'UPI' && (d.ref || '').trim().length < 4) fail('Enter the UPI reference.'); const s = retailSale({ pid: d.pid, base: d.base, method: d.method, ref: d.ref, token: d.tok }); delete S.drafts.retail; nav.reset([['more']]); toast('Sold ' + qtyText(pr, d.base) + ' — ' + rs(total) + (d.method === 'UPI' ? ' (UPI waiting for check)' : ' cash')); } });
-  const draw = () => { setKids(refBox, d.method === 'UPI' ? Field('UPI reference', h('input', { class: 'input', value: d.ref, placeholder: 'UPI transaction ID', maxlength: 30, onInput: ev => { d.ref = ev.target.value; } })) : null); };
+  const refBox = h('div'), btn = Btn('MONEY RECEIVED — CONFIRM', { kind: 'primary', onClick: () => { const s = retailSale({ pid: d.pid, base: d.base, method: d.method, ref: d.ref, token: d.tok }); delete S.drafts.retail; nav.reset([['more']]); toast('Sold ' + qtyText(pr, d.base) + ' — ' + rs(total) + (d.method === 'UPI' ? ' (UPI waiting for check)' : ' cash')); } });
+  const draw = () => { setKids(refBox, d.method === 'UPI' ? Field('UPI reference (optional)', h('input', { class: 'input', value: d.ref, placeholder: 'UPI transaction ID', maxlength: 30, onInput: ev => { d.ref = ev.target.value; } })) : null); };
   draw();
   const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, qtyText(pr, d.base) + ' ' + pr.name), h('div', { class: 'huge' }, rs(total)))), Seg([['CASH', 'Cash'], ['UPI', 'UPI']], d.method, v => { d.method = v; draw(); }), refBox,
     h('div', { class: 'aside' }, 'Counter stock goes down. The godown is not touched again.'));
