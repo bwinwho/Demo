@@ -372,6 +372,35 @@ textarea.input{padding:12px 14px;min-height:96px}
 .rc-earlier svg{width:16px;height:16px;color:var(--faint);flex:none}
 .rc-end{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s3);margin-top:var(--s5);padding-top:var(--s3);border-top:2px solid var(--ink);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
 .rc-end b{font-size:24px;letter-spacing:-.02em;font-weight:600}
+.pcar{display:flex;align-items:flex-start;gap:var(--s3);overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;margin:0 calc(-1 * var(--gut));padding:0 var(--gut) var(--s2);scroll-padding:0 var(--gut);scrollbar-width:none}
+.pcar::-webkit-scrollbar{display:none}
+.pcard{flex:0 0 calc(100% - var(--s5));scroll-snap-align:start;scroll-snap-stop:always}
+.pcar .pcard:only-child{flex-basis:100%}
+.pc-t{font-size:22px;font-weight:700;letter-spacing:-.01em;margin-top:2px}
+.pnav{display:flex;align-items:center;justify-content:space-between;gap:var(--s3)}
+.pnav .btn{width:auto;min-width:52px;padding:0 var(--s3)}
+.pmid{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:14px}
+.pdots{display:flex;gap:6px}.pdots i{width:7px;height:7px;border-radius:50%;background:var(--line2);transition:background .2s,transform .2s}.pdots i.on{background:var(--ink);transform:scale(1.25)}
+.sp{flex:1;min-height:0;display:flex;flex-direction:column}
+.sp-gap{flex:1 1 0;min-height:0;transition:flex-grow .5s cubic-bezier(.2,.8,.2,1)}
+.sp-gap.bottom{flex-grow:1.4}
+.sp.active .sp-gap{flex-grow:0}
+.sp-head{text-align:center}
+.sp-title{margin:0;font-size:34px;line-height:1.1;font-weight:700;letter-spacing:-.02em;transition:font-size .45s cubic-bezier(.2,.8,.2,1)}
+.sp.active .sp-title{font-size:20px}
+.sp-hint{color:var(--mute);font-size:15px;max-height:44px;overflow:hidden;margin-top:8px;transition:max-height .35s,opacity .25s,margin .35s}
+.sp.active .sp-hint{max-height:0;opacity:0;margin-top:0}
+.sp-bar{display:flex;align-items:center;gap:var(--s2);margin-top:var(--s4)}
+.sp-in{flex:1;border-radius:999px;text-align:center;font-size:17px;min-height:52px;transition:text-align .3s}
+.sp.active .sp-in{text-align:left}
+.sp-cancel{display:none;width:auto;min-width:78px}
+.sp.active .sp-cancel{display:inline-flex}
+.sp-sel{display:flex;justify-content:center;gap:var(--s2);margin-top:var(--s3);font-size:15px}
+.sp.active .sp-sel{display:none}
+.sp-results{flex:0 0 auto;max-height:0;opacity:0;overflow:hidden;transition:max-height .5s cubic-bezier(.2,.8,.2,1),opacity .35s .12s}
+.sp.active .sp-results{flex:1 1 auto;max-height:3000px;opacity:1;overflow-y:auto;margin-top:var(--s4);padding-bottom:var(--s4)}
+@media (prefers-reduced-motion:reduce){.sp *{transition:none!important}.pdots i{transition:none}}
+.rc-end.top{margin-top:var(--s3);border-top:0;padding-top:0}
 .rc-end-sub{margin-top:var(--s1);font-size:12px;color:var(--mute);text-align:right}
 .rd-amt{font-size:36px;font-weight:600;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
 .rd-st{margin-top:var(--s2)}
@@ -1768,23 +1797,34 @@ function renderTabs() {
   const tb = $('#tabbar'); setKids(tb, ...defs.map(d => h('button', { type: 'button', 'aria-current': d[0] === cur ? 'page' : null, onClick: () => { closeSheet(); if (nav.top().name !== d[0] || UI.stack.length > 1) nav.tab(d[0]); syncHistory(); } }, ic(d[2]), d[1])));
 }
 
-/* ---- phone Back button support: exactly one history "sentinel" exists while we are deeper than a tab root ---- */
-const HIST = { ok: true, sent: false, ignore: 0 };
-function syncHistory() {
+/* ---- phone Back button: the browser history holds [ ...earlier pages, app, guard ]. Back lands on "app"; we put the guard back at once and
+   take one step inside the app (close sheet / viewer → the screen's own back → previous screen → Today). Only a second Back on Today leaves. ---- */
+const HIST = { ok: true, armed: 0, leaving: false };
+function syncHistory() { /* kept for the callers: the guard no longer follows the screen depth */ }
+function histGuard() { if (!HIST.ok) return; try { if (!(history.state && history.state.ap === 1)) history.pushState({ ap: 1 }, ''); } catch (e) { HIST.ok = false; } }
+function histBoot() {                                   // a reload keeps the old entries, so never stack a second app entry
   if (!HIST.ok) return;
-  const want = UI.stack.length > 1;
-  try {
-    if (want && !HIST.sent) { history.pushState({ ap: 1 }, ''); HIST.sent = true; }
-    else if (!want && HIST.sent) { HIST.sent = false; HIST.ignore++; history.back(); setTimeout(() => { if (HIST.ignore > 0) HIST.ignore--; }, 600); }
-  } catch (e) { HIST.ok = false; }
+  try { const s = history.state && history.state.ap; if (s === 1) return; if (s !== 0) history.replaceState({ ap: 0 }, ''); history.pushState({ ap: 1 }, ''); } catch (e) { HIST.ok = false; }
 }
-window.addEventListener('popstate', () => {
-  if (HIST.ignore > 0) { HIST.ignore--; return; }
-  HIST.sent = false;
+['pointerdown', 'keydown', 'touchstart'].forEach(ev => document.addEventListener(ev, histGuard, { capture: true, passive: true }));   // some browsers only keep entries made after a tap
+function appBack() {                                   // → true when something inside the app took the Back press
+  if (FB.picking) { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); return true; }
+  if (UI.viewer) { closeViewer(); return true; }
+  if (UI.sheet) { closeSheet(); return true; }
   const topE = UI.stack[UI.stack.length - 1];
-  if (UI.stack.length > 1 && topE && topE.onBack) { closeSheet(); topE.onBack(); }
-  else if (UI.stack.length > 1) { closeSheet(); UI.stack.pop(); show('back'); }
-  syncHistory();
+  if (UI.stack.length > 1 && topE && topE.onBack) { topE.onBack(); return true; }
+  if (UI.stack.length > 1) { UI.stack.pop(); show('back'); return true; }
+  if (topE && topE.name !== 'today') { nav.tab('today'); return true; }
+  return false;
+}
+window.addEventListener('popstate', ev => {
+  if (!HIST.ok) return;
+  if (ev.state && ev.state.ap === 1) return;           // forward onto the guard: nothing to do
+  if (HIST.leaving) { if (ev.state && ev.state.ap === 0) { try { history.back(); } catch (e) { /* ignore */ } } return; }   // leaving: walk back over any older app entries
+  if (appBack()) { histGuard(); return; }
+  const now = Date.now();
+  if (now - HIST.armed < 2500) { HIST.armed = 0; HIST.leaving = true; try { history.back(); } catch (e) { /* ignore */ } return; }   // second Back on Today: really leave
+  HIST.armed = now; histGuard(); toast('Press Back again to leave the app');
 });
 document.addEventListener('keydown', ev => {                         // Enter on a one-question input = Continue
   if (ev.key === 'Enter' && ev.target.matches && ev.target.matches('input[data-enter]')) { const b = $('.screen:not(.leave) .foot .btn.primary:not(:disabled)'); if (b) { ev.preventDefault(); b.click(); } }
@@ -1793,7 +1833,8 @@ document.addEventListener('input', ev => { const el = ev.target; if (el && el.ma
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, ev => ev.preventDefault(), { passive: false }));   // iOS pinch-zoom (the viewport tag and touch-action stop double-tap zoom)
 document.addEventListener('dblclick', ev => { if (!(ev.target.matches && ev.target.matches('input,textarea,select'))) ev.preventDefault(); }, { passive: false });
 document.addEventListener('focusin', ev => {                         // keep the focused field visible above the on-screen keyboard
-  const t = ev.target; if (t && t.matches && t.matches('input,textarea,select')) setTimeout(() => { try { t.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { /* ignore */ } }, 280);
+  const t = ev.target; if (t && t.closest && t.closest('[data-sp]')) return;
+  if (t && t.matches && t.matches('input,textarea,select')) setTimeout(() => { try { t.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { /* ignore */ } }, 280);
 });
 
 /* ---- one-question screen pattern (like PDF pages 3-5) ---- */
@@ -1845,7 +1886,7 @@ function unfinishedSheet() {
 
 /* ---- attention list (only meaningful pending work) ---- */
 function tripGo(t) {
-  if (t.status === 'LOADING') { return nav.go(!t.vehicleId ? 'pk.vehicle' : (!t.driverId || !t.helperDone) ? 'pk.driver' : 'pk.load', { tid: t.id }); }
+  if (t.status === 'LOADING') { return nav.go(!t.vehicleId ? 'pk.vehicle' : !t.driverId ? 'pk.driver' : !t.helperDone ? 'pk.helper' : 'pk.load', { tid: t.id }); }
   if (t.status === 'READY') return nav.go('pk.ready', { tid: t.id });
   if (t.status === 'ON_ROAD') return nav.go('pk.road', { tid: t.id });
   if (t.status === 'RETURNED') return nav.go('tr.goods', { tid: t.id });
@@ -1918,7 +1959,7 @@ route('today', (p, E) => {
 
 function orderRow(o, hl) {
   const st = orderState(o), t = orderTotals(o).total, a = o.saleId ? saleTotal(saleOf(o.saleId)) : t;
-  return Row({ title: orderTitle(o), sub: [areaOf(o.partyId), o.no].filter(Boolean).join(' · '), right: rs(a), rightSub: st.due > 0 ? 'DUE ' + rs(st.due) : st.text, onClick: () => nav.go('order.detail', { id: o.id }), cls: S.highlight === o.id || hl ? 'new' : '', k: o.id });
+  return Row({ title: orderTitle(o), sub: [areaOf(o.partyId), o.no].filter(Boolean).join(' · '), right: rs(a), rightSub: st.due > 0 ? 'DUE ' + rs(st.due) : st.text, onClick: () => nav.go('order.detail', { id: o.id }), cls: S.highlight === o.id || hl || !ORDER_SETS.DONE(o) ? 'new' : '', k: o.id });
 }
 /* ---- Orders: taken orders are grouped by AREA. Loading / on the road is tracked on the Tracking screen, not here. ---- */
 const orderArea = o => areaOf(o.partyId) || 'No area';
@@ -1927,7 +1968,7 @@ function areaGroups(list) {                                               // [{ 
   const m = new Map(); list.forEach(o => { const k = orderArea(o); if (!m.has(k)) m.set(k, []); m.get(k).push(o); });
   return Array.from(m.entries()).map(([name, orders]) => ({ name, orders, total: orders.reduce((s, o) => s + orderTotals(o).total, 0) })).sort((a, b) => b.orders.length - a.orders.length || a.name.localeCompare(b.name));
 }
-const areaRow = (g, f, hl) => Row({ title: g.name, sub: plural(g.orders.length, 'order') + ' · ' + rs(g.total), right: g.orders.length, rightSub: f === 'WAITING' ? 'waiting' : 'done', cls: hl ? 'new' : '', onClick: () => nav.go('orders.area', { area: g.name, f }) });
+const areaRow = (g, f, hl) => Row({ title: g.name, sub: plural(g.orders.length, 'order') + ' · ' + rs(g.total), right: g.orders.length, rightSub: f === 'WAITING' ? 'waiting' : 'done', cls: hl || f === 'WAITING' ? 'new' : '', onClick: () => nav.go('orders.area', { area: g.name, f }) });
 const trackingCount = () => { const t = S.trips.filter(x => ['LOADING', 'READY', 'ON_ROAD', 'RETURNED'].includes(x.status)); return { loading: t.filter(x => ['LOADING', 'READY'].includes(x.status)).length, road: t.filter(x => x.status === 'ON_ROAD').length, back: t.filter(x => x.status === 'RETURNED').length }; };
 route('orders', (p, E) => {
   const hl = S.highlight; S.highlight = null;
@@ -1953,7 +1994,6 @@ route('orders.area', (p, E) => {
   const foot = [];
   if (f === 'WAITING' && items.length) foot.push(Btn('START LOADING', { kind: 'primary', icon: 'truck', onClick: () => { S.drafts.pk = { orderIds: [], area: p.area }; nav.go('pk.orders'); } }));
   if (f === 'WAITING' && trips.length) foot.push(Btn('CONTINUE LOADING' + (trips.length > 1 ? ' (' + trips.length + ' PICKUPS)' : ''), { kind: foot.length ? 'ghost' : 'primary', onClick: () => trips.length === 1 ? tripGo(trips[0]) : nav.go('pk.list') }));
-  foot.push(Btn('TAKE ORDER', { kind: 'dark', onClick: () => nav.go('cart.cust', { mode: 'order' }) }));
   return { title: p.area, sub: (f === 'WAITING' ? 'Waiting orders' : 'Finished orders') + ' · ' + plural(items.length, 'order'), big: true, body, foot };
 });
 
@@ -1999,7 +2039,7 @@ route('order.detail', (p, E) => {
   const foot = [];
   const t = o.tripId ? tripOf(o.tripId) : null;
   if (o.status === 'WAITING') {
-    foot.push(h('div', { class: 'btnrow split' }, Btn('EDIT', { kind: 'ghost', onClick: () => startEdit(o) }), Btn('START LOADING', { kind: 'primary', disabled: o.needsApproval && !o.approved, onClick: () => { S.drafts.pk = { orderIds: [o.id] }; nav.go('pk.orders'); } })));
+    foot.push(Btn('EDIT ORDER', { kind: 'primary', onClick: () => startEdit(o) }));
     foot.push(Btn('CANCEL THIS ORDER', { kind: 'link', cls: 'neg', onClick: () => confirmSheet({ title: 'Cancel this order?', sub: orderTitle(o) + ' · ' + rs(tot.total), yes: 'YES, CANCEL ORDER', danger: true, no: 'KEEP ORDER', onYes: () => { cancelOrder(o.id); nav.back(); toast('Order cancelled'); } }) }));
   } else if (t && ['LOADING', 'LOADED', 'ON_ROAD'].includes(o.status)) foot.push(Btn(o.status === 'LOADING' ? 'CONTINUE LOADING' : 'OPEN PICKUP ' + t.no, { kind: 'primary', onClick: () => tripGo(t) }));
   else if (sale) {
@@ -2033,16 +2073,36 @@ function cartRates(c) {                      // per-base rates used for this car
 }
 const cartCalc = c => totalsOf(c.lines, cartRates(c));
 
+const openOrdersOf = pid => S.orders.filter(o => o.partyId === pid && !ORDER_SETS.DONE(o));
+const inAreaName = (c, area) => { const a = ((c.addr && c.addr.area) || '').trim().toLowerCase(); return area === 'No area' ? !a : a === area.toLowerCase(); };
+function cartAreas(p, E, C) {                                           // Taking Order, screen 1: which area?
+  const mode = p.mode, shops = partiesFor(mode), names = S.areas.map(a => a.name);
+  if (shops.some(c => !((c.addr && c.addr.area) || '').trim())) names.push('No area');
+  const rows = names.map(nm => { const cs = shops.filter(c => inAreaName(c, nm)), open = cs.filter(c => openOrdersOf(c.id).length).length;
+    return Row({ title: nm, sub: plural(cs.length, 'customer') + (open ? ' · ' + open + ' ordered' : ''), right: cs.length, rightSub: cs.length === 1 ? 'shop' : 'shops', cls: open ? 'new' : '', onClick: () => nav.go('cart.cust', { mode, area: nm }) }); });
+  const body = h('div', null, h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'WHICH AREA?')),
+    rows.length ? Pane(rows) : Pane(Empty('No areas or customers yet. Add the first customer below.')),
+    open1(shops) ? h('div', { class: 'mute mt12', style: { fontSize: '14px' } }, 'Green areas already have an order waiting.') : null);
+  return { title: C.title, step: { label: C.label, n: 1, of: C.steps }, body, foot: [Btn('ADD NEW CUSTOMER', { kind: 'primary', onClick: () => { S.drafts.cust = { name: '', shop: '', phone: '', addr: {}, tok: nid('tok'), type: 'SHOP', lockType: false, ret: null, then: mode }; nav.go('cust.name'); } })],
+    help: ['Orders are taken one area at a time.', 'Pick the area, then the customer. Nothing is saved until the last confirm.'] };
+}
+const open1 = shops => shops.some(c => openOrdersOf(c.id).length);
 route('cart.cust', (p, E) => {
   const mode = p.mode, C = CARTS[mode], c = cartOf(mode);
+  if (mode === 'order' && !p.area) return cartAreas(p, E, C);
+  const area = mode === 'order' ? p.area : null;
   const body = h('div', null,
     h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, C.who)),
-    pickList(E, { placeholder: 'Search customer', empty: 'No customer found. Add a new one below.', items: () => partiesFor(mode), text: x => [x.shop, x.name, x.phone, x.addr && x.addr.area, x.position].join(' '),
-      render: x => isStaffId(x.id) ? personRow(x, () => chooseCartParty(x, mode)) : custRow(x, () => chooseCartParty(x, mode)) }));
+    pickList(E, { placeholder: 'Search customer', empty: 'No customer found. Add a new one below.', items: () => partiesFor(mode).filter(x => !area || inAreaName(x, area)), text: x => [x.shop, x.name, x.phone, x.addr && x.addr.area, x.position].join(' '),
+      render: x => { if (isStaffId(x.id)) return personRow(x, () => chooseCartParty(x, mode)); const oo = mode === 'order' ? openOrdersOf(x.id) : [];
+        return custRow(x, () => chooseCartParty(x, mode), oo.length ? { cls: 'new', chip: 'ORDERED', sub: [x.shop ? x.name : null, oo.length === 1 ? oo[0].no + ' · ' + rs(orderTotals(oo[0]).total) : plural(oo.length, 'order') + ' waiting'].filter(Boolean).join(' · ') } : null); } }));
   const foot = [];
   if (mode === 'godown') foot.push(Btn('OCCASIONAL BUYER (NAME ONLY)', { kind: 'dark', onClick: () => nav.go('ss.buyer', { forCart: mode }) }));
-  foot.unshift(Btn(mode === 'ia' ? 'ADD NEW AGENCY' : 'ADD NEW CUSTOMER', { kind: 'primary', onClick: () => { S.drafts.cust = S.drafts.cust || { name: '', shop: '', phone: '', addr: {}, tok: nid('tok') }; S.drafts.cust.then = mode; S.drafts.cust.ret = null; S.drafts.cust.lockType = mode === 'ia'; S.drafts.cust.type = mode === 'ia' ? 'AGENCY' : (S.drafts.cust.type === 'AGENCY' ? 'SHOP' : S.drafts.cust.type || 'SHOP'); nav.go('cust.name'); } }));
-  return { title: C.title, step: { label: C.label, n: 1, of: C.steps }, body, foot, help: ['You are choosing who this is for.', 'Nothing is saved until the last confirm. You can go back at any time.'] };
+  foot.unshift(Btn(mode === 'ia' ? 'ADD NEW AGENCY' : area ? 'ADD CUSTOMER TO ' + area.toUpperCase() : 'ADD NEW CUSTOMER', { kind: 'primary', onClick: () => {
+    if (area) S.drafts.cust = { name: '', shop: '', phone: '', addr: area === 'No area' ? {} : { area }, tok: nid('tok'), type: 'SHOP', lockType: false, ret: null, then: mode };
+    else { S.drafts.cust = S.drafts.cust || { name: '', shop: '', phone: '', addr: {}, tok: nid('tok') }; S.drafts.cust.type = mode === 'ia' ? 'AGENCY' : (S.drafts.cust.type === 'AGENCY' ? 'SHOP' : S.drafts.cust.type || 'SHOP'); }
+    S.drafts.cust.then = mode; S.drafts.cust.ret = null; S.drafts.cust.lockType = mode === 'ia'; if (mode === 'ia') S.drafts.cust.type = 'AGENCY'; nav.go('cust.name'); } }));
+  return { title: area || C.title, sub: area ? C.title : null, step: { label: C.label, n: 1, of: C.steps }, body, foot, help: ['You are choosing who this is for.', 'Nothing is saved until the last confirm. You can go back at any time.'] };
 });
 
 route('cart.prod', (p, E) => {
@@ -2106,9 +2166,16 @@ route('cart.review', (p, E) => {
 function cartConfirm(mode) {
   const c = cartOf(mode);
   if (mode === 'order') {
-    if (c.editId) { updateOrder(c.editId, c.lines); const id = c.editId; delete S.drafts.order; nav.popTo('order.detail'); nav.refresh(); toast('Order updated'); return; }
+    if (c.editId) {
+      updateOrder(c.editId, c.lines); delete S.drafts.order;
+      const ei = UI.stack.map(e => e.name === 'order.detail' || (e.name === 'cart.cust' && e.params && e.params.area) ? 1 : 0).lastIndexOf(1);   // back to where the edit started: the order, or the area's customer list
+      if (ei >= 0) { UI.stack.length = ei + 1; show('back'); } else nav.reset([['orders']], 'back');
+      toast('Order updated'); return;
+    }
     const o = createOrder(c.partyId, c.lines, c.tok);
-    delete S.drafts.order; S.highlight = o.id; nav.reset([['orders']], 'fwd'); toast('Order confirmed — ' + orderTitle(o) + ' ' + rs(orderTotals(o).total));
+    delete S.drafts.order; const ai = UI.stack.map(e => e.name === 'cart.cust' && e.params && e.params.area ? 1 : 0).lastIndexOf(1);
+    if (ai >= 0) { UI.stack.length = ai + 1; show('back'); } else { S.highlight = o.id; nav.reset([['orders']], 'fwd'); }
+    toast('Order confirmed — ' + orderTitle(o) + ' ' + rs(orderTotals(o).total));
   } else nav.go(mode === 'godown' ? 'gs.how' : 'ia.confirm', {});
 }
 function startEdit(o) {
@@ -2186,7 +2253,7 @@ route('cust.addr', (p, E) => {
 /* ---------------------------------------------------------------------
    7b. SCREENS — Pickup preparation · Loading · Dispatch · On the road (PDF pages 12–17)
    --------------------------------------------------------------------- */
-const pkSteps = nOrders => ['orders', 'summary', 'vehicle', 'driver'].concat(nOrders > 1 ? ['stops'] : []).concat(['load', 'confirm']);
+const pkSteps = nOrders => ['orders', 'summary', 'totals', 'vehicle', 'driver', 'helper'].concat(nOrders > 1 ? ['stops'] : []).concat(['load', 'camera', 'confirm']);
 const PK_STEPS = t => pkSteps(t ? tripOrders(t).length : 1);
 const pkStep = (t, name) => { const s = PK_STEPS(t); return { label: 'LOADING PICKUP', n: s.indexOf(name) + 1, of: s.length }; };
 const tripSub = t => t.no + ' · ' + tripOrders(t).map(o => partyName(o.partyId)).join(', ');
@@ -2207,7 +2274,6 @@ route('pk.orders', (p, E) => {
   const n = d.orderIds.length;
   const body = h('div', null,
     h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Which orders do you load now?'), h('div', { class: 'hint' }, d.area ? 'Waiting orders in ' + d.area + '. Tick the ones this pickup will carry.' : 'One pickup can carry goods for several shops. Each shop still gets its own challan.')),
-    d.area && all.length > waiting.length ? h('div', { style: { marginBottom: '12px' } }, Btn('SHOW ORDERS OF ALL AREAS', { kind: 'link', onClick: () => { d.area = null; nav.refresh(); } })) : null,
     waiting.length ? Pane(waiting.map(o => { const on = d.orderIds.includes(o.id), blocked = !ok(o);
       return h('button', { class: 'row' + (blocked ? ' off' : ''), type: 'button', disabled: blocked, 'aria-pressed': String(on), onClick: act(() => { d.orderIds = on ? d.orderIds.filter(i => i !== o.id) : d.orderIds.concat([o.id]); nav.refresh(); }) },
         h('span', { class: 'check' + (on ? ' on' : '') }, on ? ic('check') : null),
@@ -2217,17 +2283,58 @@ route('pk.orders', (p, E) => {
     foot: [Btn(n ? 'SEE WHAT TO PICK — ' + n + (n === 1 ? ' ORDER' : ' ORDERS') : 'SELECT AN ORDER', { kind: 'primary', disabled: !n, onClick: () => nav.go('pk.summary') }),
       pickable.length > 1 ? Btn(pickable.every(o => d.orderIds.includes(o.id)) ? 'CLEAR SELECTION' : 'SELECT ALL SHOWN', { kind: 'link', onClick: () => { const ids = pickable.map(o => o.id); d.orderIds = ids.every(i => d.orderIds.includes(i)) ? d.orderIds.filter(i => !ids.includes(i)) : Array.from(new Set(d.orderIds.concat(ids))); nav.refresh(); } }) : null] };
 });
-/* ---- 1b. pick list: per order what to take out of the godown, then everything together ---- */
+/* ---- 1b. pick list: one swipeable card per order ---- */
+const pickOrders = () => { const d = S.drafts.pk; return d ? d.orderIds.map(orderOf).filter(o => o && o.status === 'WAITING') : []; };
+const pickTotals = os => { const m = {}; os.forEach(o => o.lines.forEach(l => { m[l.pid] = (m[l.pid] || 0) + l.base; })); return m; };
+const shortOf = total => Object.keys(total).filter(pid => avail(pid) < total[pid]);
+const noPick = () => ({ title: 'Pick list', body: Empty('No orders selected.'), foot: [Btn('SELECT ORDERS', { kind: 'primary', onClick: () => { if (UI.stack.some(e => e.name === 'pk.orders')) nav.popTo('pk.orders'); else nav.back(); } })] });
 route('pk.summary', (p, E) => {
-  const d = S.drafts.pk; if (!d || !d.orderIds.length) return { title: 'Pick list', body: Empty('No orders selected.'), foot: [Btn('SELECT ORDERS', { kind: 'primary', onClick: () => nav.back() })] };
-  const os = d.orderIds.map(orderOf).filter(o => o && o.status === 'WAITING'), total = {};
-  os.forEach(o => o.lines.forEach(l => { total[l.pid] = (total[l.pid] || 0) + l.base; }));
-  const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'What to pick from the godown'), h('div', { class: 'hint' }, 'Per order, so the staff can take the goods out one order at a time. The full total is at the bottom.')),
-    os.map(o => h('div', { class: 'card' }, h('div', { style: { display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'baseline' } }, h('b', { style: { fontSize: '17px' } }, orderTitle(o)), h('span', { class: 'mute', style: { fontSize: '13px' } }, [areaOf(o.partyId), o.no].filter(Boolean).join(' · '))),
-      h('div', { class: 'mt8' }, o.lines.map(l => KV(prodLabel(prod(l.pid)), qtyText(prod(l.pid), l.base)))), KV('Order value', rs(orderTotals(o).total), 'tot'))),
-    Sec('All selected orders together', h('span', null, plural(os.length, 'order'))), Pane(Object.keys(total).map(pid => Row({ title: prodLabel(prod(pid)), sub: avail(pid) < total[pid] ? 'Godown has only ' + qtyText(prod(pid), avail(pid)) : baseText(prod(pid), total[pid]), right: qtyText(prod(pid), total[pid]), chip: avail(pid) < total[pid] ? 'NOT ENOUGH' : null, tone: 'bad' }))));
+  const d = S.drafts.pk, os = pickOrders(); if (!d || !os.length) return noPick();
+  const cards = os.map((o, i) => h('div', { class: 'card pcard' }, h('div', { class: 'eyebrow' }, 'ORDER ' + (i + 1) + ' OF ' + os.length),
+    h('div', { class: 'pc-t' }, orderTitle(o)), h('div', { class: 'mute', style: { fontSize: '13px' } }, [areaOf(o.partyId), o.no].filter(Boolean).join(' · ')),
+    h('div', { class: 'mt8' }, o.lines.map(l => KV(prodLabel(prod(l.pid)), qtyText(prod(l.pid), l.base)))), KV('Order value', rs(orderTotals(o).total), 'tot')));
+  const car = h('div', { class: 'pcar', role: 'group', 'aria-label': 'Orders to pick — swipe sideways' }, cards);
+  const cnt = h('b', null, '1 of ' + os.length), dots = os.map((o, i) => h('i', { class: i ? '' : 'on' }));
+  const go = i => { const c = cards[Math.max(0, Math.min(cards.length - 1, i))]; car.scrollTo({ left: c.offsetLeft - car.offsetLeft - (parseFloat(getComputedStyle(car).paddingLeft) || 0), behavior: 'smooth' }); };
+  let cur = 0;
+  car.addEventListener('scroll', () => { const step = cards.length > 1 ? cards[1].offsetLeft - cards[0].offsetLeft : 1, i = Math.max(0, Math.min(cards.length - 1, Math.round(car.scrollLeft / step))); if (i !== cur) { cur = i; cnt.textContent = (i + 1) + ' of ' + os.length; dots.forEach((x, k) => x.className = k === i ? 'on' : ''); } }, { passive: true });
+  const nav2 = os.length > 1 ? h('div', { class: 'pnav' }, h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Previous order', onClick: () => go(cur - 1) }, ic('back')), h('div', { class: 'pmid' }, cnt, h('div', { class: 'pdots' }, dots)), h('button', { class: 'btn ghost sm', type: 'button', 'aria-label': 'Next order', onClick: () => go(cur + 1) }, ic('next'))) : null;
+  const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'What to pick'), h('div', { class: 'hint' }, os.length > 1 ? 'One card per customer — swipe sideways to see each order. The total of everything is on the next screen.' : 'The goods for this order. The total is on the next screen.')), car, nav2);
   return { title: 'Pick list', sub: plural(os.length, 'order') + (d.area ? ' · ' + d.area : ''), step: { label: 'LOADING PICKUP', n: 2, of: pkSteps(os.length).length }, body,
-    foot: [Btn('CONTINUE — CHOOSE THE VEHICLE', { kind: 'primary', onClick: () => { const t = prepareTrip(d.orderIds); t.fromArea = d.area || null; delete S.drafts.pk; nav.go('pk.vehicle', { tid: t.id }); } })] };
+    foot: [Btn(os.length > 1 ? 'SEE ALL TOGETHER' : 'SEE THE TOTAL', { kind: 'primary', onClick: () => nav.go('pk.totals') })] };
+});
+route('pk.totals', (p, E) => {
+  const d = S.drafts.pk, os = pickOrders(); if (!d || !os.length) return noPick();
+  const total = pickTotals(os), shorts = shortOf(total);
+  const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'All together'), h('div', { class: 'hint' }, 'Everything these ' + plural(os.length, 'order') + ' need from the godown.')),
+    Pane(Object.keys(total).map(pid => Row({ title: prodLabel(prod(pid)), sub: avail(pid) < total[pid] ? 'Godown has only ' + qtyText(prod(pid), avail(pid)) : baseText(prod(pid), total[pid]), right: qtyText(prod(pid), total[pid]), chip: avail(pid) < total[pid] ? 'NOT ENOUGH' : null, tone: 'bad' }))),
+    shorts.length ? h('div', { class: 'aside bad' }, h('b', null, plural(shorts.length, 'product') + ' short in the godown. '), 'Fix the stock count or the orders first. You come straight back here.') : null);
+  return { title: 'Total to pick', sub: plural(os.length, 'order') + (d.area ? ' · ' + d.area : ''), step: { label: 'LOADING PICKUP', n: 3, of: pkSteps(os.length).length }, body,
+    foot: [shorts.length ? Btn('FIX STOCK FIRST', { kind: 'primary', onClick: () => nav.go('pk.shortage') }) : Btn('CONTINUE — CHOOSE THE VEHICLE', { kind: 'primary', onClick: () => { const t = prepareTrip(d.orderIds); t.fromArea = d.area || null; delete S.drafts.pk; nav.go('pk.vehicle', { tid: t.id }); } })] };
+});
+function reduceLineSheet(o, pid) {                                       // lower one product of one waiting order (stock is short)
+  const pr = prod(pid), line = o.lines.find(l => l.pid === pid), units = {}; breakdown(pr, line.base).forEach(x => units[x[0]] = x[1]);
+  const info = h('div', { class: 'center mt12' }), sv = Btn('SAVE', { kind: 'primary', onClick: () => {
+    const l = mkLine(pid, units); if (l.base > line.base) fail('You can only lower the quantity here.');
+    const lines = o.lines.map(x => x.pid === pid ? l : x).filter(x => x.base > 0); if (!lines.length) fail('That would empty the order. Use LEAVE OUT, or cancel the order.');
+    updateOrder(o.id, lines); closeSheet(); nav.refresh(); toast(l.base ? orderTitle(o) + ' now has ' + qtyText(pr, l.base) + ' of ' + pr.name : pr.name + ' removed from ' + orderTitle(o)); } });
+  const upd = b => { info.textContent = 'Order will have ' + (b ? qtyText(pr, b) : 'none') + ' · was ' + qtyText(pr, line.base) + ' · godown has ' + qtyText(pr, avail(pid)); };
+  openSheet({ title: pr.name + ' for ' + orderTitle(o), sub: 'Lower the quantity to what you can really give.', body: h('div', null, unitsEditor(pr, units, { max: line.base, onChange: upd }), info), actions: [sv, sheetClose('CANCEL')] }); upd(toBase(pr, units));
+}
+route('pk.shortage', (p, E) => {
+  const d = S.drafts.pk, os = pickOrders(); if (!d || !os.length) return noPick();
+  const total = pickTotals(os), shorts = shortOf(total);
+  const card = pid => { const pr = prod(pid), mine = os.filter(o => o.lines.some(l => l.pid === pid));
+    return h('div', { class: 'card' }, h('b', { style: { fontSize: '17px' } }, prodLabel(pr)), h('div', { class: 'mt8' }, KV('Orders need', qtyText(pr, total[pid])), KV('Godown has', qtyText(pr, avail(pid))), KV('Short by', h('b', { class: 'red' }, qtyText(pr, total[pid] - avail(pid))))),
+      h('div', { class: 'lbl mt12' }, 'Is the shelf count wrong?'), Btn('COUNT ' + pr.name.toUpperCase() + ' AGAIN', { kind: 'dark', onClick: () => nav.go('st.count', { pid, back: 'pk.shortage' }) }),
+      h('div', { class: 'lbl mt16' }, 'Or give less / skip an order'),
+      h('div', { class: 'pane' }, mine.map(o => { const l = o.lines.find(x => x.pid === pid);
+        return h('div', { class: 'row' }, h('div', { class: 'l' }, h('div', { class: 't' }, orderTitle(o)), h('div', { class: 's' }, 'wants ' + qtyText(pr, l.base))),
+          h('button', { class: 'btn ghost sm', type: 'button', onClick: act(() => reduceLineSheet(o, pid)) }, 'LOWER'),
+          h('button', { class: 'btn ghost sm', type: 'button', onClick: act(() => confirmSheet({ title: 'Leave ' + orderTitle(o) + ' out?', sub: 'This order stays waiting and is not part of this pickup.', yes: 'LEAVE IT OUT', no: 'KEEP IT', onYes: () => { d.orderIds = d.orderIds.filter(i => i !== o.id); nav.refresh(); toast(orderTitle(o) + ' left out of this pickup'); } })) }, 'LEAVE OUT')); }))); };
+  const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Not enough stock'), h('div', { class: 'hint' }, 'Choose what to do for each product. When it is fixed you go straight back to the pick list.')),
+    shorts.length ? shorts.map(card) : h('div', { class: 'aside' }, h('b', null, 'All products are in stock now ✓')));
+  return { title: 'Fix the stock', sub: plural(os.length, 'order') + ' in this pickup', body, foot: [Btn(shorts.length ? 'STILL SHORT — FIX ABOVE' : 'DONE — BACK TO THE PICKUP', { kind: 'primary', disabled: !!shorts.length, onClick: () => nav.popTo('pk.totals') })] };
 });
 
 /* ---- 2. vehicle ---- */
@@ -2238,19 +2345,39 @@ route('pk.vehicle', (p, E) => {
     render: v => { const busy = busyVehicle(v.id, t.id), on = t.vehicleId === v.id, al = vehAlerts(v).filter(a => a.kind === 'expired'); return Row({ title: v.reg, sub: v.label + (al.length ? ' · ' + al[0].text : ''), chip: busy ? 'ON ANOTHER JOB' : on ? 'SELECTED' : null, tone: busy ? 'bad' : 'ok', cls: busy ? 'off' : '', onClick: busy ? null : () => { setTripPart(t.id, 'vehicleId', v.id); nav.go('pk.driver', { tid: t.id }); } }); } })));
   return { title: 'Pick Vehicle', step: pkStep(t, 'vehicle'), body, onBack: () => backToOrders(t), help: 'Choose the vehicle that will carry these orders. A vehicle already on another job is greyed out. Back returns to the pick list.', foot: [t.vehicleId ? Btn('NEXT', { kind: 'primary', onClick: () => nav.go('pk.driver', { tid: t.id }) }) : null, cancelLink(t)] };
 });
-/* ---- 3. driver AND helper on one screen: driver is required, a helper is optional ---- */
-function crewScreen(p, E) {
-  const t = tripOf(p.tid);
-  const drivers = S.staff.filter(s => s.active && s.driver), helpers = S.staff.filter(s => s.active && s.position === 'HELPER' && s.id !== t.driverId);
-  const next = () => { t.helperDone = true; nav.go(tripOrders(t).length > 1 ? 'pk.stops' : 'pk.load', { tid: t.id }); };
-  const row = (s, kind) => { const busy = busyStaff(s.id, t.id), on = (kind === 'D' ? t.driverId : t.helperId) === s.id;
-    return Row({ title: s.name, sub: posLabel[s.position], chip: busy ? 'ON ANOTHER PICKUP' : on ? 'SELECTED' : null, tone: busy ? 'bad' : 'ok', cls: busy ? 'off' : '', onClick: busy ? null : () => { if (kind === 'D') setTripPart(t.id, 'driverId', s.id); else setTripPart(t.id, 'helperId', on ? null : s.id); nav.refresh(); } }); };
-  const body = h('div', { class: 'gap' }, tripBar(t),
-    h('div', null, Sec('Driver', h('span', null, 'required')), drivers.length ? Pane(drivers.map(s => row(s, 'D'))) : h('div', { class: 'gap' }, Pane(Empty('No one can drive yet.')), h('div', { class: 'aside' }, 'In More → Settings → Staff open a person and turn on “Can be assigned as driver”.'))),
-    h('div', null, Sec('Helper', h('span', null, 'optional')), helpers.length ? Pane(helpers.map(s => row(s, 'H'))) : Pane(Empty('No helper available.')), h('div', { class: 'hint', style: { marginTop: '8px' } }, 'A pickup can go without a helper. Tap the selected helper again to remove.')));
-  return { title: 'Driver & helper', step: pkStep(t, 'driver'), body, help: 'Choose the driver (required) and, if you want, a helper — both on this one screen. Driver is a duty, not a job title.', foot: [Btn(t.driverId ? (t.helperId ? 'NEXT' : 'NEXT — NO HELPER') : 'CHOOSE A DRIVER FIRST', { kind: 'primary', disabled: !t.driverId, onClick: next })] };
+/* ---- 3. driver (required), then helper (can be skipped): a centred title and search pill that glide to the top when you tap them ---- */
+function crewPicker(p, E, kind) {
+  const t = tripOf(p.tid), D = kind === 'D', key = D ? 'driverId' : 'helperId', word = D ? 'driver' : 'helper';
+  const pool = () => S.staff.filter(s => s.active && (D ? s.driver : s.position === 'HELPER') && s.id !== (D ? t.helperId : t.driverId));
+  const recent = () => { const seen = []; S.trips.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(x => { if (x[key] && !seen.includes(x[key])) seen.push(x[key]); }); const ids = new Set(pool().map(s => s.id)); return seen.filter(id => ids.has(id)).map(staffOf).slice(0, 5); };
+  const goNext = () => { if (D) nav.go('pk.helper', { tid: t.id }); else { t.helperDone = true; nav.go(tripOrders(t).length > 1 ? 'pk.stops' : 'pk.load', { tid: t.id }); } };
+  const pick = s => { setTripPart(t.id, key, s.id); goNext(); };
+  const row = s => { const busy = busyStaff(s.id, t.id), on = t[key] === s.id;
+    return Row({ title: s.name, sub: posLabel[s.position] + (D ? ' · can drive' : ''), chip: busy ? 'ON ANOTHER PICKUP' : on ? 'SELECTED' : null, tone: busy ? 'bad' : 'ok', cls: busy ? 'off' : '', onClick: busy ? null : () => pick(s) }); };
+  const results = h('div', { class: 'sp-results', 'aria-live': 'polite' });
+  const input = h('input', { class: 'input sp-in', type: 'text', id: 'sp-q', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search', placeholder: 'Search and pick', 'aria-label': 'Search for the ' + word });
+  const stage = h('div', { class: 'sp', 'data-sp': '1' });
+  const draw = () => {
+    const q = input.value.trim().toLowerCase(), all = pool();
+    if (q) { const m = all.filter(s => (s.name + ' ' + posLabel[s.position]).toLowerCase().includes(q)); setKids(results, m.length ? Pane(m.map(row)) : Pane(Empty(all.length ? 'No one found with that name.' : D ? 'No one can drive yet. In More → Settings → Staff turn on “Can be assigned as driver”.' : 'No helper available.'))); return; }
+    const rec = recent(), ids = new Set(rec.map(s => s.id)), rest = all.filter(s => !ids.has(s.id)), shown = rest.slice(0, rec.length ? 3 : 6);
+    setKids(results, rec.length ? Sec('Recent ' + word + 's') : null, rec.length ? Pane(rec.map(row)) : null, shown.length ? Sec(rec.length ? 'Others' : 'Staff') : null, shown.length ? Pane(shown.map(row)) : null,
+      rest.length > shown.length ? h('div', { class: 'hint', style: { marginTop: '10px' } }, 'Type a name to find ' + (rest.length - shown.length) + ' more.') : null, !all.length ? Pane(Empty(D ? 'No one can drive yet. In More → Settings → Staff turn on “Can be assigned as driver”.' : 'No helper available.')) : null);
+  };
+  const on = () => { stage.classList.add('active'); draw(); }, off = () => { stage.classList.remove('active'); input.value = ''; input.blur(); };
+  input.addEventListener('focus', on); input.addEventListener('input', draw);
+  const cur = staffOf(t[key]);
+  setKids(stage, h('div', { class: 'sp-gap top' }),
+    h('div', { class: 'sp-head' }, h('h2', { class: 'sp-title' }, D ? 'Pick Driver' : 'Pick Helper'), h('div', { class: 'sp-hint' }, D ? 'Who is driving this pickup?' : 'Who is helping? You can skip this.')),
+    h('div', { class: 'sp-bar' }, input, h('button', { class: 'btn ghost sm sp-cancel', type: 'button', onClick: off }, 'CANCEL')),
+    cur ? h('div', { class: 'sp-sel' }, h('span', { class: 'mute' }, 'Selected'), h('b', null, cur.name)) : null,
+    results, h('div', { class: 'sp-gap bottom' }));
+  const foot = [];
+  if (D) foot.push(Btn(t.driverId ? 'NEXT — HELPER' : 'PICK A DRIVER FIRST', { kind: 'primary', disabled: !t.driverId, onClick: goNext }));
+  else { foot.push(Btn(t.helperId ? 'NEXT' : 'NO HELPER — SKIP', { kind: 'primary', onClick: goNext })); if (t.helperId) foot.push(Btn('REMOVE THE HELPER', { kind: 'link', onClick: () => { setTripPart(t.id, 'helperId', null); nav.refresh(); } })); }
+  return { title: D ? 'Driver' : 'Helper', step: pkStep(t, D ? 'driver' : 'helper'), body: stage, foot, help: D ? 'A driver is needed before loading can finish. Tap the search to see recent drivers.' : 'A helper is optional. Tap the search to see recent helpers, or skip.' };
 }
-route('pk.driver', crewScreen); route('pk.helper', crewScreen);
+route('pk.driver', (p, E) => crewPicker(p, E, 'D')); route('pk.helper', (p, E) => crewPicker(p, E, 'H'));
 /* ---- 4b. stop order (manual) ---- */
 route('pk.stops', (p, E) => {
   const t = tripOf(p.tid), os = tripOrders(t);
@@ -2261,45 +2388,42 @@ route('pk.stops', (p, E) => {
   return { title: 'Delivery order', step: pkStep(t, 'stops'), body, foot: [Btn('CONTINUE', { kind: 'primary', onClick: () => nav.go('pk.load', { tid: t.id }) })] };
 });
 
-/* ---- 5. loading list + which cameras watched (cameras are asked here, on the loading screen) ---- */
+/* ---- 5. loading list: tick each product (counts are fixed beforehand — to change an order, change it in that customer's order) ---- */
 const tripCams = t => Array.isArray(t.cameraIds) ? t.cameraIds : (t.cameraId ? [t.cameraId] : []);
 const camText = t => tripCams(t).join(', ') || '—';
 function setTripCameras(tid, ids) { const t = tripOf(tid); if (!t || t.status !== 'LOADING') fail('This pickup can no longer be changed.'); t.cameraIds = ids.slice(); t.cameraId = ids[0] || null; }
 route('pk.load', (p, E) => {
   const t = tripOf(p.tid), needs = tripNeeds(t), pids = Object.keys(needs);
-  const allOk = pids.every(pid => t.counted[pid] != null), diffs = loadDiffs(t), cams = S.cameras.filter(c => c.active), chosen = tripCams(t);
-  const toggle = pid => { if (t.counted[pid] != null) delete t.counted[pid]; else { if (avail(pid) < needs[pid]) fail('Godown has only ' + qtyText(prod(pid), avail(pid)) + ' of ' + prod(pid).name + ' — tap CHANGE and enter what you can load.'); t.counted[pid] = needs[pid]; } nav.refresh(); };
-  const change = pid => {
-    const pr = prod(pid), units = {}; breakdown(pr, t.counted[pid] != null ? t.counted[pid] : needs[pid]).forEach(x => units[x[0]] = x[1]);
-    const info = h('div', { class: 'center mt12' }); const upd = b => { info.textContent = 'Counted ' + qtyText(pr, b) + ' · orders need ' + qtyText(pr, needs[pid]) + ' · godown has ' + qtyText(pr, avail(pid)); sv.disabled = b > avail(pid); };
-    const sv = Btn('SAVE COUNT', { kind: 'primary', onClick: () => { const b = toBase(pr, units); if (b > avail(pid)) fail('Godown has only ' + qtyText(pr, avail(pid))); t.counted[pid] = b; closeSheet(); nav.refresh(); } });
-    openSheet({ title: 'Count ' + pr.name, sub: 'Enter what is really loaded on the pickup.', body: h('div', null, unitsEditor(pr, units, { onChange: upd }), info), actions: [sv, sheetClose('CANCEL')] }); upd(toBase(pr, units));
-  };
-  const rows = pids.map(pid => { const pr = prod(pid), c = t.counted[pid], ok = c != null, diff = ok && c !== needs[pid];
-    return h('div', { class: 'row' }, h('button', { class: 'check' + (ok ? ' on' : ''), type: 'button', 'aria-label': (ok ? 'Unmark ' : 'Mark loaded ') + pr.name, onClick: act(() => toggle(pid)) }, ok ? ic('check') : null),
-      h('div', { class: 'l' }, h('div', { class: 't' }, prodLabel(pr)), h('div', { class: 's' }, 'Orders need ' + qtyText(pr, needs[pid]) + (diff ? ' · counted ' + qtyText(pr, c) : ''), diff ? [' ', Chip(c < needs[pid] ? 'SHORT' : 'EXTRA', 'bad')] : null)),
-      h('button', { class: 'btn ghost sm', type: 'button', onClick: act(() => change(pid)) }, 'CHANGE')); });
-  const camRows = cams.map(c => { const on = chosen.includes(c.id);
-    return h('div', { class: 'row' }, h('button', { class: 'check' + (on ? ' on' : ''), type: 'button', 'aria-label': (on ? 'Untick ' : 'Tick ') + 'camera ' + c.id, onClick: act(() => { setTripCameras(t.id, on ? chosen.filter(x => x !== c.id) : chosen.concat([c.id])); nav.refresh(); }) }, on ? ic('check') : null),
-      h('div', { class: 'l' }, h('div', { class: 't' }, 'Camera ' + c.id, c.id === S.settings.defaultCamera ? [' ', Chip('USUAL', 'ok')] : null), h('div', { class: 's' }, c.desc || 'No note'))); });
-  const camOk = !cams.length || chosen.length > 0;
-  const body = h('div', null, tripBar(t), h('div', { class: 'oq mt12', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Loading list'), h('div', { class: 'hint' }, 'Tick each product when the count on the pickup is right.')), Pane(rows),
-    h('div', { class: 'mt12' }, Btn(allOk ? 'UNTICK ALL' : 'TICK ALL — COUNTS MATCH', { kind: 'link', onClick: () => { if (allOk) pids.forEach(pid => delete t.counted[pid]); else pids.forEach(pid => { if (t.counted[pid] == null && avail(pid) >= needs[pid]) t.counted[pid] = needs[pid]; }); nav.refresh(); } })),
-    h('div', { class: 'mt24' }, Sec('Which cameras watched this loading?', h('span', null, chosen.length ? chosen.length + ' ticked' : '')),
-      cams.length ? h('div', { class: 'gap' }, h('div', { class: 'hint' }, 'Tick every camera that could see the vehicle and the loading work, so the footage can be found later.'), Pane(camRows))
-        : h('div', { class: 'gap' }, h('div', { class: 'aside' }, 'No camera numbers are set up, so none is needed now.'), Btn('ADD CAMERA NUMBERS', { kind: 'link', onClick: () => nav.go('set.cameras') }))));
-  return { title: 'Loading list', step: pkStep(t, 'load'), body, help: ['This is the combined list of everything the selected orders need.', 'If what you counted is different from the order, a small step lets you fix it. Nothing leaves the godown yet.', 'Cameras are only a reference — tick the ones that were watching.'],
-    foot: [Btn(!allOk ? 'TICK EVERY PRODUCT FIRST' : !camOk ? 'TICK THE CAMERA(S) THAT WATCHED' : (diffs.length ? 'CONTINUE — SOMETHING DIFFERS' : 'CONTINUE'), { kind: 'primary', disabled: !allOk || !camOk, onClick: () => nav.go(diffs.length ? 'pk.mismatch' : 'pk.confirm', { tid: t.id }) }), cancelLink(t)] };
+  const done = pids.filter(pid => t.counted[pid] != null).length, allOk = done === pids.length, diffs = loadDiffs(t);
+  const toggle = pid => { if (t.counted[pid] != null) delete t.counted[pid]; else { if (avail(pid) < needs[pid]) fail('Godown has only ' + qtyText(prod(pid), avail(pid)) + ' of ' + prod(pid).name + ' now. Cancel this pickup, fix the stock, and start again.'); t.counted[pid] = needs[pid]; } nav.refresh(); };
+  const rows = pids.map(pid => { const pr = prod(pid), ok = t.counted[pid] != null;
+    return h('button', { class: 'row', type: 'button', 'aria-pressed': String(ok), onClick: act(() => toggle(pid)) }, h('span', { class: 'check' + (ok ? ' on' : '') }, ok ? ic('check') : null),
+      h('div', { class: 'l' }, h('div', { class: 't' }, prodLabel(pr)), h('div', { class: 's' }, ok ? 'Loaded ✓' : 'Put on the vehicle')), h('div', { class: 'r', style: { fontSize: '15px', fontWeight: 700, maxWidth: '46%', textAlign: 'right' } }, qtyText(pr, needs[pid]))); });
+  const body = h('div', null, tripBar(t), h('div', { class: 'oq mt12', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Loading list'), h('div', { class: 'hint' }, 'Tick each product as it goes on the vehicle. ' + done + ' of ' + pids.length + ' ticked.')), Pane(rows),
+    h('div', { class: 'mt12' }, Btn(allOk ? 'UNTICK ALL' : 'TICK ALL', { kind: 'link', onClick: () => { if (allOk) pids.forEach(pid => delete t.counted[pid]); else pids.forEach(pid => { if (t.counted[pid] == null && avail(pid) >= needs[pid]) t.counted[pid] = needs[pid]; }); nav.refresh(); } })));
+  return { title: 'Loading list', step: pkStep(t, 'load'), body, help: ['This is the combined list of everything the selected orders need.', 'To change a quantity, change it in that customer’s order, not here. Nothing leaves the godown until you confirm.'],
+    foot: [Btn(allOk ? 'CONTINUE' : 'TICK EVERY PRODUCT FIRST', { kind: 'primary', disabled: !allOk, onClick: () => nav.go(diffs.length ? 'pk.mismatch' : 'pk.camera', { tid: t.id }) }), cancelLink(t)] };
 });
 route('pk.mismatch', (p, E) => {
   const t = tripOf(p.tid), diffs = loadDiffs(t), extra = diffs.some(d => d.counted > d.needed);
-  if (!diffs.length) return { title: 'Counts match', body: Empty('Everything matches now.'), foot: [Btn('CONTINUE', { kind: 'primary', onClick: () => nav.replace('pk.confirm', { tid: t.id }) })] };
+  if (!diffs.length) return { title: 'Counts match', body: Empty('Everything matches now.'), foot: [Btn('CONTINUE', { kind: 'primary', onClick: () => nav.replace('pk.camera', { tid: t.id }) })] };
   const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'What you counted is different')),
     diffs.map(d => { const pr = prod(d.pid); return h('div', { class: 'card' }, h('b', null, prodLabel(pr)), KV('Orders need', qtyText(pr, d.needed)), KV('You counted', qtyText(pr, d.counted)), KV(d.counted < d.needed ? 'Short by' : 'Extra by', h('b', { class: 'red' }, qtyText(pr, Math.abs(d.needed - d.counted))))); }),
     extra ? h('div', { class: 'card' }, 'You cannot load more than the orders need. Recount the extra goods.') : h('div', { class: 'card' }, h('b', null, 'If you load only what you counted: '), 'the shortage is taken from the last shop on the route first. Their challan is updated and the old version is kept in its history.'));
-  return { title: 'Mismatch', step: pkStep(t, 'load'), body, foot: [!extra ? Btn('LOAD ONLY WHAT I COUNTED', { kind: 'primary', onClick: () => { resolveShortLoading(t.id); toast('Orders updated'); nav.replace('pk.confirm', { tid: t.id }); } }) : null, Btn('RECOUNT', { kind: extra ? 'primary' : 'ghost', onClick: () => nav.back() })] };
+  return { title: 'Mismatch', step: pkStep(t, 'load'), body, foot: [!extra ? Btn('LOAD ONLY WHAT I COUNTED', { kind: 'primary', onClick: () => { resolveShortLoading(t.id); toast('Orders updated'); nav.replace('pk.camera', { tid: t.id }); } }) : null, Btn('RECOUNT', { kind: extra ? 'primary' : 'ghost', onClick: () => nav.back() })] };
 });
-route('pk.camera', (p, E) => ({ title: 'Camera', body: Empty('Cameras are chosen on the loading list.'), foot: [Btn('OPEN THE LOADING LIST', { kind: 'primary', onClick: () => nav.replace('pk.load', { tid: p.tid }) })] }));
+route('pk.camera', (p, E) => {
+  const t = tripOf(p.tid); if (!t || t.status !== 'LOADING') return { title: 'Camera', body: Empty('This pickup is no longer being loaded.'), foot: [Btn('BACK', { kind: 'primary', onClick: () => nav.back() })] };
+  const cams = S.cameras.filter(c => c.active), cur = tripCams(t)[0] || null;
+  const rows = cams.map(c => { const on = cur === c.id;
+    return h('button', { class: 'row', type: 'button', 'aria-pressed': String(on), onClick: act(() => { setTripCameras(t.id, [c.id]); nav.refresh(); }) }, h('span', { class: 'check' + (on ? ' on' : '') }, on ? ic('check') : null),
+      h('div', { class: 'l' }, h('div', { class: 't' }, 'Camera ' + c.id, c.id === S.settings.defaultCamera ? [' ', Chip('USUAL', 'ok')] : null), h('div', { class: 's' }, c.desc || 'No note'))); });
+  const body = h('div', null, tripBar(t), h('div', { class: 'oq mt12', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Which camera watched the loading?'), h('div', { class: 'hint' }, 'Choose the main one, so the footage can be found later.')),
+    cams.length ? Pane(rows) : h('div', { class: 'aside' }, 'No camera numbers are set up, so none is needed now.'),
+    h('div', { class: 'mt12' }, Btn('ADD A CAMERA', { kind: 'link', icon: 'plus', onClick: () => cameraSheet(null, k => setTripCameras(t.id, [k.id])) })));
+  return { title: 'Camera', step: pkStep(t, 'camera'), body, help: 'Pick the main camera that could see the vehicle while it was loaded. It is only a reference for finding the footage.',
+    foot: [Btn(cams.length && !cur ? 'CHOOSE A CAMERA' : 'CONTINUE', { kind: 'primary', disabled: !!cams.length && !cur, onClick: () => nav.go('pk.confirm', { tid: t.id }) }), cancelLink(t)] };
+});
 
 /* ---- 7. confirm loading ---- */
 route('pk.confirm', (p, E) => {
@@ -2504,7 +2628,7 @@ function afterPayment(p, pay) {
   if (pay.stage === 'PENDING' && (c.agent || pay.method === 'CHEQUE' || pay.method !== 'CASH')) { /* explained on the done screen */ }
   S.drafts.col = null;
   const fromKhata = UI.stack.some(e => e.name === 'kh.person');
-  if (fromKhata) { nav.popTo('kh.person'); nav.refresh(); toast(rs(pay.amount) + ' ' + PAY_LABEL[pay.method].toLowerCase() + ' recorded' + (c.due > 0 ? ' — ' + rs(c.due) + ' still due' : ' — all paid ✓') + (pay.stage === 'PENDING' && pay.method !== 'CASH' ? ' (waiting for office check)' : '')); }
+  if (fromKhata) { nav.popTo('kh.person'); toast(rs(pay.amount) + ' ' + PAY_LABEL[pay.method].toLowerCase() + ' recorded' + (c.due > 0 ? ' — ' + rs(c.due) + ' still due' : ' — all paid ✓') + (pay.stage === 'PENDING' && pay.method !== 'CASH' ? ' (waiting for office check)' : '')); }
   else if (c.due > 0 && !c.agent) { nav.popTo('col.home'); nav.replace('col.home', p); toast(rs(pay.amount) + ' ' + PAY_LABEL[pay.method].toLowerCase() + ' recorded — ' + rs(c.due) + ' remaining'); }
   else { nav.popTo('col.home'); nav.replace('col.done', Object.assign({}, p, { payId: pay.id })); }
 }
@@ -2631,7 +2755,7 @@ const dirLabel = (pid, b) => b < 0 ? partyName(pid) + ' owes the agency' : b > 0
 const denomLines = d => { if (!d) return []; const o = DENOMS.filter(k => d[k] > 0).map(k => ({ k, n: d[k], amt: d[k] * k * 100 })); return o; };
 const denomText = d => { const l = denomLines(d); return l.map(x => '₹' + x.k + ' × ' + x.n).join(' · ') + (d && d.coins ? (l.length ? ' · ' : '') + 'coins ' + rs(d.coins) : ''); };
 const payDescBase = y => [PAY_LABEL[y.method], y.collectorId && staffOf(y.collectorId) ? 'collected by ' + staffOf(y.collectorId).name : null, y.details.ref ? 'ref ' + y.details.ref : null, y.method === 'CHEQUE' && y.details.no ? 'cheque ' + y.details.no : null].filter(Boolean).join(' · ');
-const payDesc = y => payDescBase(y) + (y.method === 'CASH' && y.details && y.details.denoms && denomText(y.details.denoms) ? ' · notes: ' + denomText(y.details.denoms) : '');
+const payDesc = payDescBase;
 function payStatus(y) {
   if (!y) return null;
   if (y.stage === 'VERIFIED' || y.stage === 'CLEARED') return { text: STAGE_LABEL[y.stage], tone: 'ok', icon: 'check' };
@@ -2695,22 +2819,22 @@ function receiptEl(pid, x, seen) {
       h('div', { class: 'rc-foot' }, h('span', null, fmtD(x.at) + ' · ' + fmtT(x.at)), st ? h('span', { class: 'rc-st ' + st.tone }, st.icon ? ic(st.icon) : null, st.text) : null)));
 }
 /* shared by kh.person (latest entries) and kh.history (everything) */
-function receiptConversation(pid, o) {
+function receiptConversation(pid, o) {            // newest entry at the top; the running balances were worked out oldest-first
   o = o || {};
   const { items, balance } = khItems(pid), K = khUI(), seen = K.seen[pid];
   const shown = o.limit && items.length > o.limit ? items.slice(items.length - o.limit) : items, hidden = items.slice(0, items.length - shown.length);
   const wrap = h('div', { class: 'rc-conv' });
-  if (items.length) wrap.append(h('div', { class: 'rc-legend', 'aria-hidden': 'true' }, h('span', null, 'Records'), h('span', null, 'Settlements')));
-  if (hidden.length) wrap.append(h('button', { class: 'rc-earlier', type: 'button', onClick: act(() => nav.go('kh.history', { pid })) },
-    h('span', null, plural(hidden.length, 'earlier entry', 'earlier entries') + ' · brought forward ', h('b', null, rs(hidden.reduce((s, x) => s + (x.posted ? x.e.amt : 0), 0), { plus: true }))), ic('next')));
+  if (!items.length) wrap.append(Empty('No entries yet. Bills, payments, wages and commission appear here as receipts.'));
+  else wrap.append(h('div', { class: 'rc-end top' }, h('span', null, 'Balance remaining'), h('b', { class: balance < 0 ? 'red' : '' }, rs(balance, { plus: true }))), h('div', { class: 'rc-end-sub' }, dirLabel(pid, balance)),
+    h('div', { class: 'rc-legend', 'aria-hidden': 'true' }, h('span', null, 'Records'), h('span', null, 'Settlements')));
   let day = null;
-  shown.forEach(x => {
+  shown.slice().reverse().forEach(x => {
     if (ymd(x.at) !== day) { day = ymd(x.at); wrap.append(h('h3', { class: 'rc-day' }, fmtDayLong(x.at))); }
     wrap.append(receiptEl(pid, x, seen));
     if (x.posted && x.side === 'right') wrap.append(h('div', { class: 'rc-bal' }, 'Balance after', h('b', { class: x.after < 0 ? 'red' : '' }, rs(x.after, { plus: true }))));
   });
-  if (!items.length) wrap.append(Empty('No entries yet. Bills, payments, wages and commission appear here as receipts.'));
-  else wrap.append(h('div', { class: 'rc-end' }, h('span', null, 'Balance remaining'), h('b', { class: balance < 0 ? 'red' : '' }, rs(balance, { plus: true }))), h('div', { class: 'rc-end-sub' }, dirLabel(pid, balance)));
+  if (hidden.length) wrap.append(h('button', { class: 'rc-earlier', type: 'button', onClick: act(() => nav.go('kh.history', { pid })) },
+    h('span', null, plural(hidden.length, 'older entry', 'older entries') + ' · brought forward ', h('b', null, rs(hidden.reduce((s, x) => s + (x.posted ? x.e.amt : 0), 0), { plus: true }))), ic('next')));
   K.seen[pid] = items.reduce((m, x) => x.posted ? Math.max(m, x.e.seq) : m, seen || 0);
   return wrap;
 }
@@ -2735,6 +2859,11 @@ function khBalance(pid, E) {
     out.length ? h('div', { class: 'kh-pend' }, h('b', null, sum(out) + ' submitted'), ' — waiting for the office to verify. It is not in this balance yet.') : null,
     inb.length ? h('div', { class: 'aside', style: { marginBottom: '16px' } }, h('b', null, sum(inb) + ' paid online'), ' is already in this balance. The office still has to confirm it in the bank.') : null);
 }
+function paymentDetails(pid, x) {                  // the notes the customer handed over — a second step, not part of the card
+  const y = x.pay, d = y.details.denoms, l = denomLines(d), total = l.reduce((s, r) => s + r.amt, 0) + (d.coins || 0);
+  openSheet({ title: 'Payment details', sub: rs(y.amount) + ' cash · ' + fmtD(y.at), actions: [Btn('BACK TO RECEIPT', { kind: 'primary', onClick: () => receiptSheet(pid, x) }), sheetClose('CLOSE')],
+    body: h('div', { class: 'rd-kv' }, l.map(r => KV('₹' + r.k + ' notes', r.n + ' × ₹' + r.k + ' = ' + rs(r.amt))), d.coins ? KV('Coins / small change', rs(d.coins)) : null, KV('Total counted', rs(total), 'tot')) });
+}
 function receiptSheet(pid, x) {
   const e = x.e, y = x.pay, s = x.sale, st = receiptStatus(x);
   const bills = y ? y.alloc.filter(a => a.saleId && saleOf(a.saleId)).map(a => saleOf(a.saleId).no) : [];
@@ -2743,7 +2872,7 @@ function receiptSheet(pid, x) {
     x.ref ? KV('Reference', x.ref) : null, x.posted ? KV('Khata category', KCAT[e.cat]) : null,
     s ? KV('Source', SRC[s.source] || s.source) : null, s && s.orderId && orderOf(s.orderId) ? KV('Order', orderOf(s.orderId).no) : null, s && s.dcId && chalOf(s.dcId) ? KV('Challan', chalOf(s.dcId).no) : null,
     y ? KV('Method', PAY_LABEL[y.method]) : null,
-    y && y.method === 'CASH' && y.details && y.details.denoms ? [denomLines(y.details.denoms).map(x => KV('₹' + x.k + ' notes', x.n + ' × ₹' + x.k + ' = ' + rs(x.amt))), y.details.denoms.coins ? KV('Coins / small change', rs(y.details.denoms.coins)) : null] : null, y && y.details.ref ? KV('Payment reference', y.details.ref) : null,
+    y && y.details.ref ? KV('Payment reference', y.details.ref) : null,
     y && y.method === 'CHEQUE' ? KV('Cheque', [y.details.no, y.details.bank, y.details.date].filter(Boolean).join(' · ')) : null,
     y && y.collectorId && staffOf(y.collectorId) ? KV('Collected by', staffOf(y.collectorId).name) : null,
     y ? KV('Recorded', fmtDT(y.at)) : null, y ? KV('Status', STAGE_LABEL[y.stage]) : null,
@@ -2756,6 +2885,7 @@ function receiptSheet(pid, x) {
     : y && y.stage === 'WITH_COLLECTOR' ? 'The customer paid the driver. The driver holds this cash until the Manager counts it at pickup return.' : null;
   const acts = [];
   if (x.link) acts.push(Btn('VIEW BILL', { kind: 'primary', icon: 'print', onClick: () => { closeSheet(); nav.go('print', { docs: [x.link], start: 0 }); } }));
+  if (y && y.method === 'CASH' && y.details && y.details.denoms && denomLines(y.details.denoms).length + (y.details.denoms.coins ? 1 : 0)) acts.push(Btn('PAYMENT DETAILS', { kind: acts.length ? 'ghost' : 'primary', onClick: () => paymentDetails(pid, x) }));
   if (y && y.stage === 'PENDING') acts.push(Btn('OPEN PAYMENT CHECK', { kind: acts.length ? 'ghost' : 'primary', onClick: () => { closeSheet(); nav.go('cash.verify', { id: y.id }); } }));
   acts.push(sheetClose('CLOSE'));
   openSheet({ title: x.kind + ' · ' + x.what, sub: [x.ref, fmtD(x.at)].filter(Boolean).join(' · '), actions: acts,
@@ -2791,7 +2921,7 @@ route('kh.person', (p, E) => {
   foot.push(h('div', { class: 'linkrow' }, links.map(a => Btn(a[0], { kind: 'link', onClick: a[1] }))));
   return { title: pa ? (pa.shop || pa.name) : 'Khata', sub: partyKind(pid), big: true, body, foot, help: ['Left receipts are records the agency issues: bills, wages or commission earned, credits. Right receipts are money that moved to settle them: payments, wages paid, advances.', 'A minus balance means the person owes the agency; a plus balance means the agency owes the person. It is always added up from these entries — never typed in.', 'Dashed receipts are payments that are not in the balance yet. Tap any receipt to see its details and the balance after it.'] };
 });
-route('kh.history', (p, E) => ({ title: 'Full history', sub: partyName(p.pid) + ' · ' + partyKind(p.pid), body: h('div', null, h('div', { class: 'aside', style: { marginBottom: '20px' } }, 'Every entry, oldest first. Nothing here can be edited — mistakes are fixed with a new correcting entry. Tap a receipt for its details.'), receiptConversation(p.pid)),
+route('kh.history', (p, E) => ({ title: 'Full history', sub: partyName(p.pid) + ' · ' + partyKind(p.pid), body: h('div', null, h('div', { class: 'aside', style: { marginBottom: '20px' } }, 'Every entry, newest first. Nothing here can be edited — mistakes are fixed with a new correcting entry. Tap a receipt for its details.'), receiptConversation(p.pid)),
   foot: [Btn('VIEW STATEMENT', { kind: 'ghost', icon: 'print', onClick: () => nav.go('statement', { pid: p.pid }) })] }));
 route('kh.sales', (p, E) => {
   const ss = S.sales.filter(s => s.partyId === p.pid).sort((a, b) => b.at - a.at);
@@ -3110,7 +3240,7 @@ route('st.recv.confirm', (p, E) => {
 route('st.count', (p, E) => {
   const pr = prod(p.pid), u = E.st.u || (E.st.u = {}), inf = h('div', { class: 'center mt12' });
   if (E.st.init == null) { E.st.init = 1; breakdown(pr, avail(pr.id)).forEach(x => u[x[0]] = 0); }
-  const btn = Btn('CONTINUE', { kind: 'primary', onClick: () => { E.st.counted = toBase(pr, u); nav.go('st.count.fix', { pid: pr.id, counted: toBase(pr, u), opening: p.opening }); } });
+  const btn = Btn('CONTINUE', { kind: 'primary', onClick: () => { E.st.counted = toBase(pr, u); nav.go('st.count.fix', { pid: pr.id, counted: toBase(pr, u), opening: p.opening, back: p.back }); } });
   const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, (p.opening ? 'Opening stock of ' : 'Count ') + pr.name), h('div', { class: 'hint' }, p.opening ? 'Count the goods on the shelves today and enter what you really see — BOX, LADI and PACKET can be mixed. This becomes your starting stock.' : 'Count the goods on the shelves and enter what you really see. The system will not show you its number first.')), unitsEditor(pr, u, { onChange: b => { inf.textContent = 'You counted ' + qtyText(pr, b); } }), inf);
   inf.textContent = 'You counted ' + qtyText(pr, toBase(pr, u));
   return { title: p.opening ? 'Opening stock' : 'Count stock', sub: pr.name, step: { label: p.opening ? 'OPENING STOCK' : 'COUNTING STOCK', n: 1, of: 2 }, body, foot: [btn] };
@@ -3120,8 +3250,8 @@ route('st.count.fix', (p, E) => {
   const opening = !!p.opening && avail(pr.id) === 0;
   if (opening && p.counted === 0) return { title: 'Opening stock', sub: pr.name, step: { label: 'OPENING STOCK', n: 2, of: 2 }, body: Empty('You counted nothing. The product starts with zero stock — go back to count again, or receive stock from a supplier.'), foot: [Btn('COUNT AGAIN', { kind: 'primary', onClick: () => nav.back() })] };
   if (opening) return { title: 'Opening stock', sub: pr.name, step: { label: 'OPENING STOCK', n: 2, of: 2 }, body: h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'STARTING STOCK'), h('div', { class: 'big' }, qtyText(pr, p.counted)), h('div', { class: 'mute' }, '= ' + baseText(pr, p.counted)))), h('div', { class: 'aside' }, 'This is saved as the opening count. From now on, stock changes only through purchases, loading, returns and counts — and every change stays in the history.')),
-    foot: [Btn('SAVE OPENING STOCK', { kind: 'primary', onClick: () => { applyCount(pr.id, p.counted, 'Opening count', '', st.tok); nav.popTo('st.product'); nav.refresh(); toast('Opening stock saved — ' + qtyText(pr, p.counted)); } })] };
-  const btn = Btn(diff === 0 ? 'CONFIRM — IT MATCHES' : 'RECORD CORRECTION', { kind: 'primary', disabled: diff !== 0 && !st.reason, onClick: () => { applyCount(pr.id, p.counted, st.reason, st.note, st.tok); nav.popTo('st.product'); nav.refresh(); toast(diff === 0 ? 'Count matches' : 'Stock corrected'); } });
+    foot: [Btn('SAVE OPENING STOCK', { kind: 'primary', onClick: () => { applyCount(pr.id, p.counted, 'Opening count', '', st.tok); nav.popTo(p.back || 'st.product'); toast('Opening stock saved — ' + qtyText(pr, p.counted)); } })] };
+  const btn = Btn(diff === 0 ? 'CONFIRM — IT MATCHES' : 'RECORD CORRECTION', { kind: 'primary', disabled: diff !== 0 && !st.reason, onClick: () => { applyCount(pr.id, p.counted, st.reason, st.note, st.tok); nav.popTo(p.back || 'st.product'); toast(diff === 0 ? 'Count matches' : 'Stock corrected'); } });
   const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad' }, KV('System says', qtyText(pr, avail(pr.id))), KV('You counted', qtyText(pr, p.counted)), KV(diff === 0 ? 'Difference' : diff < 0 ? 'Missing' : 'Extra', diff === 0 ? '✓ none' : qtyText(pr, Math.abs(diff)), 'tot'))),
     diff !== 0 ? h('div', { class: 'gap' }, Field('Why is it different?', h('select', { class: 'select', 'aria-label': 'Reason', onChange: ev => { st.reason = ev.target.value; btn.disabled = !st.reason; } }, h('option', { value: '' }, 'Choose a reason'), COUNT_REASONS.map(r => h('option', { value: r }, r)))), Field('Note (optional)', h('input', { class: 'input', maxlength: 80, onInput: ev => { st.note = ev.target.value; } })),
       h('div', { class: 'aside' }, 'The correction is added as a new stock movement. The earlier history is kept — nothing is overwritten.')) : h('div', { class: 'card' }, 'The shelf count agrees with the system. Nothing needs to change.'));
@@ -3796,7 +3926,7 @@ function dial(c) {
 }
 function custRow(c, onClick, o) {
   o = o || {};
-  return h('div', { class: 'row' },
+  return h('div', { class: 'row' + (o.cls ? ' ' + o.cls : '') },
     h('button', { class: 'rowmain', type: 'button', onClick: act(onClick) }, h('div', { class: 'l' }, h('div', { class: 't' }, c.shop || c.name, o.chip ? [' ', Chip(o.chip)] : null), h('div', { class: 's' }, o.sub != null ? o.sub : [c.shop ? c.name : null, c.addr && c.addr.area].filter(Boolean).join(' · '))),
       o.right ? h('div', { class: 'r' }, o.right, o.rightSub ? h('small', null, o.rightSub) : null) : null),
     custPhones(c).length ? h('button', { class: 'btn ghost sm', type: 'button', style: { width: 'auto', minWidth: '84px' }, 'aria-label': 'Call ' + (c.shop || c.name), onClick: act(() => dial(c)) }, ic('phone'), 'CALL') : null);
@@ -4085,7 +4215,7 @@ function saveCamera(c, v) {
   log('CAMERA', 'Camera ' + (old !== num ? old + ' is now ' + num : num) + ' updated' + (note ? ' — ' + note : ''));
   return c;
 }
-function cameraSheet(c) {
+function cameraSheet(c, onSaved) {
   const v = { num: c ? c.id : '', note: c ? c.desc : '', active: c ? (c.active ? '1' : '0') : '1' };
   const next = 'CN-' + String(S.cameras.length + 1).padStart(2, '0');
   const body = h('div', null,
@@ -4094,7 +4224,7 @@ function cameraSheet(c) {
     c ? Field('Status', h('select', { class: 'select', 'aria-label': 'Status', onChange: ev => { v.active = ev.target.value; } }, h('option', { value: '1', selected: v.active === '1' }, 'Active'), h('option', { value: '0', selected: v.active === '0' }, 'Not active'))) : null,
     c && cameraUsed(c.id) ? h('div', { class: 'aside mt12' }, 'This camera was used on earlier pickups, so it cannot be deleted. Set it to Not active instead — the old records keep its number.') : null);
   openSheet({ title: c ? 'Camera ' + c.id : 'Add camera', sub: c ? null : 'Use the number written on the camera or the recorder.', body, actions: [
-    Btn(c ? 'SAVE' : 'ADD CAMERA', { kind: 'primary', onClick: () => { const k = saveCamera(c, v); closeSheet(); nav.refresh(); toast(c ? 'Camera saved' : 'Camera ' + k.id + ' added'); } }),
+    Btn(c ? 'SAVE' : 'ADD CAMERA', { kind: 'primary', onClick: () => { const k = saveCamera(c, v); if (onSaved) onSaved(k); closeSheet(); nav.refresh(); toast(c ? 'Camera saved' : 'Camera ' + k.id + ' added'); } }),
     c && !cameraUsed(c.id) ? Btn('DELETE CAMERA', { kind: 'danger', onClick: () => { S.cameras = S.cameras.filter(x => x !== c); if (S.settings.defaultCamera === c.id) S.settings.defaultCamera = (S.cameras.find(x => x.active) || {}).id || ''; log('CAMERA', 'Camera ' + c.id + ' deleted'); closeSheet(); nav.refresh(); toast('Camera deleted'); } }) : null,
     sheetClose('CANCEL')] });
 }
@@ -4512,7 +4642,7 @@ fbLoad();
    9. BOOT — load the saved data (or start empty the first time).
    --------------------------------------------------------------------- */
 (function boot() {
-  bootState();
+  bootState(); histBoot();
   UI.booting = true; UI.restored = new Set(activeDrafts().filter(k => FLOW_DRAFTS.includes(k)));
   nav.reset([['today']], 'none'); UI.booting = false;
   if (UI.restored.size) setTimeout(() => { if (!UI.sheet) unfinishedSheet(); }, 500);
