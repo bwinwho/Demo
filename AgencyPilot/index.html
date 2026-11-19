@@ -111,6 +111,19 @@ button{cursor:pointer;border:0;background:none;padding:0}
 .linkrow>.btn{width:auto;padding:0 var(--s1)}
 
 /* ---------- tab bar: architectural, neutral ---------- */
+.demobar{flex:none;display:flex;align-items:center;justify-content:space-between;gap:var(--s3);background:var(--ink);color:#fff;padding:calc(4px + env(safe-area-inset-top)) var(--s4) 4px;font-size:10px;letter-spacing:.1em;font-weight:600;min-height:26px}
+.demobar[hidden]{display:none}
+.demobar .dm-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.9}
+.demobar .dm-b{color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:3px;padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:.12em;min-height:22px}
+#app.hasbar .hdr{padding-top:var(--s2)}
+#app.hasbar .hdr.root{padding-top:var(--s4)}
+.rolecard{display:block;width:100%;text-align:left;background:var(--paper);border:1px solid var(--line2);border-radius:var(--r);padding:var(--s4);min-height:88px}
+.rolecard b{display:block;font-size:13px;letter-spacing:.14em;font-weight:700}
+.rolecard span{display:block;margin-top:6px;color:var(--ink2);font-size:15px;line-height:1.4}
+.rolecard b span,.rolecard b .chip{display:inline-block;margin:0 0 0 6px;font-size:10px;letter-spacing:.1em}
+.rolecard.on{border-color:var(--ink);box-shadow:inset 3px 0 0 var(--ink)}
+.rolecard.full{border-style:dashed;background:transparent}
+.rolegap{margin-top:var(--s4);padding-top:var(--s5);border-top:1px solid var(--line)}
 .tabbar{flex:none;display:flex;background:var(--bg);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 .tabbar button{flex:1;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--mute);font-size:10px;font-weight:600;letter-spacing:.12em;position:relative}
 .tabbar button svg{width:20px;height:20px;stroke-width:1.6}
@@ -485,6 +498,7 @@ textarea.input{padding:12px 14px;min-height:96px}
 </head>
 <body>
 <div id="app">
+  <div id="demobar" class="demobar" hidden></div>
   <div id="stage"></div>
   <nav id="tabbar" class="tabbar" aria-label="Main navigation"></nav>
 </div>
@@ -531,6 +545,7 @@ const ICONS = {
   more: 'M5 12h.01M12 12h.01M19 12h.01', lock: 'M7 11V8a5 5 0 0110 0v3M5 11h14v9H5z', up: 'M12 19V5M6 11l6-6 6 6', down: 'M12 5v14M6 13l6 6 6-6',
   print: 'M7 9V3h10v6M6 17H4v-6h16v6h-2M7 14h10v7H7z', nav: 'M3 11l18-8-8 18-2-8z', trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',
   camera: 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 100-7 3.5 3.5 0 000 7z', truck: 'M2 6h12v10H2zM14 10h4l3 3v3h-7M6 19.5a2 2 0 100-4 2 2 0 000 4zM17 19.5a2 2 0 100-4 2 2 0 000 4z',
+  coin: 'M12 21a9 9 0 100-18 9 9 0 000 18zM14.5 9.5h-3.2a1.6 1.6 0 000 3.2h1.4a1.6 1.6 0 010 3.2H9.5M12 7.5v1.5M12 16v1.5',
   edit: 'M4 20l4-1 11-11-3-3L5 16z', user: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c0-4 4-6 8-6s8 2 8 6', phone: 'M6 3h4l2 5-2.5 1.5a11 11 0 005 5L16 12l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z',
 };
 function ic(name, cls) {
@@ -727,6 +742,77 @@ let S = newState();
 class Biz extends Error {}                         // a friendly, expected business-rule refusal
 const fail = m => { throw new Biz(m); };
 
+/* ---------------------------------------------------------------------
+   4-ROLES. DEMO ROLES — who is using the app. SIMULATED: no password, no server, one shared data set.
+   One capability map decides everything. Business functions below call need('capability') at their entry point;
+   screens use the same map (can / canOpen) to hide what a role may not do. Role names are never checked in business logic.
+   --------------------------------------------------------------------- */
+const CAP_TEXT = {
+  viewAllOrders: 'see every order', viewOwnOrders: 'see orders', createOrder: 'take an order', editOrder: 'edit an order', cancelOrder: 'cancel an order',
+  createCustomer: 'add a customer', editCustomer: 'change a customer', viewAllCustomers: 'see every customer', viewAssignedCustomers: 'see customers',
+  approveStock: 'approve stock for release', preparePickup: 'prepare a pickup', assignDriver: 'assign a driver', confirmLoading: 'confirm loading', startTrip: 'start a trip',
+  viewAllTrips: 'see every pickup', viewOwnTrip: 'see a pickup', recordDelivery: 'record a delivery', recordDeliveryAnyTrip: 'work on any pickup',
+  recordCollection: 'collect money', verifyPayment: 'verify a payment', approveDiscount: 'approve a discount', reconcilePickup: 'check a returned pickup',
+  viewKhataAll: 'see every Khata', viewOwnKhata: 'see their own Khata', payStaff: 'pay staff', viewCashBook: 'open the CashBook', manageCash: 'move, count or close cash',
+  addExpense: 'add an expense', approveExpense: 'approve an expense', viewStock: 'see stock', countStock: 'count stock', receiveStock: 'receive stock',
+  manageProducts: 'change products', viewStaff: 'see staff', markAttendance: 'mark attendance', assignDuty: 'assign duties', manageStaff: 'change staff',
+  manageSettings: 'change settings', sellGodown: 'make a godown sale', sellInterAgency: 'make an inter-agency sale', retailSale: 'make a counter sale',
+  receiveReturn: 'take a customer return', approveCredit: 'approve a credit or refund', viewActivity: 'see history', printDocs: 'print documents',
+  viewOwnDuty: 'see their duty', viewCounter: 'see counter stock',
+};
+const CAP_ALL = Object.keys(CAP_TEXT);
+const ROLES = {
+  FULL: { label: 'Full access', blurb: 'Every module, no role limits. For development and testing.', all: true, caps: CAP_ALL },
+  OWNER: { label: 'Owner', blurb: 'Complete business overview, money, stock, staff, approvals, and operations.', all: true, caps: CAP_ALL, who: null },
+  MANAGER: { label: 'Manager', blurb: 'Orders, loading, staff duties, stock verification, and operational management.', pos: ['MANAGER'],
+    caps: ['viewAllOrders', 'createOrder', 'editOrder', 'cancelOrder', 'createCustomer', 'editCustomer', 'viewAllCustomers', 'approveStock', 'preparePickup', 'assignDriver', 'confirmLoading', 'startTrip',
+      'viewAllTrips', 'recordDelivery', 'recordDeliveryAnyTrip', 'recordCollection', 'verifyPayment', 'reconcilePickup', 'viewKhataAll', 'addExpense', 'viewStock', 'countStock', 'receiveStock',
+      'viewStaff', 'markAttendance', 'assignDuty', 'sellGodown', 'sellInterAgency', 'receiveReturn', 'viewActivity', 'printDocs'] },
+  AGENT: { label: 'Agent', blurb: 'Take customer orders, manage assigned customers, and view permitted collections.', pos: ['AGENT', 'PERSONAL_AGENT'],
+    caps: ['viewOwnOrders', 'createOrder', 'editOrder', 'cancelOrder', 'viewAssignedCustomers', 'viewOwnKhata', 'printDocs'] },
+  DRIVER: { label: 'Driver', blurb: 'View assigned trips, deliver goods, record payments, and return to the godown.', drv: true,
+    caps: ['viewOwnTrip', 'recordDelivery', 'recordCollection', 'printDocs'] },
+  HELPER: { label: 'Helper', blurb: 'View assigned duties, attendance, and loading-related tasks.', pos: ['HELPER'], caps: ['viewOwnDuty'] },
+  RETAILER: { label: 'Retailer', blurb: 'Counter sales, assigned stock, and permitted transaction history.', pos: ['RETAILER'], caps: ['retailSale', 'viewCounter', 'printDocs'] },
+};
+const ROLE_ORDER = ['OWNER', 'MANAGER', 'AGENT', 'DRIVER', 'HELPER', 'RETAILER'];
+const ACTOR = { role: null, staffId: null, sys: 0 };       // sys > 0 = demo set-up code (scenarios, sample data) — not a person
+const ROLE_KEY = 'agencyPilotV2.role.v1';
+function roleLoad() { try { const o = JSON.parse(localStorage.getItem(ROLE_KEY) || 'null'); if (o && ROLES[o.role]) { ACTOR.role = o.role; ACTOR.staffId = o.staffId || null; } } catch (e) { /* no saved role */ } }
+function roleSave() { try { if (ACTOR.role) localStorage.setItem(ROLE_KEY, JSON.stringify({ v: 1, role: ACTOR.role, staffId: ACTOR.staffId })); else localStorage.removeItem(ROLE_KEY); } catch (e) { /* demo still works without saving */ } }
+const roleDef = () => ROLES[ACTOR.role] || null;
+const hasAll = () => !!(roleDef() && roleDef().all);
+function can(cap) { return ACTOR.sys > 0 || hasAll() || !!(roleDef() && roleDef().caps.includes(cap)); }
+const canAny = caps => caps.some(can);
+function need(cap) { if (can(cap)) return; fail((roleDef() ? roleDef().label : 'This') + ' role cannot ' + (CAP_TEXT[cap] || 'do this') + '.'); }
+function needAny(caps) { if (canAny(caps)) return; fail((roleDef() ? roleDef().label : 'This') + ' role cannot ' + (CAP_TEXT[caps[0]] || 'do this') + '.'); }
+function sys(fn) { ACTOR.sys++; try { return fn(); } finally { ACTOR.sys--; } }
+const actorStaff = () => ACTOR.staffId ? staffOf(ACTOR.staffId) : null;
+function actorBy() { if (ACTOR.sys > 0 || !ACTOR.role) return { role: 'SETUP', staffId: null, name: 'Demo set-up', simulated: true }; const s = actorStaff(); return { role: ACTOR.role, staffId: s ? s.id : null, name: s ? s.name : roleDef().label, simulated: true }; }
+const actorText = a => a ? (a.role === 'SETUP' ? 'demo set-up' : (ROLES[a.role] ? ROLES[a.role].label : a.role) + (a.staffId ? ' · ' + a.name : '') + ' (simulated)') : '';
+const roleNeedsWho = r => !!(ROLES[r] && (ROLES[r].pos || ROLES[r].drv));
+function rolePool(r) { const d = ROLES[r]; if (!d) return []; if (d.drv) return S.staff.filter(s => s.active && s.driver); return S.staff.filter(s => s.active && (d.pos || []).includes(s.position)); }
+const whoValid = () => !roleNeedsWho(ACTOR.role) || rolePool(ACTOR.role).some(s => s.id === ACTOR.staffId);   // a saved person may have gone after a reset or sample-data load
+const meId = () => ACTOR.staffId;
+/* what a person may reach: assigned areas for an Agent, own trip for a Driver */
+const myAreas = () => { const s = actorStaff(); return s ? s.areas.map(a => a.trim().toLowerCase()) : []; };
+const inMyAreas = c => !!c && (can('viewAllCustomers') || ((can('viewAssignedCustomers')) && !!(c.addr && myAreas().includes((c.addr.area || '').trim().toLowerCase()))));
+const myOrder = o => !!o && (can('viewAllOrders') || (can('viewOwnOrders') && ((o.by && o.by.staffId && o.by.staffId === meId()) || inMyAreas(cust(o.partyId)))));
+const myTrip = t => !!t && (can('viewAllTrips') || (can('viewOwnTrip') && !!meId() && t.driverId === meId()));
+function needTripWork(tid, cap) {                                 // recordDeliveryAnyTrip, or the assigned driver on their own trip
+  if (can('recordDeliveryAnyTrip')) return; need(cap || 'recordDelivery');
+  const t = tid ? tripOf(tid) : null; if (!t || !meId() || t.driverId !== meId()) fail('This is not your trip. A driver can only work on the pickup assigned to them.');
+}
+function canDoc(d) {                                              // [type, id] — is this person allowed to see/print it?
+  if (!can('printDocs')) return false; if (can('viewAllTrips') || can('viewKhataAll')) return true;
+  const ty = d[0], id = d[1];
+  if (ty === 'DC') { const x = chalOf(id); return !!x && ((x.tripId && myTrip(tripOf(x.tripId))) || (!!x.partyId && inMyAreas(cust(x.partyId)))); }
+  if (ty === 'BILL') { const s = saleOf(id); return !!s && (s.partyId === meId() || (s.tripId && myTrip(tripOf(s.tripId))) || (!!s.partyId && inMyAreas(cust(s.partyId))) || (!!s.by && s.by.staffId === meId() && s.source === 'RETAIL')); }
+  if (ty === 'MANIFEST') return myTrip(tripOf(id));
+  if (ty === 'STATEMENT') return can('viewOwnKhata') && id === meId();
+  return false;
+}
+
 const byId = (a, id) => a.find(x => x.id === id);
 const prod = id => byId(S.products, id);
 const cust = id => byId(S.customers, id);
@@ -752,8 +838,9 @@ function nid(k) { S.seq[k] = (S.seq[k] || 0) + 1; return k + S.seq[k]; }
 function nextNo(k, prefix) { S.nums[k] = (S.nums[k] || 0) + 1; return prefix + '-' + S.nums[k]; }
 const tokUsed = t => !!t && S.tokens.has(t);          // double-tap guard: a command token can only be used once…
 const tokUse = t => { if (t) S.tokens.add(t); };      // …and is consumed only when the command really commits
-function log(type, text, ref) { S.events.push({ id: nid('e'), at: new Date(), type, text, ref: ref || null }); }
-function approve(kind, text) { const a = { id: nid('ap'), at: new Date(), kind, text, by: kind.startsWith('MANAGER') ? 'Manager (simulated)' : 'Owner (simulated)' }; S.approvals.push(a); log('APPROVAL', text); return a; }
+function log(type, text, ref) { S.events.push({ id: nid('e'), at: new Date(), type, text, ref: ref || null, actor: actorBy() }); }
+const APPROVAL_CAP = { MANAGER_STOCK: 'approveStock', OWNER_DISCOUNT: 'approveDiscount', OWNER_EXPENSE: 'approveExpense', OWNER_CREDIT: 'approveCredit', OWNER_SPECIAL_RATE: 'approveDiscount' };
+function approve(kind, text) { if (APPROVAL_CAP[kind]) need(APPROVAL_CAP[kind]); const a = { id: nid('ap'), at: new Date(), kind, text, by: kind.startsWith('MANAGER') ? 'Manager (simulated)' : 'Owner (simulated)', actor: actorBy() }; S.approvals.push(a); log('APPROVAL', text); return a; }
 
 /* ---- Khata: ONE event ledger. Balance is always the sum of entries. Negative = person owes the agency. ---- */
 const KCAT = { SALES: 'Sales due', COLLECTION: 'Customer money held', COMMISSION: 'Commission', WAGES: 'Wages', ADVANCE: 'Advance', UNLOADING: 'Unloading', REFUND: 'Credit / refund', OTHER: 'Other' };
@@ -809,7 +896,7 @@ function addHold(pid, base, kind, source, note) {
 }
 
 /* ---- Customers ---- */
-function addCustomer(d) {
+function addCustomer(d) { need('createCustomer');
   const name = (d.name || '').trim(), shop = (d.shop || '').trim(), phone = cleanPhone(d.phone);
   if (name.length < 2) fail('Please enter the customer name.');
   if (name.length > 40 || shop.length > 50) fail('Name is too long.');
@@ -825,7 +912,7 @@ function addCustomer(d) {
   };
   S.customers.push(c); log('CUSTOMER', 'New customer added: ' + (shop || name)); return c;
 }
-function addOccasional(name, phone) {
+function addOccasional(name, phone) { needAny(['createCustomer', 'sellGodown', 'recordDelivery']);
   name = (name || '').trim(); phone = cleanPhone(phone);
   if (name.length < 2) fail('Please enter the buyer name.');
   if (phone && phone.length !== 10) fail('Phone must be 10 digits (or leave it blank).');
@@ -864,19 +951,19 @@ const orderTotals = o => totalsOf(o.lines, o.prices);
 const currentPrices = () => { const m = {}; for (const p of S.products) m[p.id] = p.sell; return m; };
 
 /* ---- orders ---- */
-function createOrder(partyId, lines, token) {
+function createOrder(partyId, lines, token) { need('createOrder'); if (!can('viewAllCustomers') && !inMyAreas(cust(partyId))) fail('This customer is not in your assigned areas.');
   if (tokUsed(token)) fail('This order was already confirmed.');
   if (!party(partyId)) fail('Please choose a customer.');
   if (!lines.length) fail('Add at least one product.');
   tokUse(token);
   const prices = {}; lines.forEach(l => prices[l.pid] = prod(l.pid).sell);
   const o = { id: nid('o'), no: nextNo('O', 'O'), partyId, lines: lines.map(l => ({ ...l, units: { ...l.units } })), prices, status: 'WAITING', createdAt: new Date(), tripId: null, alloc: null, saleId: null,
-    needsApproval: needsApprovalParty(partyId), approved: false, history: [{ at: new Date(), text: 'Order taken' }] };
+    needsApproval: needsApprovalParty(partyId), approved: false, by: actorBy(), history: [{ at: new Date(), text: 'Order taken' + (actorBy().staffId ? ' by ' + actorBy().name + ' (' + ROLES[actorBy().role].label + ')' : '') }] };
   S.orders.push(o);
   log('ORDER', 'Order ' + o.no + ' taken for ' + partyName(partyId) + ' — ' + rs(orderTotals(o).total), { order: o.id });
   return o;
 }
-function updateOrder(id, lines) {
+function updateOrder(id, lines) { need('editOrder'); { const o0 = orderOf(id); if (o0 && !myOrder(o0)) fail('This is not one of your orders.'); }
   const o = orderOf(id); if (!o) fail('Order not found.');
   if (o.status !== 'WAITING') fail('This order is already being loaded, so it can no longer be edited.');
   if (!lines.length) fail('An order needs at least one product. Cancel the order instead.');
@@ -888,12 +975,12 @@ function updateOrder(id, lines) {
   log('ORDER', 'Order ' + o.no + ' edited — total ' + rs(before) + ' → ' + rs(after), { order: o.id });
   return o;
 }
-function approveOrder(id) {
+function approveOrder(id) { need('approveStock');
   const o = orderOf(id); if (!o) fail('Order not found.');
   o.approved = true; o.history.push({ at: new Date(), text: 'Manager approved stock for release (no goods moved yet)' });
   approve('MANAGER_STOCK', 'Manager approved stock for ' + o.no + ' (' + partyName(o.partyId) + ') — approval is not physical release');
 }
-function cancelOrder(id) {
+function cancelOrder(id) { need('cancelOrder'); { const o0 = orderOf(id); if (o0 && !myOrder(o0)) fail('This is not one of your orders.'); }
   const o = orderOf(id); if (!o) return;
   if (o.status !== 'WAITING') fail('Only a waiting order can be cancelled.');
   o.status = 'CANCELLED'; o.history.push({ at: new Date(), text: 'Cancelled' }); log('ORDER', 'Order ' + o.no + ' cancelled');
@@ -920,7 +1007,7 @@ function makeDC(type, o) {
   S.challans.push(d); return d;
 }
 function reviseDC(d, note) { d.revs.push({ at: new Date(), note, lines: d.lines.map(l => ({ ...l })) }); }
-function prepareTrip(orderIds) {
+function prepareTrip(orderIds) { need('preparePickup');
   if (!orderIds.length) fail('Select at least one order.');
   for (const id of orderIds) {
     const o = orderOf(id);
@@ -939,7 +1026,7 @@ function prepareTrip(orderIds) {
   log('PICKUP', 'Loading started: ' + t.no + ' for ' + orderIds.length + ' order(s)', { trip: t.id });
   return t;
 }
-function setTripPart(tid, part, id) {
+function setTripPart(tid, part, id) { need(part === 'driverId' ? 'assignDriver' : 'preparePickup');
   const t = tripOf(tid); if (!t || t.status !== 'LOADING') fail('This pickup can no longer be changed.');
   if (part === 'vehicleId') {
     const v = vehOf(id); if (!v || !v.active) fail('Pickup not available.');
@@ -967,7 +1054,7 @@ function loadDiffs(t) {
   return out;
 }
 /* a shortage while loading shortens the LAST stop first (PROVISIONAL default — owner decision pending) */
-function resolveShortLoading(tid) {
+function resolveShortLoading(tid) { need('confirmLoading');
   const t = tripOf(tid); if (!t || t.status !== 'LOADING') fail('Loading is not open.');
   const notes = [], diffs = loadDiffs(t);
   for (const d of diffs) if (d.counted > d.needed) fail('You cannot load more than the orders need. Recount ' + prod(d.pid).name + '.');
@@ -989,7 +1076,7 @@ function resolveShortLoading(tid) {
   log('PICKUP', t.no + ': counted quantities accepted — ' + notes.join('; '), { trip: t.id });
   return notes;
 }
-function confirmLoading(tid, token) {
+function confirmLoading(tid, token) { need('confirmLoading');
   const t = tripOf(tid); if (!t) fail('Pickup not found.');
   if (tokUsed(token)) return t;
   if (t.status !== 'LOADING') fail('Loading was already confirmed.');
@@ -1009,18 +1096,18 @@ function confirmLoading(tid, token) {
   log('PICKUP', t.no + ' loading confirmed — goods moved from godown to ' + vehOf(t.vehicleId).reg, { trip: t.id });
   return t;
 }
-function startTrip(tid) {
+function startTrip(tid) { need('startTrip');
   const t = tripOf(tid); if (!t || t.status !== 'READY') fail('This pickup is not ready to start.');
   t.status = 'ON_ROAD'; t.startedAt = new Date();
   for (const o of tripOrders(t)) { o.status = 'ON_ROAD'; const dc = chalOf(o.dcId); if (dc) { dc.status = 'ISSUED'; reviseDC(dc, 'Issued at dispatch'); } }
   log('PICKUP', t.no + ' started — ' + vehOf(t.vehicleId).reg + ' with ' + staffOf(t.driverId).name, { trip: t.id });
 }
-function cancelTrip(tid) {
+function cancelTrip(tid) { need('preparePickup');
   const t = tripOf(tid); if (!t || t.status !== 'LOADING') fail('Only a pickup that is still being loaded can be cancelled.');
   for (const o of tripOrders(t)) { o.status = 'WAITING'; o.tripId = null; o.alloc = null; const dc = chalOf(o.dcId); if (dc) { dc.status = 'CANCELLED'; reviseDC(dc, 'Pickup cancelled'); } o.history.push({ at: new Date(), text: 'Pickup cancelled — order waiting again' }); }
   t.status = 'CANCELLED'; log('PICKUP', t.no + ' cancelled before loading was confirmed');
 }
-function reorderStops(tid, orderId, dir) {
+function reorderStops(tid, orderId, dir) { need('preparePickup');
   const t = tripOf(tid); const i = t.orderIds.indexOf(orderId), j = i + dir;
   if (i < 0 || j < 0 || j >= t.orderIds.length) return;
   const a = t.orderIds; [a[i], a[j]] = [a[j], a[i]];
@@ -1043,7 +1130,7 @@ const saleTotal = s => s.gross - (s.discount ? s.discount.amt : 0);
 function createSale(o) {
   const t = totalsOf(o.lines.map(l => ({ pid: l.pid, base: l.base, units: l.units || {} })), o.lines.reduce((m, l) => (m[l.pid] = l.rate, m), {}));
   const s = { id: nid('b'), no: nextNo('B', 'B'), at: o.at || new Date(), source: o.source, partyId: o.partyId || null, buyerName: o.buyerName || '', orderId: o.orderId || null, tripId: o.tripId || null, dcId: o.dcId || null,
-    lines: t.rows, items: t.items, waived: t.waived, gross: t.total, discount: null, cashAndCarry: !!o.cashAndCarry, special: !!o.special, dueMarked: false, commission: null, note: o.note || '', pickupMode: o.pickupMode || '', vehicleNo: o.vehicleNo || '', legacy: !!o.legacy };
+    lines: t.rows, items: t.items, waived: t.waived, gross: t.total, discount: null, cashAndCarry: !!o.cashAndCarry, special: !!o.special, dueMarked: false, commission: null, by: actorBy(), note: o.note || '', pickupMode: o.pickupMode || '', vehicleNo: o.vehicleNo || '', legacy: !!o.legacy };
   if (o.partyId && isAgent(o.partyId) && staffOf(o.partyId).model.commission.on) s.commBp = staffOf(o.partyId).model.commission.bp;
   S.sales.push(s);
   if (!s.cashAndCarry && s.partyId) post(s.partyId, 'SALES', -s.gross, 'Bill ' + s.no + (o.source === 'SIDE' ? ' (sold on the road)' : o.source === 'DIRECT' ? ' (godown sale)' : o.source === 'INTER' ? ' (inter-agency sale)' : ''), { type: 'SALE', id: s.id }, s.at);
@@ -1053,7 +1140,7 @@ function createSale(o) {
 
 /* ---- delivery: ONLY vehicle custody changes ---- */
 const REASONS = { SHOP_CLOSED: 'Shop was closed', REFUSED: 'Customer refused', NOT_NEEDED: 'Not needed / wrong order', DAMAGED: 'Goods damaged', EXPIRED: 'Goods expired', OTHER: 'Other' };
-function deliver(orderId, accepted, reason, token) {
+function deliver(orderId, accepted, reason, token) { needTripWork((orderOf(orderId) || {}).tripId);
   const o = orderOf(orderId); if (!o) fail('Order not found.');
   if (tokUsed(token)) return { dup: true, order: o };
   const t = tripOf(o.tripId);
@@ -1085,7 +1172,7 @@ function deliver(orderId, accepted, reason, token) {
   return { outcome, sale, delivery: d, order: o };
 }
 /* sell goods still on the vehicle: rate = current Sell-to-Shop price, never editable on the road */
-function sideSale(tid, buyer, lines, fromOrderId, token) {
+function sideSale(tid, buyer, lines, fromOrderId, token) { needTripWork(tid);
   const t = tripOf(tid); if (!t || t.status !== 'ON_ROAD') fail('This pickup is not on the road.');
   if (tokUsed(token)) return { dup: true };
   if (!lines.length) fail('Choose what to sell.');
@@ -1103,7 +1190,7 @@ function sideSale(tid, buyer, lines, fromOrderId, token) {
   return { sale, dc };
 }
 /* when the driver says "I'm back": no more stops may be pending */
-function arriveBack(tid) {
+function arriveBack(tid) { needTripWork(tid);
   const t = tripOf(tid); if (!t || t.status !== 'ON_ROAD') fail('This pickup is not on the road.');
   if (pendingStops(t).length) fail('There are still shops to visit.');
   t.status = 'RETURNED'; t.returnedAt = new Date(); log('PICKUP', t.no + ' is back at the godown — return check pending', { trip: t.id });
@@ -1144,7 +1231,7 @@ function allocate(pid, amount, saleId) {
   if (rem > 0) out.push({ saleId: null, amount: rem });          // earlier (brought-forward) balance
   return out;
 }
-function recordPayment(o) {
+function recordPayment(o) { { const sl0 = o.saleId ? saleOf(o.saleId) : null; needTripWork(o.tripId || (sl0 && sl0.tripId) || null, 'recordCollection'); }
   const { partyId, saleId, method, amount, collectorId, tripId, details, token } = o;
   if (tokUsed(token)) fail('This payment was already recorded.');
   if (!S.settings.pay[method]) fail(PAY_LABEL[method] + ' is switched off in Settings.');
@@ -1157,7 +1244,7 @@ function recordPayment(o) {
   tokUse(token);
   const agent = partyId && isAgent(partyId);
   const p = { id: nid('y'), no: nextNo('R', 'R'), at: new Date(), partyId: partyId || null, saleId: saleId || null, method, amount, collectorId: collectorId || null, tripId: tripId || null,
-    details: d, alloc: allocate(partyId, amount, saleId), stage: 'PENDING', counted: false, handoverId: null };
+    details: d, alloc: allocate(partyId, amount, saleId), stage: 'PENDING', counted: false, handoverId: null, by: actorBy() };
   S.payments.push(p);
   const who = partyId ? partyName(partyId) : 'Walk-in customer';
   if (agent) {                                        // Agent submission: nothing counts until the office verifies it
@@ -1179,7 +1266,7 @@ function recordPayment(o) {
   log('PAYMENT', PAY_LABEL[method] + ' ' + rs(amount) + ' recorded from ' + who + ' — ' + STAGE_LABEL[p.stage], { pay: p.id });
   return p;
 }
-function verifyPayment(payId, token) {
+function verifyPayment(payId, token) { need('verifyPayment');
   const p = payOf(payId); if (!p) fail('Payment not found.');
   if (tokUsed(token)) return p;
   if (p.method === 'CHEQUE') fail('A cheque is marked as cleared once the bank clears it.');
@@ -1192,14 +1279,14 @@ function verifyPayment(payId, token) {
   log('PAYMENT', rs(p.amount) + ' ' + PAY_LABEL[p.method] + ' from ' + (p.partyId ? partyName(p.partyId) : 'Walk-in') + ' verified by the office', { pay: p.id });
   return p;
 }
-function flagPayment(payId, why) {
+function flagPayment(payId, why) { need('verifyPayment');
   const p = payOf(payId); if (!p || p.stage !== 'PENDING') fail('Only a payment that is waiting can be flagged.');
   if (!(why || '').trim()) fail('Say what the problem is.');
   if (p.counted && p.partyId) post(p.partyId, 'SALES', -p.amount, PAY_LABEL[p.method] + ' payment flagged — reversed (' + why.trim() + ')', { type: 'PAY', id: p.id });
   p.counted = false; p.stage = 'FLAGGED'; p.flagNote = why.trim();
   log('PAYMENT', rs(p.amount) + ' ' + PAY_LABEL[p.method] + ' flagged: ' + why.trim(), { pay: p.id });
 }
-function clearCheque(payId, ok) {
+function clearCheque(payId, ok) { need('verifyPayment');
   const p = payOf(payId); if (!p || p.method !== 'CHEQUE' || p.stage !== 'PENDING') fail('This cheque is not waiting to clear.');
   if (!ok) { p.stage = 'BOUNCED'; log('PAYMENT', 'Cheque ' + p.details.no + ' (' + rs(p.amount) + ') bounced — due remains', { pay: p.id }); return p; }
   p.stage = 'CLEARED'; p.counted = true; p.verifiedAt = new Date();
@@ -1218,13 +1305,13 @@ function creditCommission(s) {
   post(s.partyId, 'COMMISSION', amt, 'Commission ' + pctText(s.commBp) + ' earned on bill ' + s.no + ' (not yet paid)', { type: 'SALE', id: s.id });
   log('COMMISSION', partyName(s.partyId) + ': commission ' + rs(amt) + ' earned on ' + s.no + ' — payable, not paid', { sale: s.id });
 }
-function markDue(saleId) {
+function markDue(saleId) { { const sl0 = saleOf(saleId); needTripWork(sl0 ? sl0.tripId : null, 'recordCollection'); }
   const s = saleOf(saleId); if (!s) fail('Bill not found.');
   if (saleDue(s) <= 0) fail('Nothing is due on this bill.');
   s.dueMarked = true; log('DUE', rs(saleDue(s)) + ' left due on ' + s.no + ' — ' + partyName(s.partyId), { sale: s.id });
 }
 /* Billing discount: OWNER only. In V2 this is a simulated checkpoint, not a login. */
-function applyDiscount(saleId, bp, token) {
+function applyDiscount(saleId, bp, token) { need('approveDiscount');
   const s = saleOf(saleId); if (!s) fail('Bill not found.');
   if (tokUsed(token)) return s;
   if (s.discount) fail('A discount was already given on this bill.');
@@ -1247,7 +1334,7 @@ const stageTone = st => (st === 'VERIFIED' || st === 'CLEARED') ? 'ok' : (st ===
 /* ---- pickup return: money handover (driver → Manager → office verified) ---- */
 const tripCash = t => S.payments.filter(p => p.tripId === t.id && p.method === 'CASH' && (p.stage === 'WITH_COLLECTOR' || p.stage === 'HANDED'));
 const tripPayments = t => S.payments.filter(p => p.tripId === t.id && payActive(p));
-function handoverCount(tid, counted, note) {
+function handoverCount(tid, counted, note) { need('reconcilePickup');
   const t = tripOf(tid); if (!t) fail('Pickup not found.');
   const ps = tripCash(t), expected = ps.reduce((s, p) => s + p.amount, 0);
   if (!(counted >= 0)) fail('Enter the counted cash.');
@@ -1283,7 +1370,7 @@ function tripSummary(t) {
     online: pays.filter(p => p.method !== 'CASH').reduce((s, p) => s + p.amount, 0) };
 }
 /* Close the pickup only when EVERYTHING on the vehicle is accounted for and money is counted. */
-function closeTrip(tid, goods, token) {
+function closeTrip(tid, goods, token) { need('reconcilePickup');
   const t = tripOf(tid); if (!t || t.status !== 'RETURNED') fail('This pickup is not waiting for the return check.');
   if (tokUsed(token)) return t;
   for (const pid in t.custody) {
@@ -1317,7 +1404,7 @@ function closeTrip(tid, goods, token) {
    --------------------------------------------------------------------- */
 /* ---- stock receiving: viewing an invoice never changes stock; only the confirmed physical count does ---- */
 const invBase = l => l.base > 0 ? l.base : l.boxes * prod(l.pid).levels[0].n;      // purchases entered in the app carry an exact base quantity
-function receiveInvoice(invId, actual, note, token) {
+function receiveInvoice(invId, actual, note, token) { need('receiveStock');
   const inv = byId(S.invoices, invId); if (!inv) fail('Invoice not found.');
   if (inv.status !== 'OPEN') fail('This invoice was already received.');
   if (tokUsed(token)) return inv;
@@ -1334,7 +1421,7 @@ function receiveInvoice(invId, actual, note, token) {
   return inv;
 }
 const COUNT_REASONS = ['Counting mistake earlier', 'Goods damaged', 'Goods missing', 'Extra goods found', 'Other'];
-function applyCount(pid, counted, reason, note, token) {
+function applyCount(pid, counted, reason, note, token) { need('countStock');
   const diff = counted - avail(pid);
   if (counted < 0) fail('Enter the counted quantity.');
   if (tokUsed(token)) return diff;
@@ -1351,7 +1438,7 @@ function applyCount(pid, counted, reason, note, token) {
 const curModel = s => s.model;
 const staffJoined = s => s.joined || ymd((s.hist && s.hist[0] && s.hist[0].at) || new Date());       // staff saved before joining dates existed: the day they were added
 const joinedBy = (s, dstr) => staffJoined(s) <= dstr;
-function setJoinDate(sid, dstr) {
+function setJoinDate(sid, dstr) { need('manageStaff');
   const s = staffOf(sid); if (!s) fail('Staff member not found.');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dstr || '')) fail('Enter a valid joining date.');
   if (dstr > ymd(new Date())) fail('The joining date cannot be in the future.');
@@ -1359,11 +1446,11 @@ function setJoinDate(sid, dstr) {
   s.joined = dstr; if (s.hist && s.hist[0]) s.hist[0].at = parseYmd(dstr);
   log('STAFF', s.name + ': joining date set to ' + fmtDY(parseYmd(dstr)));
 }
-function markAllPresent(dstr) {
+function markAllPresent(dstr) { need('markAttendance');
   let n = 0; for (const s of S.staff) if (s.active && joinedBy(s, dstr) && !s.att[dstr]) { markAttendance(s.id, dstr, 'PRESENT'); n++; }
   return n;
 }
-function markAttendance(sid, dstr0, status) {
+function markAttendance(sid, dstr0, status) { need('markAttendance');
   const dateStr = dstr0, s = staffOf(sid); if (!s || !s.active) fail('Staff member not available.');
   if (dateStr > ymd(new Date())) fail('You cannot mark attendance for a future day.');
   if (!joinedBy(s, dateStr)) fail(s.name + ' joined on ' + fmtDY(parseYmd(staffJoined(s))) + ' — attendance starts from that day.');
@@ -1384,7 +1471,7 @@ function currentDuty(s) {
   if (t) return (t.driverId === s.id ? 'Driver' : 'Helper') + ' on ' + t.no + ' (' + vehOf(t.vehicleId).reg + ')';
   return s.duty ? DUTIES[s.duty.type] + (s.duty.note ? ' — ' + s.duty.note : '') : 'No special duty';
 }
-function setDuty(sid, type, note) {
+function setDuty(sid, type, note) { need('assignDuty');
   const s = staffOf(sid); if (!s || !s.active) fail('Staff member not available.');
   if (type === 'DRIVER' && !s.driver) fail(s.name + ' is not driver-eligible. Turn on driver eligibility in Settings → Staff first.');
   s.duty = type === 'NONE' ? null : { type, note: (note || '').trim(), since: new Date() };
@@ -1396,7 +1483,7 @@ function earningText(s) {
   parts.push(m.commission.on ? 'Commission ' + pctText(m.commission.bp) : 'Commission OFF');
   return parts.join(' · ');
 }
-function updateModel(sid, next, reason) {
+function updateModel(sid, next, reason) { need('manageStaff');
   const s = staffOf(sid); if (!s) fail('Staff member not found.');
   if (s.position === 'AGENT' && next.salary.on) fail('An independent Agent has no salary. Use Personal Agent for salary + commission.');
   if (next.salary.on && !(next.salary.rate > 0)) fail('Enter the salary amount.');
@@ -1405,14 +1492,14 @@ function updateModel(sid, next, reason) {
   s.hist.push({ at: new Date(), note: (reason || 'Earning model changed'), model: JSON.parse(JSON.stringify(next)), position: s.position });
   log('STAFF', s.name + ' earning model changed: ' + earningText(s));
 }
-function changePosition(sid, pos, reason) {
+function changePosition(sid, pos, reason) { need('manageStaff');
   const s = staffOf(sid); if (!s) fail('Staff member not found.');
   const was = s.position; s.position = pos;
   if (pos === 'AGENT') { s.model.salary = { on: false, method: 'NONE', rate: 0 }; if (!s.model.commission.on) s.model.commission = { on: true, bp: S.settings.agentBp || 100 }; }
   s.hist.push({ at: new Date(), note: (reason || 'Position changed') + ' (' + posLabel[was] + ' → ' + posLabel[pos] + ')', model: JSON.parse(JSON.stringify(s.model)), position: pos });
   log('STAFF', s.name + ': ' + posLabel[was] + ' → ' + posLabel[pos] + '. Earlier earnings and history are kept.');
 }
-function addStaff(d) {
+function addStaff(d) { need('manageStaff');
   const name = (d.name || '').trim(); if (name.length < 2) fail('Enter the staff name.');
   const phone = cleanPhone(d.phone); if (phone && phone.length !== 10) fail('Phone number must be 10 digits (or leave it blank).');
   const joined = d.joined || ymd(new Date()); if (!/^\d{4}-\d{2}-\d{2}$/.test(joined)) fail('Enter a valid joining date.'); if (joined > ymd(new Date())) fail('The joining date cannot be in the future.');
@@ -1423,7 +1510,7 @@ function addStaff(d) {
   S.staff.push(s); log('STAFF', name + ' added as ' + posLabel[s.position]); return s;
 }
 /* off-duty unloading: ONE fee per job, paid to ONE coordinator — never multiplied by the number of workers */
-function unloadingJob(o) {
+function unloadingJob(o) { need('payStaff');
   const ref = (o.ref || '').trim(); if (!ref) fail('Enter a job reference.');
   if (S.jobs.some(j => j.ref.toLowerCase() === ref.toLowerCase())) fail('Job ' + ref + ' was already recorded — it cannot be paid twice.');
   if (!o.coordinatorId || !staffOf(o.coordinatorId)) fail('Choose the one person who gets the unloading amount.');
@@ -1436,7 +1523,7 @@ function unloadingJob(o) {
 }
 
 /* ---- payouts: an ACTUAL payment changes the CashBook AND the Khata together, once ---- */
-function payDue(pid, cat, amount, acct, note, offset, token) {
+function payDue(pid, cat, amount, acct, note, offset, token) { need('payStaff');
   if (tokUsed(token)) fail('This payment was already made.');
   if (!(amount >= 0) || (!amount && !offset)) fail('Enter an amount to pay.');
   offset = offset || 0;
@@ -1450,7 +1537,7 @@ function payDue(pid, cat, amount, acct, note, offset, token) {
   if (offset) { post(pid, cat, -offset, 'Offset against advance (no cash paid)', { type: 'OFFSET' }); post(pid, 'ADVANCE', offset, 'Advance cleared from ' + KCAT[cat].toLowerCase(), { type: 'OFFSET' }); }
   log('PAYOUT', rs(amount) + ' ' + KCAT[cat].toLowerCase() + ' paid to ' + partyName(pid) + (offset ? ' (+ ' + rs(offset) + ' advance offset)' : ''));
 }
-function giveAdvance(pid, amount, acct, note, token) {
+function giveAdvance(pid, amount, acct, note, token) { need('payStaff');
   if (tokUsed(token)) fail('This advance was already recorded.');
   if (!(amount > 0)) fail('Enter the advance amount.');
   tokUse(token);
@@ -1460,7 +1547,7 @@ function giveAdvance(pid, amount, acct, note, token) {
 }
 
 /* ---- expenses: type → amount → note → approve → pay.  Manager cannot approve (Owner/CEO checkpoint). ---- */
-function addExpense(o) {
+function addExpense(o) { need('addExpense');
   if (tokUsed(o.token)) fail('This expense was already added.');
   if (!o.cat) fail('Choose the expense type.');
   if (!(o.amount > 0)) fail('Enter the amount.');
@@ -1468,8 +1555,8 @@ function addExpense(o) {
   const x = { id: nid('x'), no: nextNo('EX', 'EX'), cat: o.cat, amount: o.amount, note: (o.note || '').trim(), status: 'PENDING', at: new Date() };
   S.expenses.push(x); log('EXPENSE', 'Expense ' + x.no + ' ' + o.cat + ' ' + rs(x.amount) + ' noted — waiting for approval'); return x;
 }
-function approveExpense(id) { const x = byId(S.expenses, id); if (!x || x.status !== 'PENDING') fail('Nothing to approve.'); x.status = 'APPROVED'; approve('OWNER_EXPENSE', 'Owner approved expense ' + x.no + ' (' + x.cat + ' ' + rs(x.amount) + ') — Manager cannot approve expenses'); }
-function payExpense(id, acct, token) {
+function approveExpense(id) { need('approveExpense'); const x = byId(S.expenses, id); if (!x || x.status !== 'PENDING') fail('Nothing to approve.'); x.status = 'APPROVED'; approve('OWNER_EXPENSE', 'Owner approved expense ' + x.no + ' (' + x.cat + ' ' + rs(x.amount) + ') — Manager cannot approve expenses'); }
+function payExpense(id, acct, token) { need('manageCash');
   const x = byId(S.expenses, id); if (!x) fail('Expense not found.');
   if (x.status === 'PAID') fail('This expense was already paid.');
   if (x.status !== 'APPROVED') fail('Approve the expense first.');
@@ -1478,7 +1565,7 @@ function payExpense(id, acct, token) {
   tokUse(token); x.status = 'PAID'; x.paidAt = new Date(); x.acct = acct;
   log('EXPENSE', 'Expense ' + x.no + ' paid ' + rs(x.amount) + ' from ' + (acct === 'CASH' ? 'cash' : 'bank')); return x;
 }
-function transferMoney(from, amount, token) {
+function transferMoney(from, amount, token) { need('manageCash');
   const to = from === 'CASH' ? 'BANK' : 'CASH';
   if (tokUsed(token)) fail('This transfer was already made.');
   if (!(amount > 0)) fail('Enter the amount to move.');
@@ -1490,7 +1577,7 @@ function transferMoney(from, amount, token) {
 }
 
 /* ---- customer returns: goods first, money later (and only if approved) ---- */
-function customerReturn(o) {
+function customerReturn(o) { need('receiveReturn');
   if (tokUsed(o.token)) fail('This return was already recorded.');
   if (!party(o.partyId)) fail('Choose the customer.');
   if (!(o.base > 0)) fail('Enter how much came back.');
@@ -1502,7 +1589,7 @@ function customerReturn(o) {
   return r;
 }
 const returnValue = r => r.base * prod(r.pid).sell;
-function decideCredit(rid, mode, amount) {
+function decideCredit(rid, mode, amount) { need('approveCredit');
   const r = byId(S.returns, rid); if (!r) fail('Return not found.');
   if (r.credit) fail('A decision was already made for this return.');
   if (!(amount > 0) || amount > returnValue(r)) fail('Amount must be between ₹0.01 and ' + rs(returnValue(r)) + '.');
@@ -1518,13 +1605,13 @@ function decideCredit(rid, mode, amount) {
 }
 
 /* ---- retail counter: stock comes from a manager-approved retail allocation, never silently from the godown ---- */
-function retailAllocate(pid, base) {
+function retailAllocate(pid, base) { need('approveStock');
   if (!(base > 0)) fail('Enter the quantity to issue to the counter.');
   moveGodown(pid, -base, 'Retail issue', 'counter', 'Manager approved retail allocation');
   S.retail[pid] = (S.retail[pid] || 0) + base;
   approve('MANAGER_STOCK', 'Manager approved ' + qtyText(prod(pid), base) + ' ' + prod(pid).name + ' for the retail counter');
 }
-function retailSale(o) {
+function retailSale(o) { need('retailSale');
   const pr = prod(o.pid);
   if (tokUsed(o.token)) fail('This sale was already recorded.');
   if (!(o.base > 0)) fail('Enter the quantity.');
@@ -1533,12 +1620,12 @@ function retailSale(o) {
   tokUse(o.token);
   S.retail[o.pid] -= o.base;                                       // retail counter stock only — godown is NOT touched again
   const s = createSale({ source: 'RETAIL', partyId: null, buyerName: 'Walk-in customer', lines: [{ pid: o.pid, base: o.base, rate: pr.retail, units: {} }], cashAndCarry: true });
-  recordPayment({ partyId: null, saleId: s.id, method: o.method, amount: saleTotal(s), details: { ref: o.ref }, collectorId: null });
+  sys(() => recordPayment({ partyId: null, saleId: s.id, method: o.method, amount: saleTotal(s), details: { ref: o.ref }, collectorId: null }));
   return s;
 }
 
 /* ---- godown direct sale & inter-agency sale: not a pickup trip; stock leaves the godown ONCE when handed over ---- */
-function directSale(o) {
+function directSale(o) { need((o.kind === 'INTER') ? 'sellInterAgency' : 'sellGodown');
   if (tokUsed(o.token)) fail('This sale was already confirmed.');
   if (!party(o.partyId)) fail('Choose the buyer.');
   if (!o.lines.length) fail('Add at least one product.');
@@ -1559,20 +1646,20 @@ function directSale(o) {
 }
 
 /* ---- day close: counted cash must match the books, or the difference is explained — never silently erased ---- */
-function recordCount(counted, denoms) {
+function recordCount(counted, denoms) { need('manageCash');
   if (!(counted >= 0)) fail('Enter the counted cash.');
   S.count = { at: new Date(), counted, denoms: denoms || null, dayNo: S.day.no };
   log('CASH', 'Cash counted: ' + rs(counted) + ' (books say ' + rs(dayFigures().books) + ')');
 }
 const countDiff = () => S.count && S.count.dayNo === S.day.no ? S.count.counted - dayFigures().books : null;
-function recordAdjustment(note) {
+function recordAdjustment(note) { need('manageCash');
   const d = countDiff(); if (d == null) fail('Count the cash first.');
   if (d === 0) fail('There is no difference to explain.');
   if (!(note || '').trim()) fail('Write why the cash is ' + (d < 0 ? 'short' : 'extra') + '.');
   cashPost('CASH', d, 'ADJUST', 'Count difference', (d < 0 ? 'Cash short' : 'Cash extra') + ' found at count — ' + note.trim());
   log('DIFFERENCE', 'Cash ' + (d < 0 ? 'short' : 'extra') + ' by ' + rs(Math.abs(d)) + ' recorded: ' + note.trim());
 }
-function closeDay(token) {
+function closeDay(token) { need('manageCash');
   if (tokUsed(token)) fail('The day was already closed.');
   const d = countDiff(); if (d == null) fail('Count the cash before closing the day.');
   if (d !== 0) fail('Counted cash and the books differ by ' + rs(Math.abs(d)) + ' — recount, or explain the difference first.');
@@ -1623,7 +1710,7 @@ function seedDemo() {
   log('SYSTEM', 'Fictional demo data loaded');
 }
 function resetDemo() { S = newState(false); fileClear(); }                     // the owner's clean start: nothing at all
-function loadExample() { S = newState(true); seedDemo(); fileClear(); }        // fictional example data — only the Scenarios use it
+function loadExample() { S = newState(true); sys(() => seedDemo()); fileClear(); }        // fictional example data — only the Scenarios use it
 
 /* ---------- 50-ui.js ---------- */
 /* ---------------------------------------------------------------------
@@ -1634,7 +1721,7 @@ function loadExample() { S = newState(true); seedDemo(); fileClear(); }        /
 const $ = (sel, root) => (root || document).querySelector(sel);
 const UI = { stack: [], toastTimer: null, sheet: null, ignore: 0 };
 const ROUTES = {};
-const TABS = ['today', 'orders', 'khata', 'more'];
+const TABS = ['today', 'orders', 'khata', 'more'];        // the root screens of the CURRENT role (see setRoleTabs)
 const route = (name, fn) => { ROUTES[name] = fn; };
 
 /* run a button action once, turn business-rule refusals into a friendly toast */
@@ -1738,7 +1825,7 @@ function confirmSheet(o) {                       // small yes/no — use sparing
 
 /* ---- screen frame: header (quiet back arrow + left-aligned title) · progress · body · sticky footer ---- */
 function buildScreen(E) {
-  const spec = ROUTES[E.name](E.params || {}, E) || {}; E.onBack = spec.onBack || null;
+  const spec = (routeAllowed(E.name, E.params || {}) ? ROUTES[E.name](E.params || {}, E) : deniedSpec(E)) || {}; E.onBack = spec.onBack || null;
   const isRoot = TABS.includes(E.name);
   const root = h('section', { class: 'screen', 'data-route': E.name });
   const kids = [];
@@ -1784,6 +1871,7 @@ const nav = {
   },
 };
 function show(dir) {
+  roleGate();
   const E = nav.top(), stage = $('#stage');
   if (TABS.includes(E.name)) dropFlowDrafts();
   const el = buildScreen(E);
@@ -1792,7 +1880,7 @@ function show(dir) {
   if (dir === 'fwd') el.classList.add('enter'); else if (dir === 'back') el.classList.add('enter-back');
   stage.append(el); UI.screen = el;
   $('#app').classList.toggle('flow', !TABS.includes(E.name));
-  renderTabs();
+  renderTabs(); renderDemoBar();
   const inp = el.querySelector('[data-autofocus]');
   if (inp) setTimeout(() => { inp.focus({ preventScroll: true }); if (inp.select && inp.value) inp.select(); }, 60);
   else { const hh = el.querySelector('h1'); if (hh) hh.focus({ preventScroll: true }); }
@@ -1800,7 +1888,7 @@ function show(dir) {
 function renderTabs() {
   const E = nav.top(); if (!E) return;
   const cur = TABS.includes(E.name) ? E.name : (UI.tab || 'today'); if (TABS.includes(E.name)) UI.tab = E.name;
-  const defs = [['today', 'TODAY', 'home'], ['orders', 'ORDERS', 'list'], ['khata', 'KHATA', 'book'], ['more', 'MORE', 'more']];
+  const defs = roleTabDefs();
   const tb = $('#tabbar'); setKids(tb, ...defs.map(d => h('button', { type: 'button', 'aria-current': d[0] === cur ? 'page' : null, onClick: () => { closeSheet(); if (nav.top().name !== d[0] || UI.stack.length > 1) nav.tab(d[0]); syncHistory(); } }, ic(d[2]), d[1])));
 }
 
@@ -1821,7 +1909,7 @@ function appBack() {                                   // → true when somethin
   const topE = UI.stack[UI.stack.length - 1];
   if (UI.stack.length > 1 && topE && topE.onBack) { topE.onBack(); return true; }
   if (UI.stack.length > 1) { UI.stack.pop(); show('back'); return true; }
-  if (topE && topE.name !== 'today') { nav.tab('today'); return true; }
+  if (topE && !['today', 'roles', 'roles.who'].includes(topE.name)) { nav.tab('today'); return true; }
   return false;
 }
 window.addEventListener('popstate', ev => {
@@ -1850,9 +1938,10 @@ function oneQuestion(o) {
   return h('div', { class: 'oq' }, h('div', { class: 'q' }, o.q), inp, o.hint ? h('div', { class: 'hint' }, o.hint) : null, o.err ? h('div', { class: 'errtxt' }, o.err) : null);
 }
 /* dismissible "owner approval" checkpoint — a future permission boundary, simulated here (no login) */
-function authBox(title, text, btnLabel, onApprove) {
+function authBox(title, text, btnLabel, onApprove, cap) {
+  const ok = !cap || can(cap);
   return h('div', { class: 'auth' }, h('div', { class: 'lock' }, ic('lock'), title), h('p', null, text),
-    h('div', { class: 'mt12' }, Btn(btnLabel, { kind: 'black', onClick: onApprove })));
+    ok ? h('div', { class: 'mt12' }, Btn(btnLabel, { kind: 'black', onClick: onApprove })) : h('div', { class: 'mt12 mute' }, 'Waiting — your role (' + (roleDef() ? roleDef().label : '') + ') cannot give this approval. Switch to the right role to continue.'));
 }
 function openMaps(c) {
   const u = mapsUrl(c); if (!u) { toast('No address or location is saved for this customer.', true); return; }
@@ -1880,7 +1969,8 @@ const DRAFTS = {
   buy: { text: d => 'Purchase from ' + (d.supplier || 'a supplier'), on: d => d.lines.length, go: d => nav.go('st.buy.items') },
   cr: { text: d => 'Customer return' + (d.partyId ? ' from ' + partyName(d.partyId) : ''), on: d => d.partyId, go: d => nav.go(d.pid ? 'cr.qty' : 'cr.prod', {}) },
 };
-const activeDrafts = () => Object.keys(DRAFTS).filter(k => S.drafts[k] && DRAFTS[k].on(S.drafts[k]));
+const DRAFT_CAP = { order: 'createOrder', godown: 'sellGodown', ia: 'sellInterAgency', cust: 'createCustomer', pk: 'preparePickup', side: 'recordDelivery', retail: 'retailSale', prod: 'manageProducts', buy: 'receiveStock', cr: 'receiveReturn' };
+const activeDrafts = () => Object.keys(DRAFTS).filter(k => S.drafts[k] && DRAFTS[k].on(S.drafts[k]) && can(DRAFT_CAP[k]));
 const FLOW_DRAFTS = ['order', 'godown', 'ia', 'cust', 'pk', 'side', 'retail', 'prod', 'buy', 'cr'];
 UI.restored = new Set();                                          // drafts that were still there when the app was opened (the app had been closed mid-task)
 function dropFlowDrafts() { if (UI.booting) return; FLOW_DRAFTS.forEach(k => { if (S.drafts[k] && !UI.restored.has(k)) delete S.drafts[k]; }); }
@@ -1935,7 +2025,7 @@ function attendanceToday() {
   const d = ymd(new Date()), staff = S.staff.filter(s => s.active && joinedBy(s, d)), marked = staff.filter(s => s.att[d]);
   return { total: staff.length, marked: marked.length, unmarked: staff.length - marked.length, present: marked.filter(s => s.att[d].status === 'PRESENT').length, absent: marked.filter(s => s.att[d].status === 'ABSENT').length };
 }
-route('today', (p, E) => {
+const todayFull = (p, E) => {
   const d = new Date();
   const hdr = h('header', { class: 'hdr nohdr-back root' }, h('div', { class: 'ttl' }, h('div', { class: 'eyebrow' }, 'Agency Pilot'), h('h1', { class: 'big', tabindex: '-1' }, 'Today'), h('div', { class: 'sub' }, weekday(d) + ', ' + fmtDY(d))));
   const body = h('div');
@@ -1962,7 +2052,7 @@ route('today', (p, E) => {
   const recent = S.orders.filter(isOpenOrder).sort((a, b) => b.createdAt - a.createdAt).slice(0, 4);
   body.append(recent.length ? Pane(recent.map(o => orderRow(o))) : Pane(Empty('No orders yet. Tap TAKE ORDER.')));
   return { hdr, body };
-});
+};
 
 function orderRow(o, hl) {
   const st = orderState(o), t = orderTotals(o).total, a = o.saleId ? saleTotal(saleOf(o.saleId)) : t;
@@ -1984,14 +2074,14 @@ route('orders', (p, E) => {
     hlOrder && hlOrder.status === 'WAITING' ? h('div', null, Sec('Just taken'), Pane([orderRow(hlOrder, true)])) : null,
     groups.length ? h('div', null, Sec('Waiting orders by area', h('span', null, plural(waiting.length, 'order'))), Pane(groups.map(g => areaRow(g, 'WAITING', hlOrder && orderArea(hlOrder) === g.name)))) : Pane(h('div', { class: 'empty', style: { padding: '48px 0', fontSize: '22px', color: 'var(--ink2)' } }, 'No order is waiting')),
     null);
-  return { title: 'Orders', sub: 'Taken, not yet loaded', body, foot: [Btn('TAKE ORDER', { kind: 'primary', onClick: () => nav.go('cart.cust', { mode: 'order' }) }), Btn('ALL ORDERS', { kind: 'dark', onClick: () => nav.go('orders.all', {}) })] };
+  return { title: 'Orders', sub: 'Taken, not yet loaded', body, foot: [can('createOrder') ? Btn('TAKE ORDER', { kind: 'primary', onClick: () => nav.go('cart.cust', { mode: 'order' }) }) : null, Btn('ALL ORDERS', { kind: 'dark', onClick: () => nav.go('orders.all', {}) })] };
 });
 route('orders.all', (p, E) => {
   const f = E.st.f || p.filter || 'WAITING', items = S.orders.filter(ORDER_SETS[f] || ORDER_SETS.WAITING), groups = areaGroups(items);
   const body = h('div', null, Seg([['WAITING', 'Waiting'], ['DONE', 'Done']], f, v => { E.st.f = v; nav.refresh(); }),
     h('div', { class: 'mt12' }, groups.length ? Pane(groups.map(g => areaRow(g, f))) : Pane(Empty(f === 'WAITING' ? 'No orders are waiting.' : 'No finished orders yet.'))),
     h('div', { class: 'mute mt16', style: { fontSize: '14px' } }, 'Orders that are being loaded or are on the road are not in this list.'));
-  return { title: 'All orders', sub: plural(items.length, 'order') + ' · ' + plural(groups.length, 'area'), body, foot: [Btn('TAKE ORDER', { kind: 'primary', onClick: () => nav.go('cart.cust', { mode: 'order' }) })] };
+  return { title: 'All orders', sub: plural(items.length, 'order') + ' · ' + plural(groups.length, 'area'), body, foot: [can('createOrder') ? Btn('TAKE ORDER', { kind: 'primary', onClick: () => nav.go('cart.cust', { mode: 'order' }) }) : null] };
 });
 route('orders.area', (p, E) => {
   const f = p.f || 'WAITING', items = S.orders.filter(ORDER_SETS[f] || ORDER_SETS.WAITING).filter(o => orderArea(o) === p.area).sort((a, b) => b.createdAt - a.createdAt);
@@ -1999,8 +2089,8 @@ route('orders.area', (p, E) => {
   const total = items.reduce((s, o) => s + orderTotals(o).total, 0);
   const body = h('div', { class: 'gap' }, items.length ? Pane(items.map(o => orderRow(o))) : Pane(Empty('No orders here.')), items.length ? h('div', { class: 'mute center', style: { fontSize: '14px' } }, plural(items.length, 'order') + ' · ' + rs(total) + ' in total') : null);
   const foot = [];
-  if (f === 'WAITING' && items.length) foot.push(Btn('START LOADING', { kind: 'primary', icon: 'truck', onClick: () => { S.drafts.pk = { orderIds: [], area: p.area }; nav.go('pk.orders'); } }));
-  if (f === 'WAITING' && trips.length) foot.push(Btn('CONTINUE LOADING' + (trips.length > 1 ? ' (' + trips.length + ' PICKUPS)' : ''), { kind: foot.length ? 'ghost' : 'primary', onClick: () => trips.length === 1 ? tripGo(trips[0]) : nav.go('pk.list') }));
+  if (f === 'WAITING' && items.length && can('preparePickup')) foot.push(Btn('START LOADING', { kind: 'primary', icon: 'truck', onClick: () => { S.drafts.pk = { orderIds: [], area: p.area }; nav.go('pk.orders'); } }));
+  if (f === 'WAITING' && trips.length && can('preparePickup')) foot.push(Btn('CONTINUE LOADING' + (trips.length > 1 ? ' (' + trips.length + ' PICKUPS)' : ''), { kind: foot.length ? 'ghost' : 'primary', onClick: () => trips.length === 1 ? tripGo(trips[0]) : nav.go('pk.list') }));
   return { title: p.area, sub: (f === 'WAITING' ? 'Waiting orders' : 'Finished orders') + ' · ' + plural(items.length, 'order'), big: true, body, foot };
 });
 
@@ -2038,7 +2128,7 @@ route('order.detail', (p, E) => {
     if (o.alloc) { const dl = S.deliveries.find(d => d.orderId === o.id); if (dl && dl.outcome !== 'DELIVERED') body.append(h('div', { class: 'aside bad' }, h('b', null, 'Not accepted: '), Object.keys(dl.rejected).map(pid => qtyText(prod(pid), dl.rejected[pid]) + ' ' + prod(pid).name).join(', ') + ' — ' + REASONS[dl.reason])); }
   }
   if (o.needsApproval && !o.approved && o.status === 'WAITING')
-    body.append(authBox('MANAGER APPROVAL', 'This order is for ' + partyKind(o.partyId) + ' ' + partyName(o.partyId) + '. Stock needs Manager approval before it can be loaded. (Approval is not physical release — no goods move yet.)', 'CONFIRM APPROVAL', () => { approveOrder(o.id); nav.refresh(); toast('Manager approval recorded'); }));
+    body.append(authBox('MANAGER APPROVAL', 'This order is for ' + partyKind(o.partyId) + ' ' + partyName(o.partyId) + '. Stock needs Manager approval before it can be loaded. (Approval is not physical release — no goods move yet.)', 'CONFIRM APPROVAL', () => { approveOrder(o.id); nav.refresh(); toast('Manager approval recorded'); }, 'approveStock'));
   /* activity, oldest first — a quiet log, not a set of boxes */
   const sameDay = d => ymd(d) === ymd(new Date());
   body.append(Sec('Activity'));
@@ -2046,13 +2136,13 @@ route('order.detail', (p, E) => {
   const foot = [];
   const t = o.tripId ? tripOf(o.tripId) : null;
   if (o.status === 'WAITING') {
-    foot.push(Btn('EDIT ORDER', { kind: 'primary', onClick: () => startEdit(o) }));
-    foot.push(Btn('CANCEL THIS ORDER', { kind: 'link', cls: 'neg', onClick: () => confirmSheet({ title: 'Cancel this order?', sub: orderTitle(o) + ' · ' + rs(tot.total), yes: 'YES, CANCEL ORDER', danger: true, no: 'KEEP ORDER', onYes: () => { cancelOrder(o.id); nav.back(); toast('Order cancelled'); } }) }));
-  } else if (t && ['LOADING', 'LOADED', 'ON_ROAD'].includes(o.status)) foot.push(Btn(o.status === 'LOADING' ? 'CONTINUE LOADING' : 'OPEN PICKUP ' + t.no, { kind: 'primary', onClick: () => tripGo(t) }));
+    if (can('editOrder')) foot.push(Btn('EDIT ORDER', { kind: 'primary', onClick: () => startEdit(o) }));
+    if (can('cancelOrder')) foot.push(Btn('CANCEL THIS ORDER', { kind: 'link', cls: 'neg', onClick: () => confirmSheet({ title: 'Cancel this order?', sub: orderTitle(o) + ' · ' + rs(tot.total), yes: 'YES, CANCEL ORDER', danger: true, no: 'KEEP ORDER', onYes: () => { cancelOrder(o.id); nav.back(); toast('Order cancelled'); } }) }));
+  } else if (t && ['LOADING', 'LOADED', 'ON_ROAD'].includes(o.status) && (can('preparePickup') || myTrip(t))) foot.push(Btn(o.status === 'LOADING' ? 'CONTINUE LOADING' : 'OPEN PICKUP ' + t.no, { kind: 'primary', onClick: () => tripGo(t) }));
   else if (sale) {
-    if (saleDue(sale) > 0) foot.push(Btn('COLLECT ' + rs(saleDue(sale)), { kind: 'primary', onClick: () => nav.go('col.home', { sid: sale.id }) }));
-    foot.push(h('div', { class: 'btnrow' }, Btn('VIEW CHALLAN', { kind: 'ghost', onClick: () => nav.go('print', { docs: [['DC', o.dcId], ['BILL', sale.id]], start: 0 }) }), Btn('VIEW BILL', { kind: 'ghost', onClick: () => nav.go('print', { docs: [['BILL', sale.id], ['DC', o.dcId]], start: 0 }) })));
-  } else if (o.dcId) foot.push(Btn('VIEW CHALLAN', { kind: 'ghost', onClick: () => nav.go('print', { docs: [['DC', o.dcId]], start: 0 }) }));
+    if (saleDue(sale) > 0 && canOpen('col.home', { sid: sale.id })) foot.push(Btn('COLLECT ' + rs(saleDue(sale)), { kind: 'primary', onClick: () => nav.go('col.home', { sid: sale.id }) }));
+    if (canDoc(['DC', o.dcId])) foot.push(h('div', { class: 'btnrow' }, Btn('VIEW CHALLAN', { kind: 'ghost', onClick: () => nav.go('print', { docs: [['DC', o.dcId], ['BILL', sale.id]], start: 0 }) }), Btn('VIEW BILL', { kind: 'ghost', onClick: () => nav.go('print', { docs: [['BILL', sale.id], ['DC', o.dcId]], start: 0 }) })));
+  } else if (o.dcId && canDoc(['DC', o.dcId])) foot.push(Btn('VIEW CHALLAN', { kind: 'ghost', onClick: () => nav.go('print', { docs: [['DC', o.dcId]], start: 0 }) }));
   return { title: orderTitle(o), sub: partyKind(o.partyId), big: true, body, foot };
 });
 
@@ -2067,7 +2157,7 @@ const CARTS = {
 };
 function cartOf(mode) { return S.drafts[mode] || (S.drafts[mode] = { mode, partyId: null, lines: [], tok: nid('tok'), editId: null, extra: {} }); }
 function partiesFor(mode) {
-  const shops = S.customers.filter(c => c.type === 'SHOP' && isActiveCust(c)), agents = S.staff.filter(s => s.active && needsApprovalParty(s.id));
+  const shops = S.customers.filter(c => c.type === 'SHOP' && isActiveCust(c) && inMyAreas(c)), agents = S.staff.filter(s => s.active && needsApprovalParty(s.id));
   if (mode === 'order') return shops;
   if (mode === 'godown') return shops.concat(S.customers.filter(c => c.type === 'OCCASIONAL'));
   if (mode === 'ia') return S.customers.filter(c => c.type === 'AGENCY' && isActiveCust(c));
@@ -2083,13 +2173,13 @@ const cartCalc = c => totalsOf(c.lines, cartRates(c));
 const openOrdersOf = pid => S.orders.filter(o => o.partyId === pid && !ORDER_SETS.DONE(o));
 const inAreaName = (c, area) => { const a = ((c.addr && c.addr.area) || '').trim().toLowerCase(); return area === 'No area' ? !a : a === area.toLowerCase(); };
 function cartAreas(p, E, C) {                                           // Taking Order, screen 1: which area?
-  const mode = p.mode, shops = partiesFor(mode), names = S.areas.map(a => a.name);
+  const mode = p.mode, shops = partiesFor(mode), names = S.areas.map(a => a.name).filter(nm => can('viewAllCustomers') || myAreas().includes(nm.toLowerCase()));
   if (shops.some(c => !((c.addr && c.addr.area) || '').trim())) names.push('No area');
   const rows = names.map(nm => { const cs = shops.filter(c => inAreaName(c, nm)), open = cs.filter(c => openOrdersOf(c.id).length).length;
     return Row({ title: nm, sub: plural(cs.length, 'customer') + (open ? ' · ' + open + ' ordered' : ''), right: cs.length, rightSub: cs.length === 1 ? 'shop' : 'shops', onClick: () => nav.go('cart.cust', { mode, area: nm }) }); });
   const body = h('div', null, h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'WHICH AREA?')),
-    rows.length ? Pane(rows) : Pane(Empty('No areas or customers yet. Add the first customer below.')));
-  return { title: C.title, step: { label: C.label, n: 1, of: C.steps }, body, foot: rows.length ? undefined : [Btn('ADD NEW CUSTOMER', { kind: 'primary', onClick: () => { S.drafts.cust = { name: '', shop: '', phone: '', addr: {}, tok: nid('tok'), type: 'SHOP', lockType: false, ret: null, then: mode }; nav.go('cust.name'); } })],
+    rows.length ? Pane(rows) : Pane(Empty(can('createCustomer') ? 'No areas or customers yet. Add the first customer below.' : 'No customers in your areas yet. Ask the Manager to add them.')));
+  return { title: C.title, step: { label: C.label, n: 1, of: C.steps }, body, foot: rows.length || !can('createCustomer') ? undefined : [Btn('ADD NEW CUSTOMER', { kind: 'primary', onClick: () => { S.drafts.cust = { name: '', shop: '', phone: '', addr: {}, tok: nid('tok'), type: 'SHOP', lockType: false, ret: null, then: mode }; nav.go('cust.name'); } })],
     help: ['Orders are taken one area at a time.', 'Pick the area, then the customer. Nothing is saved until the last confirm.'] };
 }
 const open1 = shops => shops.some(c => openOrdersOf(c.id).length);
@@ -2104,7 +2194,7 @@ route('cart.cust', (p, E) => {
         return custRow(x, () => chooseCartParty(x, mode), oo.length ? { cls: 'new', chip: 'ORDERED', sub: [x.shop ? x.name : null, oo.length === 1 ? oo[0].no + ' · ' + rs(orderTotals(oo[0]).total) : plural(oo.length, 'order') + ' waiting'].filter(Boolean).join(' · ') } : null); } }));
   const foot = [];
   if (mode === 'godown') foot.push(Btn('OCCASIONAL BUYER (NAME ONLY)', { kind: 'dark', onClick: () => nav.go('ss.buyer', { forCart: mode }) }));
-  foot.unshift(Btn(mode === 'ia' ? 'ADD NEW AGENCY' : 'ADD NEW CUSTOMER', { kind: 'primary', onClick: () => {
+  if (can('createCustomer')) foot.unshift(Btn(mode === 'ia' ? 'ADD NEW AGENCY' : 'ADD NEW CUSTOMER', { kind: 'primary', onClick: () => {
     if (area) S.drafts.cust = { name: '', shop: '', phone: '', addr: area === 'No area' ? {} : { area }, tok: nid('tok'), type: 'SHOP', lockType: false, ret: null, then: mode };
     else { S.drafts.cust = S.drafts.cust || { name: '', shop: '', phone: '', addr: {}, tok: nid('tok') }; S.drafts.cust.type = mode === 'ia' ? 'AGENCY' : (S.drafts.cust.type === 'AGENCY' ? 'SHOP' : S.drafts.cust.type || 'SHOP'); }
     S.drafts.cust.then = mode; S.drafts.cust.ret = null; S.drafts.cust.lockType = mode === 'ia'; if (mode === 'ia') S.drafts.cust.type = 'AGENCY'; nav.go('cust.name'); } }));
@@ -2175,12 +2265,12 @@ function cartConfirm(mode) {
     if (c.editId) {
       updateOrder(c.editId, c.lines); delete S.drafts.order;
       const ei = UI.stack.map(e => e.name === 'order.detail' || (e.name === 'cart.cust' && e.params && e.params.area) ? 1 : 0).lastIndexOf(1);   // back to where the edit started: the order, or the area's customer list
-      if (ei >= 0) { UI.stack.length = ei + 1; show('back'); } else nav.reset([['orders']], 'back');
+      if (ei >= 0) { UI.stack.length = ei + 1; show('back'); } else nav.reset([[canOpen('orders') ? 'orders' : 'today']], 'back');
       toast('Order updated'); return;
     }
     const o = createOrder(c.partyId, c.lines, c.tok);
     delete S.drafts.order; const ai = UI.stack.map(e => e.name === 'cart.cust' && e.params && e.params.area ? 1 : 0).lastIndexOf(1);
-    if (ai >= 0) { UI.stack.length = ai + 1; show('back'); } else { S.highlight = o.id; nav.reset([['orders']], 'fwd'); }
+    if (ai >= 0) { UI.stack.length = ai + 1; show('back'); } else { S.highlight = o.id; nav.reset([[canOpen('orders') ? 'orders' : 'today']], 'fwd'); }
     toast('Order confirmed — ' + orderTitle(o) + ' ' + rs(orderTotals(o).total));
   } else nav.go(mode === 'godown' ? 'gs.how' : 'ia.confirm', {});
 }
@@ -2399,7 +2489,7 @@ route('pk.stops', (p, E) => {
 /* ---- 5. loading list: tick each product (counts are fixed beforehand — to change an order, change it in that customer's order) ---- */
 const tripCams = t => Array.isArray(t.cameraIds) ? t.cameraIds : (t.cameraId ? [t.cameraId] : []);
 const camText = t => tripCams(t).join(', ') || '—';
-function setTripCameras(tid, ids) { const t = tripOf(tid); if (!t || t.status !== 'LOADING') fail('This pickup can no longer be changed.'); t.cameraIds = ids.slice(); t.cameraId = ids[0] || null; }
+function setTripCameras(tid, ids) { need('preparePickup'); const t = tripOf(tid); if (!t || t.status !== 'LOADING') fail('This pickup can no longer be changed.'); t.cameraIds = ids.slice(); t.cameraId = ids[0] || null; }
 route('pk.load', (p, E) => {
   const t = tripOf(p.tid), needs = tripNeeds(t), pids = Object.keys(needs);
   const done = pids.filter(pid => t.counted[pid] != null).length, allOk = done === pids.length, diffs = loadDiffs(t);
@@ -2435,7 +2525,7 @@ function camSheet(t, mode) {                                       // 'main' = p
 route('pk.camera', (p, E) => {
   const t = tripOf(p.tid); if (!t || t.status !== 'LOADING') return { title: 'Camera', body: Empty('This pickup is no longer being loaded.'), foot: [Btn('BACK', { kind: 'primary', onClick: () => nav.back() })] };
   const cams = S.cameras.filter(c => c.active), usual = cams.find(c => c.id === S.settings.defaultCamera) || null, camOf = id => cams.find(c => c.id === id);
-  let ids = tripCams(t).filter(camOf); if (!ids.length && usual) { setTripCameras(t.id, [usual.id]); ids = [usual.id]; }
+  let ids = tripCams(t).filter(camOf); if (!ids.length && usual) { sys(() => setTripCameras(t.id, [usual.id])); ids = [usual.id]; }
   const main = camOf(ids[0]) || null, more = ids.slice(1).map(camOf).filter(Boolean);
   const camRow = c => Row({ title: 'Camera ' + c.id, sub: c.desc || 'No note', chip: c.id === S.settings.defaultCamera ? 'USUAL' : null });
   const body = h('div', null, tripBar(t), h('div', { class: 'oq mt12', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Which camera watched the loading?'),
@@ -2465,7 +2555,7 @@ route('pk.ready', (p, E) => {
   if (t.status !== 'READY') return { title: t.no, body: Empty('This pickup is ' + t.status.toLowerCase().replace('_', ' ') + '.'), foot: [Btn('OPEN PICKUP', { kind: 'primary', onClick: () => tripGo(t) })] };
   const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'Pickup number'), h('div', { class: 'huge' }, t.no), h('div', { class: 'mt8' }, vehOf(t.vehicleId).reg + ' · ' + staffOf(t.driverId).name + (t.helperId ? ' + ' + staffOf(t.helperId).name : '')), h('div', { class: 'mt8' }, Chip('LOADED', 'ok')))),
     Sec('Orders'), Pane(tripOrders(t).map((o, i) => Row({ title: (i + 1) + '. ' + orderTitle(o), sub: areaOf(o.partyId) + ' · ' + chalOf(o.dcId).no + ' ' + chalOf(o.dcId).status.toLowerCase(), right: rs(orderTotals(o).total) }))));
-  return { title: 'Pickup Ready', body, help: 'Starting the trip issues the delivery challans. The driver then works through the stops one by one.', foot: [Btn('START TRIP', { kind: 'primary', icon: 'truck', onClick: () => { startTrip(t.id); nav.replace('pk.road', { tid: t.id }); toast('Trip started'); } }),
+  return { title: 'Pickup Ready', body, help: 'Starting the trip issues the delivery challans. The driver then works through the stops one by one.', foot: [can('startTrip') ? Btn('START TRIP', { kind: 'primary', icon: 'truck', onClick: () => { startTrip(t.id); nav.replace('pk.road', { tid: t.id }); toast('Trip started'); } }) : null,
     Btn('PRINT', { kind: 'dark', icon: 'print', onClick: () => nav.go('print', { docs: [['MANIFEST', t.id]].concat(tripOrders(t).map(o => ['DC', o.dcId])), start: 0 }) })] };
 });
 
@@ -2496,7 +2586,7 @@ route('pk.road', (p, E) => {
   if (Object.keys(free).length && (done.length || !nx)) body.append(h('div', { class: 'card' }, h('b', null, 'Goods left on the pickup'), h('div', { class: 'mute', style: { fontSize: '14px' } }, Object.keys(free).map(pid => qtyText(prod(pid), free[pid]) + ' ' + prod(pid).name).join(' · ')), h('div', { class: 'mt12' }, Btn('WHAT TO DO WITH THEM?', { kind: 'dark', cls: 'sm', onClick: () => nav.go('pk.left', { tid: t.id }) }))));
   if (t.unsafe.length) body.append(h('div', { class: 'card' }, h('b', null, 'Not sellable on board: '), t.unsafe.map(u => qtyText(prod(u.pid), u.base) + ' ' + prod(u.pid).name + ' (' + u.kind.toLowerCase() + ')').join(', '), h('div', { class: 'mute', style: { fontSize: '13px' } }, 'These can never be sold. They come back to the godown as held goods.')));
   const foot = [];
-  if (!nx) foot.push(Btn('BACK AT GODOWN — START RETURN', { kind: 'primary', onClick: () => { arriveBack(t.id); nav.replace('tr.goods', { tid: t.id }); } }));
+  if (!nx) foot.push(Btn(can('reconcilePickup') ? 'BACK AT GODOWN — START RETURN' : 'BACK AT GODOWN', { kind: 'primary', onClick: () => { arriveBack(t.id); if (can('reconcilePickup')) nav.replace('tr.goods', { tid: t.id }); else { nav.reset([['today']]); toast('Marked back at the godown — the Manager will check the return'); } } }));
   return { title: 'On the road', sub: vehOf(t.vehicleId).reg + ' · ' + staffOf(t.driverId).name, body, foot, back: true, help: ['The next shop to visit is shown first.', 'Open the order at the shop to confirm what was delivered, then collect the money.'] };
 });
 const mapsUrlLabel = c => c.addr.lat != null ? 'OPEN MAPS' : 'OPEN MAPS (BY ADDRESS)';
@@ -2684,7 +2774,7 @@ route('col.home', (p, E) => {
     const bCash = m.CASH ? Btn('CASH', { kind: 'dark', onClick: go('col.cash') }) : null, bOn = (m.UPI || m.BANK) ? Btn('ONLINE', { kind: 'dark', onClick: go('col.online') }) : null;
     const bChq = m.CHEQUE ? Btn('CHEQUE', { kind: 'dark', onClick: go('col.cheque') }) : null, bDue = !c.agent && c.sale ? Btn('MARK DUE', { kind: 'neg', onClick: () => nav.go('col.due', p) }) : null;
     [[bCash, bOn], [bChq, bDue]].forEach(pr => { const k = pr.filter(Boolean); if (k.length === 2) foot.push(pair(k[0], k[1])); else if (k.length === 1) foot.push(k[0]); });
-    if (c.sale && !c.sale.discount && !c.sale.cashAndCarry && c.paid === 0) foot.push(Btn('GIVE DISCOUNT', { kind: 'link', onClick: () => nav.go('disc', { sid: c.sale.id }) }));
+    if (c.sale && !c.sale.discount && !c.sale.cashAndCarry && c.paid === 0 && can('approveDiscount')) foot.push(Btn('GIVE DISCOUNT', { kind: 'link', onClick: () => nav.go('disc', { sid: c.sale.id }) }));
   } else foot.push(Btn('DONE', { kind: 'primary', onClick: () => nav.replace('col.done', p) }));
   return { title: 'Collect', sub: c.agent ? 'Agent payment' : (c.trip ? c.trip.no : ''), body, foot, center: true, help: ['Choose how the customer is paying. Only the next screen for that method appears.', 'Cash collected on the road stays with the driver until the Manager counts it at pickup return. Online and cheque payments wait for an office check.'] };
 });
@@ -2752,8 +2842,8 @@ route('col.done', (p, E) => {
     else nav.reset([['today']]);
   };
   const body = h('div', { class: 'gap' }, h('div', { class: 'center' }, h('div', { class: 'donemark' }, ic('check')), h('div', { class: 'big' }, c.due > 0 ? 'Saved' : 'All paid'), h('div', { class: 'mute mt8' }, c.label)), lines,
-    pay && pay.stage === 'PENDING' && (c.agent || pay.method !== 'CHEQUE') ? Btn('VERIFY NOW', { kind: 'ghost', onClick: () => nav.go('cash.verify', { id: pay.id }) }) : null);
-  return { title: 'Collection', sub: c.label, body, foot: [Btn(trip ? (askLeft ? 'WHAT TO DO WITH REMAINING GOODS?' : nextStop_ ? 'NEXT STOP' : 'BACK TO PICKUP') : 'DONE', { kind: 'primary', onClick: goNext }), c.pid ? Btn('OPEN ' + partyName(c.pid).toUpperCase() + ' KHATA', { kind: 'link', onClick: () => nav.reset([['khata'], ['kh.person', { pid: c.pid }]]) }) : null], back: false };
+    pay && pay.stage === 'PENDING' && (c.agent || pay.method !== 'CHEQUE') && can('verifyPayment') ? Btn('VERIFY NOW', { kind: 'ghost', onClick: () => nav.go('cash.verify', { id: pay.id }) }) : null);
+  return { title: 'Collection', sub: c.label, body, foot: [Btn(trip ? (askLeft ? 'WHAT TO DO WITH REMAINING GOODS?' : nextStop_ ? 'NEXT STOP' : 'BACK TO PICKUP') : 'DONE', { kind: 'primary', onClick: goNext }), c.pid && can('viewKhataAll') ? Btn('OPEN ' + partyName(c.pid).toUpperCase() + ' KHATA', { kind: 'link', onClick: () => nav.reset([['khata'], ['kh.person', { pid: c.pid }]]) }) : null], back: false };
 });
 function payExplain(pay) {
   if (pay.stage === 'WITH_COLLECTOR') return 'This cash is with ' + staffOf(pay.collectorId).name + '. It is not agency cash until the Manager counts it when the pickup comes back.';
@@ -2772,7 +2862,7 @@ route('disc', (p, E) => {
   const inp = h('input', { class: 'a input', style: { textAlign: 'center', fontSize: '30px', minHeight: '64px' }, id: 'pct', inputmode: 'decimal', placeholder: '0.5', value: st.pct, maxlength: 5, 'aria-label': 'Discount percentage', 'data-autofocus': '1', onInput: ev => { st.pct = ev.target.value.replace(/[^\d.]/g, ''); ev.target.value = st.pct; nav.refresh(); } });
   const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Discount percentage'), h('div', { class: 'mt12' }, inp), h('div', { class: 'hint' }, 'e.g. 0.5 for half a percent')),
     h('div', { class: 'seg' }, ['0.5', '1', '2'].map(v => h('button', { type: 'button', 'aria-pressed': String(st.pct === v), onClick: () => { st.pct = v; nav.refresh(); } }, v + '%'))), box,
-    authBox('OWNER APPROVAL REQUIRED', 'Only the Owner can approve a billing discount. This is a future permission boundary — in this test build, simulating the approval needs no login.', 'SIMULATE OWNER APPROVAL', () => { if (!ok) fail('Enter a discount between 0.01 and 20 percent.'); applyDiscount(s.id, bp, 'dc-' + s.id + '-' + bp); nav.back(); toast('Owner approved ' + pctText(bp) + ' — new total ' + rs(saleTotal(s))); }));
+    authBox('OWNER APPROVAL REQUIRED', 'Only the Owner can approve a billing discount. This is a future permission boundary — in this test build, simulating the approval needs no login.', 'SIMULATE OWNER APPROVAL', () => { if (!ok) fail('Enter a discount between 0.01 and 20 percent.'); applyDiscount(s.id, bp, 'dc-' + s.id + '-' + bp); nav.back(); toast('Owner approved ' + pctText(bp) + ' — new total ' + rs(saleTotal(s))); }, 'approveDiscount'));
   return { title: 'Discount', sub: s.no + ' · ' + partyName(s.partyId), body, help: 'A billing discount lowers the bill before money is collected. It is different from an inter-agency special rate.' };
 });
 
@@ -2923,9 +3013,9 @@ function receiptSheet(pid, x) {
     : y && y.stage === 'PENDING' ? 'Already counted in the balance. The office still has to see this money in the bank.'
     : y && y.stage === 'WITH_COLLECTOR' ? 'The customer paid the driver. The driver holds this cash until the Manager counts it at pickup return.' : null;
   const acts = [];
-  if (x.link) acts.push(Btn('VIEW BILL', { kind: 'primary', icon: 'print', onClick: () => { closeSheet(); nav.go('print', { docs: [x.link], start: 0 }); } }));
+  if (x.link && canDoc(x.link)) acts.push(Btn('VIEW BILL', { kind: 'primary', icon: 'print', onClick: () => { closeSheet(); nav.go('print', { docs: [x.link], start: 0 }); } }));
   if (y && y.method === 'CASH' && y.details && y.details.denoms && denomLines(y.details.denoms).length + (y.details.denoms.coins ? 1 : 0)) acts.push(Btn('PAYMENT DETAILS', { kind: acts.length ? 'ghost' : 'primary', onClick: () => paymentDetails(pid, x) }));
-  if (y && y.stage === 'PENDING') acts.push(Btn('OPEN PAYMENT CHECK', { kind: acts.length ? 'ghost' : 'primary', onClick: () => { closeSheet(); nav.go('cash.verify', { id: y.id }); } }));
+  if (y && y.stage === 'PENDING' && can('verifyPayment')) acts.push(Btn('OPEN PAYMENT CHECK', { kind: acts.length ? 'ghost' : 'primary', onClick: () => { closeSheet(); nav.go('cash.verify', { id: y.id }); } }));
   acts.push(sheetClose('CLOSE'));
   openSheet({ title: x.kind + ' · ' + x.what, sub: [x.ref, fmtD(x.at)].filter(Boolean).join(' · '), actions: acts,
     body: h('div', null, h('div', { class: 'rd-amt' + (x.void ? ' mute' : '') }, x.posted ? rs(e.amt, { plus: true }) : rs(x.amt)),
@@ -2945,15 +3035,15 @@ route('kh.person', (p, E) => {
   const body = h('div', null, khBalance(pid, E), receiptConversation(pid, { limit: 10 }));
   /* one primary money action · other money actions as quiet outlines · navigation as text links */
   const prim = [], money = [], links = [];
-  if (!isS) { if (b < 0 || due > 0) prim.push(['RECORD PAYMENT', () => nav.go('col.home', { pid })]); links.push(['STATEMENT', () => nav.go('statement', { pid })]); }
+  if (!isS) { if ((b < 0 || due > 0) && can('recordCollection')) prim.push(['RECORD PAYMENT', () => nav.go('col.home', { pid })]); if (canDoc(['STATEMENT', pid])) links.push(['STATEMENT', () => nav.go('statement', { pid })]); }
   else {
-    if (agent && due > 0) prim.push(['RECORD PAYMENT', () => nav.go('col.home', { pid })]);
+    if (agent && due > 0 && can('recordCollection')) prim.push(['RECORD PAYMENT', () => nav.go('col.home', { pid })]);
     const comm = kbal(pid, 'COMMISSION');
-    if (comm > 0) prim.push(['PAY COMMISSION ' + rs(comm), () => nav.go('kh.pay', { pid, cat: 'COMMISSION' })]);
+    if (!can('payStaff')) { /* no pay actions for this role */ } else if (comm > 0) prim.push(['PAY COMMISSION ' + rs(comm), () => nav.go('kh.pay', { pid, cat: 'COMMISSION' })]);
     else if (b > 0) prim.push(['SETTLE DUE ' + rs(b), () => nav.go('kh.pay', { pid })]);
-    if (agent) links.push(['VIEW SALES', () => nav.go('kh.sales', { pid })]); else money.push(['RECORD ADVANCE', () => nav.go('kh.advance', { pid })]);
+    if (agent) links.push(['VIEW SALES', () => nav.go('kh.sales', { pid })]); else if (can('payStaff')) money.push(['RECORD ADVANCE', () => nav.go('kh.advance', { pid })]);
   }
-  links.push([isS ? 'STAFF PROFILE' : 'CUSTOMER PROFILE', () => isS ? nav.go('sf.person', { sid: pid }) : nav.go('customer.profile', { pid })]);
+  if (canOpen(isS ? 'sf.person' : 'customer.profile', { pid, sid: pid })) links.push([isS ? 'STAFF PROFILE' : 'CUSTOMER PROFILE', () => isS ? nav.go('sf.person', { sid: pid }) : nav.go('customer.profile', { pid })]);
   const foot = [], quiet = prim.slice(1).concat(money);
   if (prim[0]) foot.push(Btn(prim[0][0], { kind: 'primary', onClick: prim[0][1] }));
   if (quiet.length) foot.push(h('div', { class: 'btnrow' }, quiet.map(a => Btn(a[0], { kind: 'ghost', onClick: a[1] }))));
@@ -3134,7 +3224,7 @@ route('tr.done', (p, E) => {
 const stTone = s => s === 'OK' ? 'ok' : s === 'LOW' ? 'warn' : 'bad';
 const stLabel = s => s === 'OK' ? 'IN STOCK' : s === 'LOW' ? 'LOW' : 'OUT';
 /* ===================== PRODUCTS — the catalogue (details, prices, order). Stock (counting, receiving) is a separate section. ===================== */
-function moveProduct(pid, dir) {
+function moveProduct(pid, dir) { need('manageProducts');
   const a = S.products, i = a.findIndex(p => p.id === pid), j = i + dir; if (i < 0 || j < 0 || j >= a.length) return;
   [a[i], a[j]] = [a[j], a[i]]; log('PRODUCT', a[j].name + ' moved ' + (dir < 0 ? 'up' : 'down') + ' — now number ' + (j + 1));
 }
@@ -3190,7 +3280,7 @@ route('st.receive', (p, E) => {
 });
 /* ---- new purchase: supplier → products & quantities at buying price → review → (count → confirm, as for any invoice).
    Entering the invoice never changes stock; only the confirmed physical count does. ---- */
-function createPurchase(d) {
+function createPurchase(d) { need('receiveStock');
   if (tokUsed(d.tok)) fail('This purchase was already saved.');
   const supplier = (d.supplier || '').trim(); if (supplier.length < 2) fail('Enter the supplier name.');
   if (!d.lines.length) fail('Add at least one product.');
@@ -3433,7 +3523,7 @@ function staffBlockers(s) {
   add(S.returns.filter(r => r.partyId === s.id).length, 'return'); add(S.jobs.filter(j => j.coordinatorId === s.id).length, 'unloading job');
   return n;
 }
-function removeStaff(sid) {
+function removeStaff(sid) { need('manageStaff');
   const s = staffOf(sid); if (!s) fail('Staff member not found.');
   if (busyStaff(sid)) fail(s.name + ' is on a pickup right now.');
   const bl = staffBlockers(s); if (bl.length) fail(s.name + ' has ' + bl.join(', ') + ' — keep the profile as inactive instead.');
@@ -3479,7 +3569,7 @@ function profileMissing(s) {
 const profileIncomplete = s => s.active !== false && profileMissing(s).length > 0;
 const incompleteBanner = (s, onGo) => { const m = profileMissing(s); return m.length ? h('div', { class: 'aside bad' }, h('b', null, 'Profile incomplete — '), 'missing: ' + m.join(', ') + '.', onGo ? h('div', { class: 'mt8' }, Btn('COMPLETE PROFILE', { kind: 'dark', cls: 'sm', onClick: onGo })) : null) : null; };
 const callLink = ph => h('a', { class: 'btn ghost sm', href: 'tel:' + ph, style: { width: 'auto', minWidth: '84px' }, 'aria-label': 'Call ' + ph }, ic('phone'), 'CALL');
-function saveStaffDetails(sid, v) {
+function saveStaffDetails(sid, v) { need('manageStaff');
   const s = staffOf(sid); if (!s) fail('Staff member not found.');
   const aad = digitsOf(v.aadhaar, 12), home = (v.home || '').trim(), email = cleanEmail(v.email), pan = cleanPan(v.pan), dl = cleanLicence(v.dlNo);
   const phones = v.phones.map(x => ({ label: x.label || 'Mobile', num: cleanPhone(x.num) }));
@@ -3649,12 +3739,12 @@ route('cash.staff', (p, E) => ({ title: 'Pay staff', body: h('div', null, h('div
 /* expense: type → amount + note → approve → pay */
 route('cash.exp.type', (p, E) => { const d = S.drafts.exp; if (!d) return { title: 'Expense', body: Empty('Nothing in progress') };
   return { title: 'Add expense', step: { label: 'NEW EXPENSE', n: 1, of: 4 }, body: h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'What kind of expense?')), Pane(S.expenseCats.map(c => Row({ title: c, chip: d.cat === c ? 'SELECTED' : null, tone: 'ok', onClick: () => { d.cat = c; nav.go('cash.exp.amt'); } })))) }; });
-route('cash.exp.amt', (p, E) => { const d = S.drafts.exp; const btn = Btn('CONTINUE', { kind: 'primary', disabled: !(parseRs(d.amt) > 0), onClick: () => { const x = addExpense({ cat: d.cat, amount: parseRs(d.amt), note: d.note, token: d.tok }); delete S.drafts.exp; nav.replace('cash.exp.approve', { id: x.id }); } });
+route('cash.exp.amt', (p, E) => { const d = S.drafts.exp; const btn = Btn('CONTINUE', { kind: 'primary', disabled: !(parseRs(d.amt) > 0), onClick: () => { const x = addExpense({ cat: d.cat, amount: parseRs(d.amt), note: d.note, token: d.tok }); delete S.drafts.exp; if (can('approveExpense')) nav.replace('cash.exp.approve', { id: x.id }); else { nav.reset([['more']]); toast('Expense noted — waiting for the Owner to approve it'); } } });
   return { title: 'Add expense', sub: d.cat, step: { label: 'NEW EXPENSE', n: 2, of: 4 }, body: h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'How much?'), h('input', { class: 'a', id: 'oq', inputmode: 'decimal', placeholder: '₹ amount', value: d.amt, maxlength: 10, 'data-autofocus': '1', 'data-enter': '1', 'aria-label': 'Amount', onInput: ev => { d.amt = ev.target.value.replace(/[^\d.]/g, ''); ev.target.value = d.amt; btn.disabled = !(parseRs(d.amt) > 0); } })), Field('Note (optional)', h('input', { class: 'input', maxlength: 80, placeholder: 'e.g. diesel for RJ35-4821', value: d.note, onInput: ev => { d.note = ev.target.value; } }))), foot: [btn], center: true }; });
 route('cash.exp.approve', (p, E) => { const x = byId(S.expenses, p.id);
   if (x.status !== 'PENDING') return { title: 'Expense', body: Empty('Already ' + x.status.toLowerCase()), foot: [Btn('CONTINUE', { kind: 'primary', onClick: () => nav.replace('cash.exp.pay', { id: x.id }) })] };
   return { title: 'Approve expense', sub: x.no, step: { label: 'NEW EXPENSE', n: 3, of: 4 }, body: h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, x.cat), h('div', { class: 'huge' }, rs(x.amount)), x.note ? h('div', { class: 'mt8' }, x.note) : null)),
-    authBox('OWNER APPROVAL REQUIRED', 'A Manager can note an expense but cannot approve it. Approval is a future permission boundary — simulated here without a login.', 'SIMULATE OWNER APPROVAL', () => { approveExpense(x.id); nav.replace('cash.exp.pay', { id: x.id }); toast('Approved')})) }; });
+    authBox('OWNER APPROVAL REQUIRED', 'A Manager can note an expense but cannot approve it. Approval is a future permission boundary — simulated here without a login.', 'SIMULATE OWNER APPROVAL', () => { approveExpense(x.id); nav.replace('cash.exp.pay', { id: x.id }); toast('Approved')}, 'approveExpense')) }; });
 route('cash.exp.pay', (p, E) => { const x = byId(S.expenses, p.id), st = E.st; if (!st.init) { st.init = 1; st.acct = 'CASH'; st.tok = nid('tok'); }
   if (x.status === 'PAID') return { title: 'Expense', body: Empty('Already paid.') };
   return { title: 'Pay expense', sub: x.no, step: { label: 'NEW EXPENSE', n: 4, of: 4 }, body: h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, x.cat + ' · approved'), h('div', { class: 'huge' }, rs(x.amount)))), h('div', null, h('div', { class: 'lbl' }, 'Pay from'), Seg([['CASH', 'Cash ' + rs(cbal('CASH'))], ['BANK', 'Bank ' + rs(cbal('BANK'))]], st.acct, v => { st.acct = v; })), h('div', { class: 'aside' }, 'Approving did not move any money. Paying now takes it out of the account you choose.')),
@@ -3709,7 +3799,7 @@ route('gs.confirm', (p, E) => {
   const body = h('div', { class: 'gap' }, docTitle('Godown sale to', partyName(c.partyId)), linesPane(tot.rows, tot, {}),
     h('div', { class: 'card' }, KV('Goods leave by', mode === 'SELF' ? 'Self pickup' : 'Customer vehicle')),
     mode === 'CUSTOMER_VEHICLE' ? Field('Vehicle number (optional)', h('input', { class: 'input', maxlength: 14, placeholder: 'e.g. RJ14-1234', value: st.veh, onInput: ev => { st.veh = ev.target.value; c.extra.veh = st.veh; } })) : null,
-    needsOk ? (c.extra.mgr ? h('div', { class: 'card' }, '✓ Manager approval recorded') : authBox('MANAGER APPROVAL', partyKind(c.partyId) + ' stock needs Manager approval before it is handed over. (Approval is not the same as the goods leaving.)', 'CONFIRM APPROVAL', () => { c.extra.mgr = true; approve('MANAGER_STOCK', 'Manager approved godown stock for ' + partyName(c.partyId)); nav.refresh(); })) : null);
+    needsOk ? (c.extra.mgr ? h('div', { class: 'card' }, '✓ Manager approval recorded') : authBox('MANAGER APPROVAL', partyKind(c.partyId) + ' stock needs Manager approval before it is handed over. (Approval is not the same as the goods leaving.)', 'CONFIRM APPROVAL', () => { c.extra.mgr = true; approve('MANAGER_STOCK', 'Manager approved godown stock for ' + partyName(c.partyId)); nav.refresh(); }, 'approveStock')) : null);
   return { title: 'Confirm sale', sub: partyName(c.partyId), step: { label: 'GODOWN SALE', n: 6, of: 6 }, body, help: 'Confirming hands the goods over: godown stock goes down once and a bill and challan are created. Next you collect the money or leave it due.',
     foot: [Btn('CONFIRM — GOODS HANDED OVER', { kind: 'primary', disabled: needsOk && !c.extra.mgr, onClick: () => { const r = directSale({ kind: 'DIRECT', partyId: c.partyId, lines: c.lines.map(l => ({ pid: l.pid, base: l.base, rate: prod(l.pid).sell, units: l.units })), mode, vehicleNo: st.veh, approved: !!c.extra.mgr, token: c.tok }); delete S.drafts.godown; nav.reset([['more'], ['col.home', { sid: r.sale.id }]]); toast('Sale confirmed — ' + r.sale.no); } })] };
 });
@@ -3722,7 +3812,7 @@ route('ia.rates', (p, E) => {
   const changed = () => c.lines.some(l => { const v = parse(l.pid); return v != null && v !== prod(l.pid).sell; });
   const bad = () => c.lines.some(l => !(parse(l.pid) > 0));
   const btn = Btn('CONTINUE', { kind: 'primary', onClick: () => { const rates = {}; c.lines.forEach(l => rates[l.pid] = parse(l.pid)); c.extra.rates = rates; c.extra.authed = st.authed && changed(); nav.go('cart.review', { mode: 'ia' }); } });
-  const upd = () => { btn.disabled = bad() || (changed() && !st.authed); setKids(authWrap, changed() ? (st.authed ? h('div', { class: 'card' }, '✓ Owner authorised these special rates') : authBox('OWNER AUTHORIZATION REQUIRED', 'A negotiated rate below the normal Sell-to-Shop price needs the Owner. This is a special inter-agency rate — not a billing discount. (Simulated: no login in this test build.)', 'SIMULATE OWNER APPROVAL', () => { if (bad()) fail('Enter a rate for every product.'); st.authed = true; c.extra.authed = true; approve('OWNER_SPECIAL_RATE', 'Owner authorised special inter-agency rates for ' + partyName(c.partyId)); upd(); })) : null); };
+  const upd = () => { btn.disabled = bad() || (changed() && !st.authed); setKids(authWrap, changed() ? (st.authed ? h('div', { class: 'card' }, '✓ Owner authorised these special rates') : authBox('OWNER AUTHORIZATION REQUIRED', 'A negotiated rate below the normal Sell-to-Shop price needs the Owner. This is a special inter-agency rate — not a billing discount. (Simulated: no login in this test build.)', 'SIMULATE OWNER APPROVAL', () => { if (bad()) fail('Enter a rate for every product.'); st.authed = true; c.extra.authed = true; approve('OWNER_SPECIAL_RATE', 'Owner authorised special inter-agency rates for ' + partyName(c.partyId)); upd(); }, 'approveDiscount')) : null); };
   const authWrap = h('div');
   const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Agreed rate'), h('div', { class: 'hint' }, 'Rate per ' + 'single unit (packet / piece). Leave it as it is for the normal price.')),
     c.lines.map(l => { const pr = prod(l.pid); return h('div', { class: 'card' }, h('b', null, prodLabel(pr)), h('div', { class: 'mute', style: { fontSize: '14px' } }, qtyText(pr, l.base) + ' · normal ₹' + (pr.sell / 100) + ' per ' + pr.base.toLowerCase()),
@@ -3743,7 +3833,7 @@ route('rl.prod', (p, E) => {
   const items = S.products.filter(x => x.active && (S.retail[x.id] || 0) > 0);
   const body = h('div', null, h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Which product?'), h('div', { class: 'hint' }, 'Only goods already issued to the retail counter can be sold here.')),
     items.length ? pickList(E, { placeholder: 'Search product', empty: 'No product found.', items: () => items, text: x => prodLabel(x) + ' ' + x.nick, render: x => Row({ title: prodLabel(x), sub: 'Counter stock: ' + baseText(x, S.retail[x.id]), right: '₹' + (x.retail / 100), rightSub: 'each', onClick: () => { S.drafts.retail = { pid: x.id, base: 0, method: 'CASH', ref: '', tok: nid('tok') }; nav.go('rl.qty'); } }) }) : Pane(Empty('The retail counter has no stock.')));
-  return { title: 'Retail Sale', step: { label: 'RETAIL SALE', n: 1, of: 3 }, body, foot: [Btn('GET MORE COUNTER STOCK', { kind: 'dark', onClick: () => nav.go('rl.alloc') })], help: 'Retail packets are sold from stock the Manager approved for the counter — never silently from the godown.' };
+  return { title: 'Retail Sale', step: { label: 'RETAIL SALE', n: 1, of: 3 }, body, foot: can('approveStock') ? [Btn('GET MORE COUNTER STOCK', { kind: 'dark', onClick: () => nav.go('rl.alloc') })] : [h('div', { class: 'mute center', style: { fontSize: '14px' } }, 'Need more counter stock? Ask the Manager to approve it.')], help: 'Retail packets are sold from stock the Manager approved for the counter — never silently from the godown.' };
 });
 route('rl.qty', (p, E) => {
   const d = S.drafts.retail; if (!d) return { title: 'Retail Sale', body: Empty('Choose a product first'), foot: [Btn('CHOOSE PRODUCT', { kind: 'primary', onClick: () => nav.replace('rl.prod') })] };
@@ -3768,7 +3858,7 @@ route('rl.alloc', (p, E) => {
   if (!st.pid) return { title: 'Counter stock', body: h('div', null, h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Which product for the counter?')), pickList(E, { placeholder: 'Search product', empty: 'No product.', items: () => S.products.filter(x => x.active && avail(x.id) > 0), text: x => prodLabel(x) + ' ' + x.nick, render: x => Row({ title: prodLabel(x), sub: 'In godown: ' + qtyText(x, avail(x.id)), onClick: () => { st.pid = x.id; st.u = {}; nav.refresh(); } }) })) };
   const pr = prod(st.pid), max = avail(pr.id), inf = h('div', { class: 'center mt12' });
   const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'How much for the counter?'), h('div', { class: 'big mt8' }, prodLabel(pr)), h('div', { class: 'mute mt8' }, 'In godown: ' + qtyText(pr, max))), unitsEditor(pr, st.u, { max, onChange: b => { inf.textContent = b ? 'Issue ' + qtyText(pr, b) + ' to the counter' : ''; } }), inf,
-    authBox('MANAGER APPROVAL', 'Retail stock needs Manager approval. Approving moves the goods from the godown to the counter. (Simulated — no login.)', 'CONFIRM APPROVAL & ISSUE', () => { const b = toBase(pr, st.u); retailAllocate(pr.id, b); nav.replace('rl.prod'); toast(qtyText(pr, b) + ' issued to the counter'); }));
+    authBox('MANAGER APPROVAL', 'Retail stock needs Manager approval. Approving moves the goods from the godown to the counter. (Simulated — no login.)', 'CONFIRM APPROVAL & ISSUE', () => { const b = toBase(pr, st.u); retailAllocate(pr.id, b); if (can('retailSale')) nav.replace('rl.prod'); else nav.reset([['more']]); toast(qtyText(pr, b) + ' issued to the counter'); }, 'approveStock'));
   return { title: 'Counter stock', sub: pr.name, body, back: true };
 });
 
@@ -3797,7 +3887,7 @@ route('cr.confirm', (p, E) => { const d = crd(); if (!d || !d.base) return { tit
   return { title: 'Confirm return', sub: partyName(d.partyId), step: { label: 'CUSTOMER RETURN', n: 4, of: 4 }, body: h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad' }, KV('Customer', partyName(d.partyId)), KV('Product', prodLabel(pr)), KV('Quantity', qtyText(pr, d.base)), KV('Condition', cap(d.kind)))),
     h('div', { class: 'aside' }, h('b', null, 'These goods will be kept apart. '), cap(d.kind) + ' goods never go into sellable stock. No money is paid or credited yet — you decide that next.')),
     help: 'Receiving the return only records the goods. Credit or refund is a separate approved decision.',
-    foot: [Btn('RECEIVE THESE GOODS', { kind: 'primary', onClick: () => { const r = customerReturn({ partyId: d.partyId, pid: d.pid, base: d.base, kind: d.kind, note: d.note, token: d.tok }); delete S.drafts.cr; nav.reset([['more'], ['cr.credit', { rid: r.id }]]); toast('Goods received — kept out of sellable stock'); } })] }; });
+    foot: [Btn('RECEIVE THESE GOODS', { kind: 'primary', onClick: () => { const r = customerReturn({ partyId: d.partyId, pid: d.pid, base: d.base, kind: d.kind, note: d.note, token: d.tok }); delete S.drafts.cr; if (can('approveCredit')) nav.reset([['more'], ['cr.credit', { rid: r.id }]]); else nav.reset([['more']]); toast(can('approveCredit') ? 'Goods received — kept out of sellable stock' : 'Goods received — kept out of sellable stock. The Owner decides the money.'); } })] }; });
 route('cr.credit', (p, E) => {
   const r = byId(S.returns, p.rid); if (!r) return { title: 'Return', body: Empty('Not found') };
   const st = E.st; if (!st.init) { st.init = 1; st.mode = null; st.amt = String(returnValue(r) / 100); }
@@ -3806,7 +3896,7 @@ route('cr.credit', (p, E) => {
   const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'What about the money?'), h('div', { class: 'hint' }, qtyText(prod(r.pid), r.base) + ' ' + prod(r.pid).name + ' ' + r.kind.toLowerCase() + ' from ' + partyName(r.partyId) + ' · worth up to ' + rs(returnValue(r)))),
     Seg([['KHATA', 'KHATA CREDIT'], ['CASH', 'CASH REFUND'], ['BANK', 'BANK REFUND']], st.mode, v => { st.mode = v; nav.refresh(); }),
     Field('Amount (₹)', h('input', { class: 'input', inputmode: 'decimal', value: st.amt, onInput: ev => { st.amt = ev.target.value.replace(/[^\d.]/g, ''); } })),
-    st.mode ? authBox('OWNER APPROVAL REQUIRED', (st.mode === 'KHATA' ? 'The credit reduces what ' + partyName(r.partyId) + ' owes.' : 'Cash/bank leaves the agency.') + ' Credits and refunds need approval. (Simulated — no login.)', 'SIMULATE APPROVAL & RECORD', () => { if (!(parseRs(st.amt) > 0)) fail('Enter an amount.'); decideCredit(r.id, st.mode, parseRs(st.amt)); nav.reset([['more']]); toast('Recorded — ' + (st.mode === 'KHATA' ? 'Khata credit' : st.mode.toLowerCase() + ' refund') + ' ' + rs(parseRs(st.amt))); }) : null);
+    st.mode ? authBox('OWNER APPROVAL REQUIRED', (st.mode === 'KHATA' ? 'The credit reduces what ' + partyName(r.partyId) + ' owes.' : 'Cash/bank leaves the agency.') + ' Credits and refunds need approval. (Simulated — no login.)', 'SIMULATE APPROVAL & RECORD', () => { if (!(parseRs(st.amt) > 0)) fail('Enter an amount.'); decideCredit(r.id, st.mode, parseRs(st.amt)); nav.reset([['more']]); toast('Recorded — ' + (st.mode === 'KHATA' ? 'Khata credit' : st.mode.toLowerCase() + ' refund') + ' ' + rs(parseRs(st.amt))); }, 'approveCredit') : null);
   return { title: 'Money for return', sub: r.no, body, foot: [Btn('DECIDE LATER', { kind: 'ghost', onClick: () => nav.reset([['more']]) })], help: 'A returned product does not automatically mean money back. Choose a credit on the customer’s Khata, or an approved refund — or decide later.' };
 });
 route('cr.pending', (p, E) => { const l = S.returns.filter(r => !r.credit);
@@ -3831,14 +3921,17 @@ function editSheet(o) {
 
 route('more', (p, E) => {
   const pend = pendingPayments().length;
-  const sec = (t, rows) => h('div', null, Sec(t), Pane(rows));
+  const MORE_CAP = { 'Godown sale': 'sellGodown', 'Retail sale': 'retailSale', 'Inter-agency sale': 'sellInterAgency', 'Tracking': 'viewAllTrips', 'Products': 'manageProducts', 'Stock': 'viewStock', 'Customers': 'viewAllCustomers', 'Attendance': 'markAttendance', 'Staff': 'viewStaff', 'Returns & expired goods': 'receiveReturn', 'Cash / Day close': 'viewCashBook', 'Add expense': 'addExpense', 'Counter stock': 'approveStock', 'Khata': 'viewKhataAll', 'Pending verification': 'verifyPayment', 'Areas': 'manageSettings', 'Settings': 'manageSettings', 'Data & backup': 'manageSettings', 'History': 'viewActivity' };
+  const keep = r => { const tt = r && r.querySelector && r.querySelector('.t'), key = tt && tt.firstChild ? tt.firstChild.textContent : '', cp = MORE_CAP[key]; return !cp || can(cp); };
+  const sec = (t, rows) => { const k = rows.filter(r => r && keep(r)); return k.length ? h('div', null, Sec(t), Pane(k)) : null; };
   const body = h('div', null,
+    h('div', null, Sec('Demo'), Pane([Row({ title: ACTOR.role === 'FULL' ? 'Full access — no role limits' : 'Viewing as ' + roleDef().label + (actorStaff() ? ' · ' + actorStaff().name : ''), sub: 'Permissions are simulated · tap to switch role', onClick: () => nav.go('me') })])),
     sec('Sell', [Row({ title: 'Godown sale', sub: 'Customer comes to the godown', onClick: () => startCart('godown') }), Row({ title: 'Retail sale', sub: 'Single packets at the counter', onClick: () => { const d = S.drafts.retail; if (d && d.pid) openSheet({ title: 'Unfinished retail sale', sub: prod(d.pid).name, body: h('div'), actions: [Btn('RESUME IT', { kind: 'primary', onClick: () => { closeSheet(); nav.go('rl.qty'); } }), Btn('START NEW', { kind: 'ghost', onClick: () => { closeSheet(); delete S.drafts.retail; nav.go('rl.prod'); } }), sheetClose('CANCEL')] }); else nav.go('rl.prod'); } }), Row({ title: 'Inter-agency sale', sub: 'Another Balaji agency buys goods', onClick: () => startCart('ia') })]),
     sec('Operate', [Row({ title: 'Tracking', sub: 'Pickups: loading · on the road · back', onClick: () => nav.go('pk.list') }), Row({ title: 'Products', sub: S.products.length ? plural(S.products.length, 'product') + ' · details, prices, order' : 'Add what you sell', onClick: () => nav.go('pr.list') }), Row({ title: 'Stock', sub: 'What is in the godown · receive · count', onClick: () => nav.go('st.list') }),
       Row({ title: 'Customers', sub: S.customers.length ? plural(S.customers.filter(c => c.type !== 'OCCASIONAL').length, 'customer') + ' · ' + plural(S.areas.length, 'area') : 'Add shops and areas', onClick: () => nav.go('cu.list') }),
       Row({ title: 'Attendance', sub: (() => { const a = attendanceToday(); return a.total ? (a.unmarked ? a.unmarked + ' not marked today' : 'Everyone marked today ✓') : 'Mark staff present or absent'; })(), onClick: () => nav.go('sf.att', {}) }),
-      Row({ title: 'Staff', sub: 'Profiles, duty, earnings', onClick: () => nav.go('sf.list') }), Row({ title: 'Returns & expired goods', sub: 'What came back, and money for it', onClick: () => nav.go('rtn.start') })]),
-    sec('Money', [Row({ title: 'Cash / Day close', sub: 'Cash ' + rs(cbal('CASH')) + ' · Bank ' + rs(cbal('BANK')), onClick: () => nav.go('cash.home') }), Row({ title: 'Pending verification', sub: 'Money waiting to be checked', right: pend ? Chip(String(pend), 'bad') : '✓', onClick: () => nav.go('cash.pend') })]),
+      Row({ title: 'Staff', sub: 'Profiles, duty, earnings', onClick: () => nav.go('sf.list') }), Row({ title: 'Returns & expired goods', sub: 'What came back, and money for it', onClick: () => nav.go('rtn.start') }), Row({ title: 'Counter stock', sub: 'Approve stock for the retail counter', onClick: () => nav.go('rl.alloc') })]),
+    sec('Money', [!TABS.includes('khata') ? Row({ title: 'Khata', sub: 'Who owes whom', onClick: () => nav.go('khata') }) : null, Row({ title: 'Add expense', sub: 'Note it — the Owner approves', onClick: () => { S.drafts.exp = { cat: '', amt: '', note: '', tok: nid('tok') }; nav.go('cash.exp.type'); } }), Row({ title: 'Cash / Day close', sub: 'Cash ' + rs(cbal('CASH')) + ' · Bank ' + rs(cbal('BANK')), onClick: () => nav.go('cash.home') }), Row({ title: 'Pending verification', sub: 'Money waiting to be checked', right: pend ? Chip(String(pend), 'bad') : '✓', onClick: () => nav.go('cash.pend') })]),
     sec('Setup', [Row({ title: 'Areas', sub: S.areas.length ? S.areas.map(a => a.name).slice(0, 3).join(', ') + (S.areas.length > 3 ? '…' : '') : 'Add the areas you deliver to', onClick: () => nav.go('set.area') }), Row({ title: 'Settings', sub: 'Staff · Area · Stock · Vehicles · Cameras', onClick: () => nav.go('set.home') }), Row({ title: 'Data & backup', sub: saveStatusText(), right: STORE.ok && !STORE.error ? null : Chip('NOT SAVING', 'bad'), onClick: () => nav.go('set.data') }), Row({ title: 'Feedback notes', sub: FB.notes.length ? plural(FB.notes.filter(x => !x.done).length, 'open note') + ' · hold an empty space 5 seconds to add' : 'Hold any empty space for 5 seconds to leave a note', right: FB.notes.length ? Chip(String(FB.notes.length)) : null, onClick: () => nav.go('fb.list') }), Row({ title: 'History', sub: 'Everything that happened', onClick: () => nav.go('hist') })]),
     h('div', { class: 'center mute mt24', style: { fontSize: '12px', marginBottom: '12px' } }, 'Agency Pilot V2 · test build · ' + saveStatusText()));
   return { title: 'More', body };
@@ -3882,13 +3975,13 @@ function customerHistory(pid) {
   return n;
 }
 function dropDraftsFor(match) { for (const k of Object.keys(S.drafts)) { const d = S.drafts[k]; if (d && typeof d === 'object' && match(d)) delete S.drafts[k]; } }
-function removeCustomer(pid) {
+function removeCustomer(pid) { need('editCustomer');
   const c = cust(pid); if (!c) fail('Customer not found.');
   const hist = customerHistory(pid); if (hist.length) fail((c.shop || c.name) + ' has ' + hist.join(', ') + ' — it cannot be deleted. Hide it instead.');
   S.customers = S.customers.filter(x => x.id !== pid); dropDraftsFor(d => d.partyId === pid || (d.buyer && d.buyer.partyId === pid));
   log('CUSTOMER', 'Customer deleted: ' + (c.shop || c.name));
 }
-function setCustomerHidden(pid, hide) {
+function setCustomerHidden(pid, hide) { need('editCustomer');
   const c = cust(pid); if (!c) fail('Customer not found.');
   if (hide) { const open = S.orders.filter(o => o.partyId === pid && OPEN_ORDER.includes(o.status)).length; if (open) fail((c.shop || c.name) + ' has ' + plural(open, 'order') + ' still open. Deliver or cancel ' + (open === 1 ? 'it' : 'them') + ' first.'); dropDraftsFor(d => d.partyId === pid); }
   c.active = !hide; log('CUSTOMER', (c.shop || c.name) + (hide ? ' hidden — old bills and Khata stay' : ' shown again'));
@@ -3906,14 +3999,14 @@ function productHistory(pid) {
   if (!n.length && ((S.godown[pid] || 0) > 0 || (S.retail[pid] || 0) > 0)) n.push('stock on the shelves');
   return n;
 }
-function removeProduct(pid) {
+function removeProduct(pid) { need('manageProducts');
   const x = prod(pid); if (!x) fail('Product not found.');
   const hist = productHistory(pid); if (hist.length) fail(x.name + ' has ' + hist.join(', ') + ' — it cannot be deleted. Hide it instead.');
   S.products = S.products.filter(q => q.id !== pid); delete S.godown[pid]; delete S.retail[pid];
   for (const k of Object.keys(S.drafts)) { const d = S.drafts[k]; if (d && Array.isArray(d.lines)) d.lines = d.lines.filter(l => l.pid !== pid); }
   log('STOCK', 'Product deleted: ' + x.name);
 }
-function setProductHidden(pid, hide) {
+function setProductHidden(pid, hide) { need('manageProducts');
   const x = prod(pid); if (!x) fail('Product not found.');
   if (hide) { const open = S.orders.filter(o => OPEN_ORDER.includes(o.status) && o.lines.some(l => l.pid === pid)).length; if (open) fail(x.name + ' is on ' + plural(open, 'open order') + '. Deliver or cancel ' + (open === 1 ? 'it' : 'them') + ' first.'); }
   x.active = !hide; log('STOCK', x.name + (hide ? ' hidden — it cannot be ordered' : ' shown again'));
@@ -3994,7 +4087,7 @@ function locBlock(a) {                                                    // cap
   }
   draw(); return box;
 }
-function updateCustomer(pid, v) {
+function updateCustomer(pid, v) { need('editCustomer');
   const c = cust(pid); if (!c) fail('Customer not found.');
   const name = (v.name || '').trim(), shop = (v.shop || '').trim(), area = (v.area || '').trim();
   const phones = (v.phones || []).map(x => ({ label: x.label || 'Mobile', num: cleanPhone(x.num) }));
@@ -4052,7 +4145,7 @@ function packLevels(d) {
   if (d.mid) { if (!(mid > 1 && mid < box)) fail('1 ' + d.mid + ' must hold more than 1 and fewer ' + u + ' than a BOX (' + box + ').'); levels.push({ u: d.mid, n: mid }); }
   return levels;
 }
-function addProduct(d) {
+function addProduct(d) { need('manageProducts');
   const name = (d.name || '').trim(); if (name.length < 2) fail('Enter the product name.');
   if (S.products.some(p => p.name.toLowerCase() === name.toLowerCase())) fail('A product called ' + name + ' already exists.');
   const levels = packLevels(d), mrp = parseRs(d.mrp), conv = s => { const r = parseRate(s); return r == null ? null : d.priceBy === 'BOX' ? r / levels[0].n : r; }, buy = conv(d.buy), sell = conv(d.sell), retail = mrp;                         // the retail counter sells at the MRP
@@ -4142,7 +4235,7 @@ const vehLive = v => v.active !== false && !v.sold;
 function vehicleUsed(vid) { return S.trips.filter(t => t.vehicleId === vid && t.status !== 'CANCELLED').length; }
 function vehicleChip(v) { return v.sold ? 'SOLD' : !v.active ? 'NOT ACTIVE' : vehAlerts(v).some(a => a.kind === 'expired') ? 'PAPERS EXPIRED' : vehAlerts(v).length ? 'PAPERS EXPIRING' : vehMissing(v).length ? 'PROFILE INCOMPLETE' : null; }
 
-function saveVehicle(vid, v) {
+function saveVehicle(vid, v) { need('manageSettings');
   const reg = (v.reg || '').trim().toUpperCase().replace(/\s+/g, ' '), label = (v.label || '').trim(), chassis = (v.chassisNo || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase(), engine = (v.engineNo || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
   if (reg.length < 4) fail('Enter the registration number.'); if (reg.length > 16) fail('The registration number is too long.');
   if (S.vehicles.some(x => x.id !== vid && x.reg === reg)) fail('A vehicle with this registration already exists.');
@@ -4241,7 +4334,7 @@ route('veh.edit', (p, E) => {
 /* ===================== CAMERAS — a camera is only a number + a note that helps find the loading video later ===================== */
 const cameraUsed = id => S.trips.some(t => tripCams(t).includes(id));
 const busyCamera = id => S.trips.some(t => t.status === 'LOADING' && tripCams(t).includes(id));
-function saveCamera(c, v) {
+function saveCamera(c, v) { need('manageSettings');
   const num = (v.num || '').trim().replace(/\s+/g, ' '), note = (v.note || '').trim();
   if (!num) fail('Enter the camera number.'); if (num.length > 14) fail('The camera number is too long (14 letters at most).'); if (note.length > 80) fail('The note is too long.');
   if (S.cameras.some(x => x !== c && x.id.toLowerCase() === num.toLowerCase())) fail('Camera ' + num + ' already exists.');
@@ -4320,7 +4413,7 @@ route('set.data', (p, E) => {
 route('hist', (p, E) => {
   const tab = E.st.tab || 'ACT';
   const items = tab === 'ACT' ? S.events.slice().reverse() : S.approvals.slice().reverse();
-  const body = h('div', null, Seg([['ACT', 'Activity'], ['APP', 'Approvals']], tab, v => { E.st.tab = v; nav.refresh(); }), h('div', { class: 'mt12' }, pickList(E, { placeholder: 'Search history', empty: 'Nothing recorded yet.', items: () => items, text: x => (x.text || '') + ' ' + (x.type || x.kind), render: x => Row({ title: x.text, sub: fmtDT(x.at) + ' · ' + (x.type || x.kind.replace(/_/g, ' ').toLowerCase()) + (x.by ? ' · ' + x.by : '') }) })));
+  const body = h('div', null, Seg([['ACT', 'Activity'], ['APP', 'Approvals']], tab, v => { E.st.tab = v; nav.refresh(); }), h('div', { class: 'mt12' }, pickList(E, { placeholder: 'Search history', empty: 'Nothing recorded yet.', items: () => items, text: x => (x.text || '') + ' ' + (x.type || x.kind), render: x => Row({ title: x.text, sub: fmtDT(x.at) + ' · ' + (x.type || x.kind.replace(/_/g, ' ').toLowerCase()) + (x.actor && x.actor.role !== 'SETUP' ? ' · by ' + actorText(x.actor) : x.by ? ' · ' + x.by : '') }) })));
   return { title: 'History', sub: tab === 'ACT' ? S.events.length + ' events this session' : S.approvals.length + ' simulated approvals', body };
 });
 
@@ -4353,7 +4446,7 @@ const SCENARIOS = [
       nav.reset([['more'], ['cash.home'], ['cash.count']], 'none'); } },
 ];
 route('scen', (p, E) => ({ title: 'Scenarios', sub: 'Jump straight to an example', body: h('div', { class: 'gap' }, h('div', { class: 'aside' }, 'Each scenario starts from the fictional starting data and puts you on its first screen. It replaces anything you have changed in this session.'),
-  Pane(SCENARIOS.map(s => Row({ title: s.code + '. ' + s.title, sub: s.text, onClick: () => confirmSheet({ title: 'Load scenario ' + s.code + '?', sub: s.title + ' — this resets the demo data first.', yes: 'LOAD IT', no: 'CANCEL', onYes: () => { try { s.run(); toast('Scenario ' + s.code + ' ready'); } catch (e) { handleErr(e); } } }) })))) }));
+  Pane(SCENARIOS.map(s => Row({ title: s.code + '. ' + s.title, sub: s.text, onClick: () => confirmSheet({ title: 'Load scenario ' + s.code + '?', sub: s.title + ' — this resets the demo data first.', yes: 'LOAD IT', no: 'CANCEL', onYes: () => { try { sys(() => s.run()); toast('Scenario ' + s.code + ' ready'); } catch (e) { handleErr(e); } } }) })))) }));
 
 /* ---------- 66-print.js ---------- */
 /* ---------------------------------------------------------------------
@@ -4626,20 +4719,21 @@ function fbCompose(ctx, el, point, existing) {
     Btn('SAVE NOTE', { kind: 'primary', onClick: () => {
       const text = st.note.trim(); if (text.length < 2) fail('Please write a few words about the change you want.');
       if (existing) { existing.note = text; existing.kind = st.kind; existing.editedAt = new Date().toISOString(); }
-      else { const d = st.el ? fbDescribe(st.el, point) : null; FB.notes.push({ id: 'fb' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), at: new Date().toISOString(), screen: { route: ctx.route, params: ctx.params, stack: ctx.stack, tab: ctx.tab, title: ctx.title, subtitle: ctx.subtitle, step: ctx.step }, scope: d ? 'element' : 'screen', element: d, kind: st.kind, note: text, done: false, visibleText: ctx.visibleText, viewport: { w: innerWidth, h: innerHeight } }); }
+      else { const d = st.el ? fbDescribe(st.el, point) : null; FB.notes.push({ id: 'fb' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), at: new Date().toISOString(), role: fbRole(), screen: { route: ctx.route, params: ctx.params, stack: ctx.stack, tab: ctx.tab, title: ctx.title, subtitle: ctx.subtitle, step: ctx.step }, scope: d ? 'element' : 'screen', element: d, kind: st.kind, note: text, done: false, visibleText: ctx.visibleText, viewport: { w: innerWidth, h: innerHeight } }); }
       if (!fbSave()) return; closeSheet(); toast(existing ? 'Note updated' : 'Note saved — ' + plural(fbNotesFor(ctx.route).length, 'note') + ' on this screen'); if (existing) nav.refresh(); } }),
     sheetClose('CANCEL')] });
 }
 /* ---- review & export ---- */
+function fbRole() { const s = actorStaff(); return { role: ACTOR.role || null, roleLabel: roleDef() ? roleDef().label : null, staffId: s ? s.id : null, staffName: s ? s.name : null, simulated: true }; }
 function fbExportObject() {
   return { app: 'AgencyPilotV2 tester feedback', build: FB.build, exportedAt: new Date().toISOString(), count: FB.notes.length,
-    howToRead: 'Each note is a change request typed by the customer while testing the app. screen.route is the route name registered in Demos/AgencyPilotV2/index.html (route(\'name\', …)); scope "element" means they pointed at one part of the screen (see element.text / kind / path / rect); scope "screen" means the whole screen. visibleText is what the screen showed at that moment. rect and point are in CSS pixels relative to the screen; xPct / yPct are percentages of the screen size.',
+    howToRead: 'Each note is a change request typed by the customer while testing the app. Each note also has role { role, roleLabel, staffId, staffName }: the SIMULATED demo role the tester was viewing as when they wrote it (FULL = full access, no role limits) — judge a note in the context of that role. screen.route is the route name registered in Demos/AgencyPilotV2/index.html (route(\'name\', …)); scope "element" means they pointed at one part of the screen (see element.text / kind / path / rect); scope "screen" means the whole screen. visibleText is what the screen showed at that moment. rect and point are in CSS pixels relative to the screen; xPct / yPct are percentages of the screen size.',
     device: { userAgent: navigator.userAgent, platform: navigator.platform || '', language: navigator.language, viewport: { w: innerWidth, h: innerHeight }, screen: { w: screen.width, h: screen.height }, pixelRatio: window.devicePixelRatio || 1 },
     notes: FB.notes.slice().sort((a, b) => a.at < b.at ? -1 : 1) };
 }
 function fbText() {
   const L = ['AGENCY PILOT — TESTER NOTES (' + FB.notes.length + ') · ' + FB.build + ' · exported ' + new Date().toLocaleString(), ''];
-  FB.notes.slice().sort((a, b) => a.at < b.at ? -1 : 1).forEach((n, i) => L.push((i + 1) + '. [' + (n.screen.title || n.screen.route) + ' · ' + n.screen.route + '] ' + fbKindLabel(n.kind).toUpperCase() + (n.done ? ' (done)' : '') + ' — ' + (n.element ? fbLabel(n.element) : 'whole screen') + '\n   ' + n.note.replace(/\n/g, '\n   ')));
+  FB.notes.slice().sort((a, b) => a.at < b.at ? -1 : 1).forEach((n, i) => L.push((i + 1) + '. [' + (n.screen.title || n.screen.route) + ' · ' + n.screen.route + '] ' + fbKindLabel(n.kind).toUpperCase() + (n.role ? ' as ' + (n.role.roleLabel || n.role.role) + (n.role.staffName ? ' · ' + n.role.staffName : '') : '') + (n.done ? ' (done)' : '') + ' — ' + (n.element ? fbLabel(n.element) : 'whole screen') + '\n   ' + n.note.replace(/\n/g, '\n   ')));
   return L.join('\n');
 }
 function fbDownload() {
@@ -4653,7 +4747,7 @@ function fbCopy() {
 function fbCopyOld(txt, done) { const t = h('textarea', { style: { position: 'fixed', opacity: 0, top: 0 } }); t.value = txt; document.body.append(t); t.select(); try { document.execCommand('copy'); done(); } catch (e) { toast('Could not copy — use the file download.', true); } t.remove(); }
 function fbNoteSheet(n) {
   const ctx = { route: n.screen.route, title: n.screen.title };
-  openSheet({ title: fbKindLabel(n.kind) + (n.done ? ' · done' : ''), sub: (n.screen.title || n.screen.route) + ' · ' + fmtDT(new Date(n.at)), body: h('div', { class: 'gap' },
+  openSheet({ title: fbKindLabel(n.kind) + (n.done ? ' · done' : ''), sub: (n.screen.title || n.screen.route) + ' · ' + fmtDT(new Date(n.at)) + (n.role && n.role.roleLabel ? ' · as ' + n.role.roleLabel + (n.role.staffName ? ' · ' + n.role.staffName : '') : ''), body: h('div', { class: 'gap' },
     h('div', { style: { fontSize: '17px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' } }, n.note), h('div', { class: 'aside' }, h('b', null, 'About: '), n.element ? fbLabel(n.element) : 'the whole screen', n.element && n.element.sectionAbove ? h('div', { class: 'mute' }, 'under “' + n.element.sectionAbove + '”') : null)),
     actions: [Btn(n.done ? 'REOPEN' : 'MARK AS DONE', { kind: 'primary', onClick: () => { n.done = !n.done; fbSave(); closeSheet(); nav.refresh(); } }), Btn('EDIT NOTE', { kind: 'ghost', onClick: () => { closeSheet(); fbCompose(ctx, null, null, n); } }),
       Btn('DELETE NOTE', { kind: 'danger', onClick: () => { FB.notes = FB.notes.filter(x => x !== n); fbSave(); closeSheet(); nav.refresh(); toast('Note deleted'); } }), sheetClose('CLOSE')] });
@@ -4663,7 +4757,7 @@ route('fb.list', (p, E) => {
   const items = all.filter(n => f === 'ALL' || (f === 'OPEN' ? !n.done : n.done));
   const body = h('div', { class: 'gap' }, h('div', { class: 'aside' }, h('b', null, 'How to leave a note: '), 'on any screen, put your finger on an empty space and keep it there for 5 seconds. Then choose the whole screen, or tap the exact part you want changed.'),
     Seg([['OPEN', 'Open (' + open + ')'], ['DONE', 'Done (' + (all.length - open) + ')'], ['ALL', 'All']], f, v => { E.st.f = v; nav.refresh(); }),
-    items.length ? Pane(items.map(n => Row({ title: n.note.length > 90 ? n.note.slice(0, 90) + '…' : n.note, sub: (n.screen.title || n.screen.route) + ' · ' + (n.element ? fbLabel(n.element) : 'whole screen') + ' · ' + fmtD(new Date(n.at)), chip: fbKindLabel(n.kind), tone: n.done ? 'ok' : '', onClick: () => fbNoteSheet(n) }))) : Pane(Empty(all.length ? 'Nothing here.' : 'No notes yet. Hold an empty space for 5 seconds on any screen.')));
+    items.length ? Pane(items.map(n => Row({ title: n.note.length > 90 ? n.note.slice(0, 90) + '…' : n.note, sub: (n.screen.title || n.screen.route) + ' · ' + (n.element ? fbLabel(n.element) : 'whole screen') + ' · ' + fmtD(new Date(n.at)) + (n.role && n.role.roleLabel ? ' · as ' + n.role.roleLabel + (n.role.staffName ? ' ' + n.role.staffName : '') : ''), chip: fbKindLabel(n.kind), tone: n.done ? 'ok' : '', onClick: () => fbNoteSheet(n) }))) : Pane(Empty(all.length ? 'Nothing here.' : 'No notes yet. Hold an empty space for 5 seconds on any screen.')));
   return { title: 'Feedback notes', sub: plural(all.length, 'note') + ' · ' + open + ' open', body, foot: all.length ? [Btn('EXPORT NOTES (JSON FILE)', { kind: 'primary', icon: 'print', onClick: fbDownload }), Btn('COPY AS TEXT', { kind: 'ghost', onClick: fbCopy }),
     h('div', { class: 'linkrow' }, Btn('DELETE ALL NOTES', { kind: 'link', cls: 'neg', onClick: () => confirmSheet({ title: 'Delete all ' + all.length + ' notes?', sub: 'Export them first if you still need them.', yes: 'YES, DELETE ALL', danger: true, no: 'KEEP THEM', onYes: () => { FB.notes = []; fbSave(); nav.refresh(); toast('All notes deleted'); } }) }))] : [] };
 });
@@ -4676,19 +4770,341 @@ function fbTip() {
 fbLoad();
 
 
+/* ---------- 70-roles.js ---------- */
+/* ---------------------------------------------------------------------
+   7g. ROLES (demo) — role picker · switcher · role homes · access map for screens.
+   Business logic is untouched: these screens call the same functions as every other screen.
+   --------------------------------------------------------------------- */
+const CARTCAP = { order: 'createOrder', godown: 'sellGodown', ia: 'sellInterAgency' };
+const ROUTE_RULES = [                                  // first match wins; a screen not listed here is Owner / Full access only
+  [/^(today|me|roles|roles\.who|denied|fb\.list)$/, () => true],
+  [/^cart\./, p => can(CARTCAP[p.mode || 'order'] || 'createOrder')],
+  [/^cust\./, () => can('createCustomer')],
+  [/^(cu\.list|cu\.edit)$/, () => can('viewAllCustomers')],
+  [/^customer\.(profile|section)$/, p => can('viewAllCustomers') || inMyAreas(cust(p.pid))],
+  [/^orders(\.all|\.area)?$/, () => can('viewAllOrders')],
+  [/^my\.orders$/, () => can('viewOwnOrders')],
+  [/^order\.detail$/, p => { const o = orderOf(p.id); return !!o && (myOrder(o) || (!!o.tripId && myTrip(tripOf(o.tripId)))); }],
+  [/^pk\.(orders|summary|totals|shortage|vehicle|driver|helper|stops|load|mismatch|camera|confirm|ready)$/, () => can('preparePickup')],
+  [/^(pk\.list|mg\.pickups)$/, () => can('viewAllTrips')],
+  [/^pk\.(view|road)$/, p => myTrip(tripOf(p.tid))],
+  [/^pk\.left$/, p => can('recordDelivery') && (can('recordDeliveryAnyTrip') || myTrip(tripOf(p.tid)))],
+  [/^dl\./, p => { const o = orderOf(p.oid); return can('recordDelivery') && (can('recordDeliveryAnyTrip') || (!!o && myTrip(tripOf(o.tripId)))); }],
+  [/^ss\./, () => can('recordDelivery')],
+  [/^col\./, p => { const s = p.sid ? saleOf(p.sid) : null; return can('recordCollection') && (can('recordDeliveryAnyTrip') || (!!s && myTrip(tripOf(s.tripId)))); }],
+  [/^disc$/, () => can('approveDiscount')],
+  [/^khata$/, () => can('viewKhataAll')],
+  [/^kh\.(person|history|sales)$/, p => can('viewKhataAll') || (can('viewOwnKhata') && p.pid === meId())],
+  [/^me\.khata$/, () => can('viewOwnKhata')],
+  [/^kh\.(pay|advance)$/, () => can('payStaff')],
+  [/^cash\.(pend|verify)$/, () => can('verifyPayment')],
+  [/^cash\.exp\.(type|amt)$/, () => can('addExpense')],
+  [/^cash\.exp\.approve$/, () => can('approveExpense')],
+  [/^(cash\.|ow\.cash)/, () => can('viewCashBook')],
+  [/^tr\./, () => can('reconcilePickup')],
+  [/^(pr\.|set\.prod$)/, () => can('manageProducts')],
+  [/^st\.(list|product|hist)$/, () => can('viewStock')],
+  [/^st\.(count|count\.fix)$/, () => can('countStock')],
+  [/^st\.(receive|buy|recv)/, () => can('receiveStock')],
+  [/^sf\.(list|person|details)$/, () => can('viewStaff')],
+  [/^sf\.att$/, () => can('markAttendance')],
+  [/^sf\.duty$/, () => can('assignDuty')],
+  [/^(sf\.|set\.staff)/, () => can('manageStaff')],
+  [/^gs\./, () => can('sellGodown')],
+  [/^ia\./, () => can('sellInterAgency')],
+  [/^rl\.alloc$/, () => can('approveStock')],
+  [/^(rl\.|rt\.sales)/, () => can('retailSale')],
+  [/^cr\.credit$/, () => can('approveCredit')],
+  [/^(rtn\.start|cr\.)/, () => can('receiveReturn')],
+  [/^more$/, () => can('viewAllOrders')],
+  [/^hist$/, () => can('viewActivity')],
+  [/^print$/, p => (p.docs || []).length > 0 && p.docs.every(canDoc)],
+  [/^statement$/, p => canDoc(['STATEMENT', p.pid])],
+  [/^(set\.|veh\.|scen$)/, () => can('manageSettings')],
+];
+function routeAllowed(name, p) {
+  if (ACTOR.sys > 0 || hasAll()) return true;
+  if (!ACTOR.role) return name === 'roles' || name === 'roles.who';
+  for (const r of ROUTE_RULES) if (r[0].test(name)) return !!r[1](p || {});
+  return false;
+}
+const canOpen = routeAllowed;                          // screens use this to hide entry points that would be refused
+setTimeout(() => { const un = Object.keys(ROUTES).filter(k => !ROUTE_RULES.some(r => r[0].test(k))); if (un.length) console.warn('Screens with no access rule (Owner / Full access only):', un.join(', ')); }, 0);
+
+function deniedSpec(E) {
+  return { title: 'Not available', center: true, back: false, body: h('div', { class: 'gap center' }, h('div', { class: 'donemark' }, ic('lock')), h('div', { class: 'big' }, 'Not for this role'),
+    h('div', { class: 'mute' }, 'This screen is not available for the ' + (roleDef() ? roleDef().label : '') + ' role. Switch role to see it. Anything you already saved is kept.')),
+    foot: [Btn('GO TO HOME', { kind: 'primary', onClick: () => nav.reset([['today']]) }), Btn('SWITCH ROLE', { kind: 'link', onClick: () => nav.go('roles') })] };
+}
+function roleGate() {                                  // no role yet, or the saved person is gone → the picker, never a half-working screen
+  const top = UI.stack[UI.stack.length - 1], isPick = top && (top.name === 'roles' || top.name === 'roles.who');
+  if (!ACTOR.role) { if (!isPick) UI.stack = [{ name: 'roles', params: {}, st: {}, help: false }]; return; }
+  if (!whoValid() && !isPick) { UI.stack = [{ name: 'roles.who', params: { role: ACTOR.role }, st: {}, help: false }]; return; }
+  const base = UI.stack[0];                            // a flow that resets to a root this role does not have (More, Orders…) starts from Today instead
+  if (base && !isPick && !routeAllowed(base.name, base.params)) UI.stack = [{ name: 'today', params: {}, st: {}, help: false }].concat(UI.stack.slice(1).filter(e => routeAllowed(e.name, e.params)));
+}
+const ROLE_TABS = {
+  FULL: [['today', 'TODAY', 'home'], ['orders', 'ORDERS', 'list'], ['khata', 'KHATA', 'book'], ['more', 'MORE', 'more']],
+  OWNER: [['today', 'TODAY', 'home'], ['orders', 'ORDERS', 'list'], ['khata', 'KHATA', 'book'], ['ow.cash', 'MONEY', 'coin'], ['more', 'MORE', 'more']],
+  MANAGER: [['today', 'TODAY', 'home'], ['orders', 'ORDERS', 'list'], ['mg.pickups', 'PICKUPS', 'truck'], ['more', 'MORE', 'more']],
+  AGENT: [['today', 'HOME', 'home'], ['my.orders', 'ORDERS', 'list'], ['me.khata', 'MY KHATA', 'book'], ['me', 'ME', 'user']],
+  DRIVER: [['today', 'MY TRIP', 'truck'], ['me', 'ME', 'user']],
+  HELPER: [['today', 'MY DUTY', 'home'], ['me', 'ME', 'user']],
+  RETAILER: [['today', 'COUNTER', 'home'], ['rt.sales', 'SALES', 'list'], ['me', 'ME', 'user']],
+};
+const roleTabDefs = () => ROLE_TABS[ACTOR.role] || ROLE_TABS.FULL;
+function setRoleTabs() { TABS.length = 0; roleTabDefs().forEach(d => TABS.push(d[0])); }
+function renderDemoBar() {
+  const bar = $('#demobar'), E = nav.top(), app = $('#app'); if (!bar) return;
+  const on = !!ACTOR.role && !!E && E.name !== 'roles'; bar.hidden = !on; app.classList.toggle('hasbar', on); if (!on) return;
+  const s = actorStaff();
+  setKids(bar, h('span', { class: 'dm-t' }, h('b', null, 'DEMO'), ' · ' + (ACTOR.role === 'FULL' ? 'FULL ACCESS · NO LIMITS' : roleDef().label.toUpperCase() + (s ? ' · ' + s.name.toUpperCase() : '') + ' · SIMULATED')),
+    h('button', { type: 'button', class: 'dm-b', onClick: () => { closeSheet(); nav.go('roles'); } }, 'SWITCH'));
+}
+function enterRole(r, sid) {
+  ACTOR.role = r; ACTOR.staffId = sid || null; roleSave(); setRoleTabs(); UI.tab = 'today'; closeSheet();
+  nav.reset([['today']], 'fwd');
+  toast(r === 'FULL' ? 'Full access — no role limits' : 'Now viewing as ' + ROLES[r].label + (sid && staffOf(sid) ? ' · ' + staffOf(sid).name : ''));
+  if (!FB.tipShown) setTimeout(() => { if (!UI.sheet) fbTip(); }, 700);
+}
+function chooseRole(r) {
+  if (!roleNeedsWho(r)) return enterRole(r, null);
+  const pool = rolePool(r);
+  if (pool.length === 1) return enterRole(r, pool[0].id);
+  nav.go('roles.who', { role: r });
+}
+const businessEmpty = () => !S.products.length && !S.customers.length && !S.orders.length && !S.staff.length && !S.sales.length;
+function loadSample() {
+  const run = () => { loadExample(); saveNow(); nav.refresh(); toast('Sample agency loaded — staff, customers, stock and orders'); };
+  if (businessEmpty()) run();
+  else confirmSheet({ title: 'Replace your data with the sample agency?', sub: 'This REPLACES everything on this phone with a fictional sample agency. Download a backup first (More → Data & backup).', yes: 'REPLACE WITH SAMPLE', danger: true, no: 'CANCEL', onYes: run });
+}
+route('roles', (p, E) => {
+  const cards = ROLE_ORDER.map(r => h('button', { class: 'rolecard' + (ACTOR.role === r ? ' on' : ''), type: 'button', onClick: act(() => chooseRole(r)) },
+    h('b', null, ROLES[r].label.toUpperCase(), ACTOR.role === r ? [' ', Chip('VIEWING NOW', 'ok')] : null), h('span', null, ROLES[r].blurb)));
+  const body = h('div', { class: 'gap' }, cards,
+    h('div', { class: 'rolegap' }, h('button', { class: 'rolecard full' + (ACTOR.role === 'FULL' ? ' on' : ''), type: 'button', onClick: act(() => enterRole('FULL', null)) },
+      h('b', null, 'FULL ACCESS — DEMO', ACTOR.role === 'FULL' ? [' ', Chip('VIEWING NOW', 'ok')] : null), h('span', null, 'Explore all modules and workflows without role restrictions. For development, debugging and comprehensive testing.'))),
+    !S.staff.length ? h('div', { class: 'aside' }, h('b', null, 'No staff yet. '), 'Manager, Agent, Driver, Helper and Retailer are played by staff members. Load the sample agency to try every role.', h('div', { class: 'mt12' }, Btn('LOAD SAMPLE AGENCY', { kind: 'dark', cls: 'sm', onClick: loadSample }))) : null,
+    h('div', { class: 'mute center', style: { fontSize: '13px' } }, 'Demo only: there is no password. Roles are simulated, and every role works on the same shared data — switching never resets anything.'),
+    ACTOR.role && UI.stack.length > 1 ? Btn('STAY AS ' + ROLES[ACTOR.role].label.toUpperCase(), { kind: 'link', onClick: () => nav.back() }) : null);
+  return { title: 'AGENCY PILOT', sub: 'Experience the app as different people in the agency.', big: true, body };
+});
+function whoSub(r, s) {
+  if (r === 'DRIVER') { const t = S.trips.find(x => x.driverId === s.id && ['LOADING', 'READY', 'ON_ROAD', 'RETURNED'].includes(x.status)); return t ? t.no + ' · ' + t.status.replace('_', ' ').toLowerCase() : 'No pickup assigned'; }
+  if (r === 'AGENT') return s.areas.length ? 'Areas: ' + s.areas.join(', ') : 'No areas assigned';
+  if (r === 'HELPER') return currentDuty(s);
+  return posLabel[s.position];
+}
+route('roles.who', (p, E) => {
+  const r = p.role, d = ROLES[r]; if (!d) return { title: 'Who are you?', body: Empty('Unknown role.') };
+  const pool = rolePool(r);
+  const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Who are you?'), h('div', { class: 'hint' }, r === 'DRIVER' ? 'Driving is a duty. Any staff member allowed to drive can be the driver of a pickup.' : 'Sample employees in the ' + d.label + ' position. Each sees only their own work.')),
+    pool.length ? Pane(pool.map(s => Row({ title: s.name, sub: whoSub(r, s), chip: ACTOR.role === r && ACTOR.staffId === s.id ? 'NOW' : null, tone: 'ok', onClick: () => enterRole(r, s.id) })))
+      : h('div', { class: 'aside' }, 'Nobody can play the ' + d.label + ' yet.' + (S.staff.length ? ' Add a staff member in this position (Owner → Staff), or load the sample agency.' : ' Load the sample agency to try this role.'), h('div', { class: 'mt12' }, Btn('LOAD SAMPLE AGENCY', { kind: 'dark', cls: 'sm', onClick: loadSample }))));
+  return { title: d.label, sub: 'Choose the person', body, foot: [Btn('CHOOSE ANOTHER ROLE', { kind: 'link', onClick: () => UI.stack.length > 1 ? nav.back() : nav.reset([['roles']]) })] };
+});
+route('me', (p, E) => {
+  const d = roleDef(), s = actorStaff(), pool = roleNeedsWho(ACTOR.role) ? rolePool(ACTOR.role) : [];
+  const canList = d.all ? ['Everything — the Owner has every permission.'] : d.caps.map(c => CAP_TEXT[c]).filter(Boolean).map(t => t.charAt(0).toUpperCase() + t.slice(1));
+  const body = h('div', { class: 'gap' },
+    Pane(h('div', { class: 'pad', style: { paddingBottom: 0 } }, KV('Viewing as', d.label), s ? KV('Person', s.name) : null, s ? KV('Position', posLabel[s.position]) : null, s && s.areas.length ? KV('Areas', s.areas.join(', ')) : null, KV('Mode', 'Demo — permissions simulated'))),
+    h('div', { class: 'aside' }, h('b', null, 'This is a demo. '), 'There is no password. Roles are simulated on one shared set of data, so a Driver\'s delivery is what the Manager and the Owner see. Switching role never resets anything.'),
+    Sec('What this role can do'), h('div', { class: 'card' }, canList.map(t => h('div', { style: { padding: '3px 0', fontSize: '15px' } }, '· ' + t))),
+    Pane([Row({ title: 'Feedback notes', sub: FB.notes.length ? plural(FB.notes.filter(x => !x.done).length, 'open note') + ' · notes record which role wrote them' : 'Hold any empty space for 5 seconds to leave a note', onClick: () => nav.go('fb.list') })]));
+  return { title: 'Profile', sub: d.label + (s ? ' · ' + s.name : ''), body, foot: [Btn('SWITCH ROLE', { kind: 'primary', onClick: () => nav.go('roles') }), pool.length > 1 ? Btn('CHANGE PERSON', { kind: 'ghost', onClick: () => nav.go('roles.who', { role: ACTOR.role }) }) : null, ACTOR.role !== 'FULL' ? Btn('RETURN TO FULL ACCESS', { kind: 'link', onClick: () => enterRole('FULL', null) }) : null] };
+});
+
+/* ---- shared pieces for the role homes ---- */
+const greeting = () => { const hr = new Date().getHours(); return hr < 12 ? 'Good Morning' : hr < 17 ? 'Good Afternoon' : 'Good Evening'; };
+const homeHdr = (eyebrow, title, sub) => h('header', { class: 'hdr nohdr-back root' }, h('div', { class: 'ttl' }, h('div', { class: 'eyebrow' }, eyebrow), h('h1', { class: 'big', tabindex: '-1' }, title), sub ? h('div', { class: 'sub' }, sub) : null));
+const attnBtn = (n, text, sub, go, tone) => h('button', { class: 'attn', type: 'button', onClick: act(go) }, h('span', { class: 'n' + (tone === 'red' ? ' red' : '') }, pad2(n)), h('span', { class: 'l' }, text, sub ? h('small', null, sub) : null), ic('next'));
+const attnBox = list => list.length ? h('div', { class: 'attn-list' }, list.map(a => attnBtn(a.n, a.text, a.sub, a.go, a.tone))) : null;
+function startOrderFlow() {
+  const dr = S.drafts.order;
+  if (dr && DRAFTS.order.on(dr) && UI.restored.has('order')) openSheet({ title: 'Unfinished order', sub: DRAFTS.order.text(dr) + ' is still open.', body: h('div'), actions: [Btn('RESUME IT', { kind: 'primary', onClick: () => { closeSheet(); UI.restored.delete('order'); DRAFTS.order.go(dr); } }), Btn('START A NEW ORDER', { kind: 'ghost', onClick: () => { closeSheet(); delete S.drafts.order; UI.restored.delete('order'); nav.go('cart.cust', { mode: 'order' }); } }), sheetClose('CANCEL')] });
+  else { delete S.drafts.order; nav.go('cart.cust', { mode: 'order' }); }
+}
+function startRetailFlow() {
+  const d = S.drafts.retail;
+  if (d && d.pid) openSheet({ title: 'Unfinished retail sale', sub: prod(d.pid).name, body: h('div'), actions: [Btn('RESUME IT', { kind: 'primary', onClick: () => { closeSheet(); nav.go('rl.qty'); } }), Btn('START NEW', { kind: 'ghost', onClick: () => { closeSheet(); delete S.drafts.retail; nav.go('rl.prod'); } }), sheetClose('CANCEL')] });
+  else nav.go('rl.prod');
+}
+const newest = (a, b) => b.createdAt - a.createdAt;
+const stopQty = o => Object.keys(o.alloc || {}).filter(pid => o.alloc[pid] > 0).map(pid => qtyText(prod(pid), o.alloc[pid]) + ' ' + prod(pid).name).join(' · ');
+const ACTIVE_TRIP = ['LOADING', 'READY', 'ON_ROAD', 'RETURNED'];
+
+/* ---- OWNER ---- */
+function ownerHome(p, E) {
+  const d = new Date(), hdr = homeHdr('Agency Pilot · Owner', 'Overview', weekday(d) + ', ' + fmtDY(d));
+  const body = h('div', { class: 'gap' });
+  const owed = S.customers.reduce((s, c) => { const b = netBal(c.id); return b < 0 ? s - b : s; }, 0), weOwe = S.staff.reduce((s, x) => { const b = netBal(x.id); return b > 0 ? s + b : s; }, 0);
+  body.append(Pane(h('div', { class: 'pad' }, h('div', { class: 'tiles' }, h('div', null, h('div', { class: 'eyebrow' }, 'CASH IN BOX'), h('div', { class: 'big' }, rs(cbal('CASH')))), h('div', null, h('div', { class: 'eyebrow' }, 'BANK'), h('div', { class: 'big' }, rs(cbal('BANK'))))),
+    h('div', { class: 'tiles mt12' }, h('div', null, h('div', { class: 'eyebrow' }, 'CUSTOMERS OWE'), h('div', { class: 'big red' }, rs(owed))), h('div', null, h('div', { class: 'eyebrow' }, 'AGENCY OWES STAFF'), h('div', { class: 'big' }, rs(weOwe)))))));
+  const pendEx = S.expenses.filter(x => x.status === 'PENDING'), pendRet = S.returns.filter(r => !r.credit), pendPay = pendingPayments(), needStock = S.orders.filter(o => o.status === 'WAITING' && o.needsApproval && !o.approved);
+  const decide = [];
+  pendEx.forEach(x => decide.push({ n: 1, text: 'Expense to approve', sub: x.cat + ' · ' + rs(x.amount), go: () => nav.go('cash.exp.approve', { id: x.id }), tone: 'red' }));
+  if (pendRet.length) decide.push({ n: pendRet.length, text: pendRet.length === 1 ? 'Return waiting for a money decision' : 'Returns waiting for a money decision', sub: 'Credit or refund needs you', go: () => nav.go('cr.pending') });
+  if (needStock.length) decide.push({ n: needStock.length, text: needStock.length === 1 ? 'Order needs stock approval' : 'Orders need stock approval', sub: 'Agent or Retailer stock', go: () => nav.go('orders.all', { filter: 'WAITING' }) });
+  if (pendPay.length) decide.push({ n: pendPay.length, text: pendPay.length === 1 ? 'Payment needs verification' : 'Payments need verification', sub: 'Not counted as money until checked', go: () => nav.go('cash.pend') });
+  body.append(Sec('Pending approvals', decide.length ? h('span', null, pad2(decide.length)) : null), decide.length ? attnBox(decide) : h('div', { class: 'allclear' }, 'Nothing is waiting for you.'));
+  const waiting = S.orders.filter(ORDER_SETS.WAITING), by = st => S.trips.filter(t => t.status === st);
+  const ops = [];
+  if (waiting.length) ops.push({ n: waiting.length, text: waiting.length === 1 ? 'Order waiting' : 'Orders waiting', sub: rs(waiting.reduce((s, o) => s + orderTotals(o).total, 0)) + ' in all', go: () => nav.go('orders.all', { filter: 'WAITING' }) });
+  by('LOADING').concat(by('READY')).forEach(t => ops.push({ n: 1, text: t.status === 'READY' ? 'Pickup ready' : 'Pickup being loaded', sub: t.no + ' · ' + (t.vehicleId ? vehOf(t.vehicleId).reg : 'no vehicle yet'), go: () => tripGo(t) }));
+  by('ON_ROAD').forEach(t => ops.push({ n: pendingStops(t).length, text: 'On the road · ' + vehOf(t.vehicleId).reg, sub: (t.driverId ? staffOf(t.driverId).name : 'No driver') + ' · ' + plural(pendingStops(t).length, 'stop') + ' left', go: () => tripGo(t) }));
+  by('RETURNED').forEach(t => ops.push({ n: 1, text: 'Pickup back — check cash', sub: t.no + ' · ' + vehOf(t.vehicleId).reg, tone: 'red', go: () => tripGo(t) }));
+  body.append(Sec('Orders & pickups'), ops.length ? attnBox(ops) : h('div', { class: 'allclear' }, 'No orders or pickups in progress.'));
+  const low = S.products.filter(x => x.active && stockStatus(x.id) !== 'OK'), out = low.filter(x => stockStatus(x.id) === 'OUT');
+  body.append(Sec('Stock'), Pane([Row({ title: low.length ? plural(low.length, 'product') + ' low or out' : 'Stock looks healthy', sub: low.length ? (out.length ? out.length + ' out · ' : '') + low.slice(0, 3).map(x => x.name).join(', ') + (low.length > 3 ? '…' : '') : plural(S.products.filter(x => x.active).length, 'product') + ' in the godown', onClick: () => nav.go('st.list') })]));
+  const ats = attendanceToday();
+  body.append(Sec('Staff activity'), Pane([Row({ title: ats.total ? (ats.unmarked ? ats.unmarked + ' of ' + ats.total + ' not marked today' : 'Everyone marked today ✓') : 'No staff yet', sub: ats.marked ? ats.present + ' present' + (ats.absent ? ', ' + ats.absent + ' absent' : '') : 'Attendance and duties', onClick: () => nav.go('sf.list') })]));
+  const diffs = S.events.filter(e => e.type === 'DIFFERENCE').slice(-3).reverse(), adj = S.cash.filter(e => /difference/i.test(e.cat || '')).slice(-2).reverse();
+  body.append(Sec('Money differences'), diffs.length || adj.length ? Pane(diffs.map(e => Row({ title: e.text, sub: fmtDT(e.at) })).concat(adj.map(e => Row({ title: e.desc, sub: fmtDT(e.at) + ' · ' + rs(e.amt, { plus: true }) })))) : h('div', { class: 'allclear' }, 'No shortages or cash differences recorded.'));
+  const ev = S.events.slice(-4).reverse();
+  body.append(Sec('Recent activity', Btn('SEE ALL', { kind: 'link', cls: 'sm', onClick: () => nav.go('hist') })), ev.length ? Pane(ev.map(e => Row({ title: e.text, sub: fmtDT(e.at) + (e.actor && e.actor.role !== 'SETUP' ? ' · ' + actorText(e.actor) : '') }))) : Pane(Empty('Nothing has happened yet.')));
+  return { hdr, body };
+}
+
+/* ---- MANAGER ---- */
+function managerHome(p, E) {
+  const d = new Date(), hdr = homeHdr('Agency Pilot · Manager', 'Operations', weekday(d) + ', ' + fmtDY(d));
+  const body = h('div', { class: 'gap' });
+  const waiting = S.orders.filter(ORDER_SETS.WAITING), by = st => S.trips.filter(t => t.status === st);
+  if (waiting.length) body.append(Btn('PREPARE A PICKUP', { kind: 'primary', icon: 'truck', onClick: () => { S.drafts.pk = { orderIds: [] }; nav.go('pk.orders'); } }));
+  const groups = areaGroups(waiting);
+  if (groups.length) body.append(Sec('Orders waiting for loading', h('span', null, plural(waiting.length, 'order'))), Pane(groups.map(g => areaRow(g, 'WAITING'))));
+  const prep = by('LOADING').concat(by('READY'));
+  if (prep.length) body.append(Sec('Pickups being prepared'), Pane(prep.map(t => Row({ title: (t.vehicleId ? vehOf(t.vehicleId).reg : 'No vehicle yet') + ' · ' + t.no, sub: (t.driverId ? 'Driver ' + staffOf(t.driverId).name : 'No driver yet') + ' · ' + tripOrders(t).map(o => partyName(o.partyId)).join(', '), chip: t.status === 'READY' ? 'READY — START TRIP' : 'LOADING', onClick: () => tripGo(t) }))));
+  const road = by('ON_ROAD');
+  if (road.length) body.append(Sec('Vehicles on the road'), Pane(road.map(t => Row({ title: vehOf(t.vehicleId).reg + ' · ' + t.no, sub: (t.driverId ? staffOf(t.driverId).name : '—') + ' · ' + plural(pendingStops(t).length, 'stop') + ' left of ' + tripOrders(t).length, onClick: () => tripGo(t) }))));
+  const back = by('RETURNED');
+  if (back.length) body.append(Sec('Back — awaiting your check'), Pane(back.map(t => Row({ title: vehOf(t.vehicleId).reg + ' · ' + t.no, sub: 'Count the goods and the driver\'s cash', chip: 'CHECK', tone: 'bad', onClick: () => tripGo(t) }))));
+  const needStock = S.orders.filter(o => o.status === 'WAITING' && o.needsApproval && !o.approved);
+  if (needStock.length) body.append(Sec('Stock approvals pending'), Pane(needStock.map(o => Row({ title: orderTitle(o), sub: o.no + ' · ' + partyKind(o.partyId) + ' · ' + rs(orderTotals(o).total), chip: 'APPROVE', tone: 'warn', onClick: () => nav.go('order.detail', { id: o.id }) }))));
+  const ats = attendanceToday();
+  body.append(Sec('Staff duties & attendance', ats.total ? h('span', null, ats.marked + ' / ' + ats.total) : null), Pane(h('div', { class: 'pad', style: { paddingTop: '14px' } },
+    h('div', { style: { fontSize: '15px', color: 'var(--ink2)' } }, ats.total ? (ats.unmarked ? (ats.marked ? ats.unmarked + ' of ' + ats.total + ' not marked yet' : 'Nobody is marked yet') : 'Everyone is marked ✓') + (ats.marked ? ' · ' + ats.present + ' present' + (ats.absent ? ', ' + ats.absent + ' absent' : '') : '') : 'No staff yet'),
+    h('div', { class: 'btnrow', style: { paddingTop: '12px' } }, ats.unmarked ? Btn('ALL PRESENT', { kind: 'primary', cls: 'sm', onClick: () => { const n = markAllPresent(todayStr()); nav.refresh(); toast(plural(n, 'person', 'people') + ' marked present'); } }) : null, Btn('ATTENDANCE', { kind: 'ghost', cls: 'sm', onClick: () => nav.go('sf.att', {}) }), Btn('DUTIES', { kind: 'ghost', cls: 'sm', onClick: () => nav.go('sf.list') })))));
+  const pend = pendingPayments();
+  if (pend.length) body.append(Sec('Payments to verify'), Pane([Row({ title: plural(pend.length, 'payment') + ' waiting', sub: 'Not counted as money until checked', chip: 'CHECK', tone: 'bad', onClick: () => nav.go('cash.pend') })]));
+  if (!waiting.length && !prep.length && !road.length && !back.length && !needStock.length && !pend.length) body.append(h('div', { class: 'allclear' }, 'All clear. No orders or pickups need you right now.'));
+  return { hdr, body };
+}
+
+/* ---- AGENT ---- */
+function agentHome(p, E) {
+  const s = actorStaff(), d = new Date();
+  const hdr = h('header', { class: 'hdr nohdr-back root' }, h('div', { class: 'ttl' }, h('div', { class: 'eyebrow' }, 'Agency Pilot · Agent'), h('h1', { class: 'big', tabindex: '-1' }, greeting() + (s ? ', ' + s.name : '')), h('div', { class: 'sub' }, 'Ready to take today\'s orders?')));
+  const body = h('div', { class: 'gap' }, Btn('TAKE ORDER', { kind: 'primary', icon: 'plus', onClick: startOrderFlow }));
+  const custs = S.customers.filter(c => c.type === 'SHOP' && isActiveCust(c) && inMyAreas(c)), mine = S.orders.filter(o => isOpenOrder(o) && myOrder(o));
+  const todays = mine.filter(o => ymd(o.createdAt) === todayStr()).sort(newest), pending = mine.filter(o => !ORDER_SETS.DONE(o) && ymd(o.createdAt) !== todayStr()).sort(newest);
+  body.append(Sec('My assigned customers', h('span', null, custs.length)),
+    custs.length ? Pane(custs.slice(0, 8).map(c => { const oo = openOrdersOf(c.id); return custRow(c, () => chooseCartParty(c, 'order'), oo.length ? { cls: 'new', chip: 'ORDERED', sub: [c.shop ? c.name : null, c.addr && c.addr.area, oo.length === 1 ? oo[0].no : plural(oo.length, 'order') + ' waiting'].filter(Boolean).join(' · ') } : null); }))
+      : Pane(Empty(s && s.areas.length ? 'No customers in your areas yet. Ask the Manager to add them.' : 'No areas are assigned to you yet. Ask the Owner.')));
+  if (custs.length > 8) body.append(Btn('ALL ' + custs.length + ' CUSTOMERS — TAKE ORDER', { kind: 'link', onClick: startOrderFlow }));
+  body.append(Sec('Today\'s orders', todays.length ? h('span', null, todays.length) : null), todays.length ? Pane(todays.map(o => orderRow(o))) : Pane(Empty('No orders taken today yet.')));
+  if (pending.length) body.append(Sec('Pending orders'), Pane(pending.slice(0, 6).map(o => orderRow(o))));
+  const dues = custs.map(c => ({ c, due: partyDueIncl(c.id) })).filter(x => x.due > 0);
+  body.append(Sec('Collections in my areas'), dues.length ? Pane(dues.map(x => Row({ title: x.c.shop || x.c.name, sub: (x.c.addr && x.c.addr.area) || '', right: rs(x.due), rightSub: 'still to pay' }))) : Pane(Empty('Nothing is due from your customers.')));
+  const b = s ? netBal(s.id) : 0;
+  body.append(Sec('My Khata'), Pane([Row({ title: s ? 'My account' : 'My account', sub: b < 0 ? 'I owe the agency' : b > 0 ? 'The agency owes me' : 'All clear', right: h('span', { class: b < 0 ? 'red' : b > 0 ? 'green' : '' }, rs(b, { plus: true })), onClick: () => nav.tab('me.khata') })]));
+  return { hdr, body };
+}
+route('my.orders', (p, E) => {
+  const f = E.st.f || 'OPEN', all = S.orders.filter(o => isOpenOrder(o) && myOrder(o)), list = all.filter(o => f === 'OPEN' ? !ORDER_SETS.DONE(o) : ORDER_SETS.DONE(o)).sort(newest);
+  const body = h('div', null, Seg([['OPEN', 'Open'], ['DONE', 'Done']], f, v => { E.st.f = v; nav.refresh(); }), h('div', { class: 'mt12' }, list.length ? Pane(list.map(o => orderRow(o))) : Pane(Empty(f === 'OPEN' ? 'No open orders.' : 'No finished orders yet.'))));
+  return { title: 'My orders', sub: 'Orders for my customers', body, foot: can('createOrder') ? [Btn('TAKE ORDER', { kind: 'primary', icon: 'plus', onClick: startOrderFlow })] : [] };
+});
+route('me.khata', (p, E) => { const sp = ROUTES['kh.person']({ pid: meId() }, E); sp.big = true; return sp; });
+
+/* ---- DRIVER ---- */
+function driverHome(p, E) {
+  const s = actorStaff(), d = new Date();
+  const hdr = homeHdr('Agency Pilot · Driver', 'Your trip', weekday(d) + ', ' + fmtDY(d) + (s ? ' · ' + s.name : ''));
+  const body = h('div', { class: 'gap' }), rank = { ON_ROAD: 0, READY: 1, LOADING: 2, RETURNED: 3 };
+  const t = meId() ? S.trips.filter(x => x.driverId === meId() && rank[x.status] != null).sort((a, b) => rank[a.status] - rank[b.status])[0] : null;
+  if (!t) { body.append(Pane(h('div', { class: 'pad center', style: { padding: '40px 16px' } }, h('div', { class: 'big' }, 'No trip assigned yet.'), h('div', { class: 'mt8 mute' }, 'Your next pickup will appear here.')))); return { hdr, body }; }
+  const os = tripOrders(t), areas = Array.from(new Set(os.map(o => areaOf(o.partyId)).filter(Boolean))), nx = nextStop(t);
+  const stText = { LOADING: 'Being loaded', READY: 'Loaded — waiting to start', ON_ROAD: 'On the road', RETURNED: 'Back at the godown' }[t.status];
+  body.append(Pane(h('div', { class: 'pad' }, h('div', { class: 'eyebrow' }, t.no), h('div', { class: 'big mt8' }, t.vehicleId ? vehOf(t.vehicleId).reg : 'No vehicle yet'), h('div', { class: 'mt8' }, (t.fromArea || areas.join(', ') || 'No area') + ' · ' + plural(os.length, 'stop')), h('div', { class: 'mt8' }, Chip(stText.toUpperCase(), t.status === 'ON_ROAD' ? 'ok' : '')))));
+  if (t.status === 'LOADING') body.append(h('div', { class: 'aside' }, 'Your pickup is being loaded. The Manager will start the trip when loading is confirmed.'));
+  if (t.status === 'READY') body.append(h('div', { class: 'aside' }, 'Loaded and ready. The Manager starts the trip — then your first delivery shows here.'), Sec('Your stops'), Pane(os.map((o, i) => Row({ title: (i + 1) + '. ' + orderTitle(o), sub: areaOf(o.partyId) + ' · ' + (chalOf(o.dcId) ? chalOf(o.dcId).no : ''), right: rs(orderTotals(o).total) }))));
+  if (t.status === 'RETURNED') body.append(h('div', { class: 'aside' }, h('b', null, 'You are back. '), 'The Manager will count the goods and the cash you collected.'));
+  if (t.status === 'ON_ROAD') {
+    if (nx) { const c = party(nx.partyId), dc = chalOf(nx.dcId);
+      body.append(h('div', { class: 'pane ink' }, h('div', { class: 'pad' }, h('div', { class: 'eyebrow' }, 'Next delivery'), h('div', { style: { fontSize: '26px', fontWeight: 700, margin: '4px 0' } }, orderTitle(nx).toUpperCase()), h('div', null, c && c.addr ? addrLine(c) : areaOf(nx.partyId)),
+        h('div', { class: 'mt8' }, 'Challan ' + (dc ? dc.no : '—')), h('div', { class: 'mt8', style: { fontSize: '17px', fontWeight: 600 } }, stopQty(nx)),
+        h('div', { class: 'gap mt16' }, Btn('OPEN ORDER', { kind: 'primary', onClick: () => nav.go('dl.detail', { oid: nx.id }) }), h('div', { class: 'btnrow split' }, c && c.addr && mapsUrl(c) ? Btn('MAPS', { kind: 'ghost', icon: 'nav', onClick: () => openMaps(c) }) : null, c && c.phone ? Btn('CALL', { kind: 'ghost', icon: 'phone', onClick: () => dial(c) }) : null)))));
+    } else body.append(h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { style: { fontSize: '22px', fontWeight: 700 } }, 'All stops done ✓'), h('div', { class: 'mt8 mute' }, 'Goods that were not accepted are still on the vehicle.'))));
+    const later = os.filter(o => o.status === 'ON_ROAD' && o !== nx);
+    if (later.length) body.append(Sec('Then'), Pane(later.map(o => Row({ title: orderTitle(o), sub: (chalOf(o.dcId) ? chalOf(o.dcId).no + ' · ' : '') + stopQty(o) }))));
+    const collect = S.sales.filter(x => x.tripId === t.id && x.partyId && saleDue(x) > 0 && !x.dueMarked);
+    if (collect.length) body.append(Sec('Money to collect'), attnBox(collect.map(x => ({ n: 1, text: 'Collect ' + rs(saleDue(x)), sub: partyName(x.partyId), tone: 'red', go: () => nav.go('col.home', { sid: x.id }) }))));
+    const free = freeGoods(t);
+    if (Object.keys(free).length && (!nx || os.some(o => o.status !== 'ON_ROAD'))) body.append(h('div', { class: 'card' }, h('b', null, 'Goods left on the vehicle'), h('div', { class: 'mute', style: { fontSize: '14px' } }, Object.keys(free).map(pid => qtyText(prod(pid), free[pid]) + ' ' + prod(pid).name).join(' · ')), h('div', { class: 'mt12' }, Btn('RECORD WHAT HAPPENS TO THEM', { kind: 'dark', cls: 'sm', onClick: () => nav.go('pk.left', { tid: t.id }) }))));
+    if (!nx) body.append(Btn('BACK AT GODOWN', { kind: 'primary', onClick: () => { arriveBack(t.id); toast('Marked back at the godown — the Manager will check the return'); nav.refresh(); } }));
+  }
+  const done = os.filter(o => o.dcId && ['DELIVERED', 'PARTIAL'].includes(o.status));
+  if (done.length) body.append(Sec('Delivery documents'), Pane(done.map(o => Row({ title: orderTitle(o), sub: (chalOf(o.dcId) ? chalOf(o.dcId).no : '') + (o.saleId && saleOf(o.saleId) ? ' · Bill ' + saleOf(o.saleId).no : ''), chip: o.status === 'PARTIAL' ? 'PARTLY' : 'DELIVERED', tone: 'ok', onClick: () => nav.go('print', { docs: [['DC', o.dcId]].concat(o.saleId ? [['BILL', o.saleId]] : []), start: 0 }) }))));
+  return { hdr, body };
+}
+
+/* ---- HELPER ---- */
+function helperHome(p, E) {
+  const s = actorStaff(), d = new Date();
+  const hdr = homeHdr('Agency Pilot · Helper', 'My duty', weekday(d) + ', ' + fmtDY(d) + (s ? ' · ' + s.name : ''));
+  const body = h('div', { class: 'gap' });
+  if (!s) { body.append(Pane(Empty('Choose who you are first.'))); return { hdr, body }; }
+  const duty = currentDuty(s), att = attChip(s), t = S.trips.find(x => x.helperId === s.id && ACTIVE_TRIP.includes(x.status)) || S.trips.find(x => x.driverId === s.id && ACTIVE_TRIP.includes(x.status));
+  body.append(Pane(h('div', { class: 'pad', style: { paddingBottom: 0 } }, KV('Today\'s duty', duty), KV('Attendance today', att || 'Not marked yet'), KV('Position', posLabel[s.position]))));
+  if (!t) body.append(Pane(h('div', { class: 'pad center', style: { padding: '32px 16px' } }, h('div', { class: 'big' }, 'No pickup for you yet.'), h('div', { class: 'mt8 mute' }, 'If you are given a pickup it will appear here.'))));
+  else {
+    const mineHelper = t.helperId === s.id, need_ = tripNeeds(t);
+    body.append(Sec('My pickup'), Pane([Row({ title: (t.vehicleId ? vehOf(t.vehicleId).reg : 'No vehicle yet') + ' · ' + t.no, sub: (mineHelper ? 'You are the helper' : 'You are the driver') + (t.driverId && mineHelper ? ' · Driver ' + staffOf(t.driverId).name : '') + ' · ' + tripOrders(t).map(o => partyName(o.partyId)).join(', '), chip: t.status.replace('_', ' ') })]));
+    if (t.status === 'LOADING') body.append(Sec('Loading instructions'), Pane(Object.keys(need_).map(pid => Row({ title: prodLabel(prod(pid)), right: qtyText(prod(pid), need_[pid]) }))), h('div', { class: 'aside' }, 'Read only. The Manager counts and confirms the loading — a helper cannot release stock.'));
+  }
+  return { hdr, body };
+}
+
+/* ---- RETAILER ---- */
+function retailerHome(p, E) {
+  const s = actorStaff(), d = new Date();
+  const hdr = homeHdr('Agency Pilot · Retailer', 'Counter', weekday(d) + ', ' + fmtDY(d) + (s ? ' · ' + s.name : ''));
+  const body = h('div', { class: 'gap' }, Btn('NEW COUNTER SALE', { kind: 'primary', icon: 'plus', onClick: startRetailFlow }));
+  const stock = S.products.filter(x => (S.retail[x.id] || 0) > 0);
+  body.append(Sec('Counter stock', stock.length ? h('span', null, plural(stock.length, 'product')) : null), stock.length ? Pane(stock.map(x => Row({ title: prodLabel(x), sub: 'at the counter', right: qtyText(x, S.retail[x.id]) }))) : Pane(Empty('No stock at the counter. Ask the Manager to approve some.')));
+  const mine = S.sales.filter(x => x.source === 'RETAIL' && x.by && x.by.staffId === meId()), today = mine.filter(x => ymd(x.at) === todayStr());
+  body.append(Sec('Today\'s sales'), Pane(h('div', { class: 'pad', style: { paddingBottom: 0 } }, KV('Sales', String(today.length)), KV('Total', rs(today.reduce((a, x) => a + saleTotal(x), 0)), 'tot'))));
+  body.append(h('div', { class: 'aside' }, 'Counter stock is issued by the Manager. A Retailer cannot approve their own stock.'));
+  return { hdr, body };
+}
+route('rt.sales', (p, E) => {
+  const mine = S.sales.filter(x => x.source === 'RETAIL' && x.by && x.by.staffId === meId()).slice().sort((a, b) => b.at - a.at).slice(0, 40);
+  return { title: 'My sales', sub: 'Counter sales I recorded', body: mine.length ? Pane(mine.map(x => Row({ title: x.no + ' · ' + rs(saleTotal(x)), sub: fmtDT(x.at) + ' · ' + x.lines.map(l => qtyText(prod(l.pid), l.base) + ' ' + prod(l.pid).name).join(', '), onClick: () => nav.go('print', { docs: [['BILL', x.id]], start: 0 }) }))) : Pane(Empty('No counter sales yet.')),
+    foot: [Btn('NEW COUNTER SALE', { kind: 'primary', icon: 'plus', onClick: startRetailFlow })] };
+});
+
+/* ---- wrappers that give existing screens a tab-root identity (the original routes stay reachable from inside flows) ---- */
+route('ow.cash', (p, E) => ROUTES['cash.home'](p, E));
+route('mg.pickups', (p, E) => Object.assign({}, ROUTES['pk.list'](p, E), { title: 'Pickups' }));
+
+/* ---- the Today route: one name, one home per role ---- */
+route('today', (p, E) => ({ OWNER: ownerHome, MANAGER: managerHome, AGENT: agentHome, DRIVER: driverHome, HELPER: helperHome, RETAILER: retailerHome }[ACTOR.role] || todayFull)(p, E));
+
 /* ---------- 90-boot.js ---------- */
 /* ---------------------------------------------------------------------
    9. BOOT — load the saved data (or start empty the first time).
    --------------------------------------------------------------------- */
 (function boot() {
-  bootState(); histBoot();
+  bootState(); histBoot(); roleLoad(); setRoleTabs();
   UI.booting = true; UI.restored = new Set(activeDrafts().filter(k => FLOW_DRAFTS.includes(k)));
-  nav.reset([['today']], 'none'); UI.booting = false;
-  if (UI.restored.size) setTimeout(() => { if (!UI.sheet) unfinishedSheet(); }, 500);
-  if (!FB.tipShown) setTimeout(() => { if (!UI.sheet) fbTip(); }, 700);
+  nav.reset([[ACTOR.role ? 'today' : 'roles']], 'none'); UI.booting = false;
+  if (ACTOR.role && UI.restored.size) setTimeout(() => { if (!UI.sheet) unfinishedSheet(); }, 500);
+  if (ACTOR.role && !FB.tipShown) setTimeout(() => { if (!UI.sheet) fbTip(); }, 700);
   if (STORE.loaded && STORE.loaded.fromBackup) toast('Your main save was damaged, so the backup copy was opened.', true);
   /* read-only inspection handle for the person demonstrating / testing in the console */
-  window.AP = { get state() { return S; }, FB, nav, UI, ROUTES, STORE, saveNow, resetDemo, rs, qtyText };
+  window.AP = { get state() { return S; }, FB, nav, UI, ROUTES, STORE, saveNow, resetDemo, rs, qtyText, ACTOR, ROLES, can, sys, enterRole, chooseRole, loadSample, routeAllowed };
 })();
 
 </script>
