@@ -494,6 +494,40 @@ textarea.input{padding:12px 14px;min-height:96px}
 .vbtn.danger{border-color:#ff8a80;color:#ff8a80}
 .vact{display:flex;gap:var(--s3)}
 .vhint{text-align:center;font-size:12px;color:rgba(255,255,255,.6)}
+/* ---- Nov 19 tester batch ---- */
+.dragh{flex:none;width:48px;min-height:48px;font-size:24px;line-height:1;color:var(--ink2);touch-action:none;cursor:grab}
+.row.dragging{background:var(--tint);box-shadow:0 6px 18px rgba(0,0,0,.18);position:relative;z-index:6}
+.idxin{flex:none;width:58px;min-height:44px;text-align:center;font-size:18px;font-weight:700;border:1px solid var(--line2);border-radius:var(--r);background:var(--paper)}
+.gb .kv{padding:6px 0}.gb .kv b{font-size:15px}
+.gblbl{margin:var(--s3) 0 2px;font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--ink2);text-transform:uppercase}
+.ptot .pt-line{padding:9px 0}.ptot .pt-n{font-size:15px}.ptot .pt-s{font-size:12px}.ptot .pt-q{font-size:16px}
+.dd{display:flex;flex-direction:column}
+.dd-title{margin:0;font-size:28px;line-height:1.1;font-weight:700;letter-spacing:-.02em}
+.dd-hint{color:var(--mute);font-size:15px;margin-top:6px}
+.dd.open .dd-title{font-size:20px}.dd.open .dd-hint{display:none}
+.dd-bar{position:relative;margin-top:var(--s4)}
+.dd-in{border-radius:999px;font-size:17px;min-height:52px;padding:0 52px 0 18px;text-align:left}
+.dd-card{margin-top:var(--s2);background:var(--paper);border:1px solid var(--line2);border-radius:var(--r2);box-shadow:0 8px 24px rgba(0,0,0,.08);max-height:46vh;overflow-y:auto;padding:0 var(--s3) var(--s2)}
+.dd-card .pane{border:0;box-shadow:none;background:transparent}
+.dd-card .sec{margin-top:var(--s3)}
+.dd-sel{display:flex;gap:var(--s2);margin-top:var(--s3);font-size:15px}
+.dd.open .dd-sel{display:none}
+.xbtn{flex:none;width:44px;height:44px;display:grid;place-items:center;font-size:26px;line-height:1;color:var(--ink2)}
+.check.on{font-weight:700;font-size:17px}
+.rolecard.allin{border:2px solid var(--ink);background:var(--paper)}
+.rolecard.allin.on{box-shadow:inset 4px 0 0 var(--green)}
+.rolelbl{margin:var(--s5) 0 0;font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--mute)}
+.totqty{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s3);padding:var(--s3) var(--s4);background:var(--tint);border-top:1px solid var(--line)}
+.totqty span{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--ink2);flex:0 1 55%}
+.totqty b{font-size:17px;font-weight:700;text-align:right;min-width:0;overflow-wrap:anywhere}
+.card > .totqty,.pcard > .totqty{margin:var(--s2) calc(-1 * var(--s4)) 0}
+.search input::-webkit-search-cancel-button{display:none}
+.search .input{padding-right:48px}
+.sclear{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:44px;height:44px;display:grid;place-items:center;font-size:26px;line-height:1;color:var(--ink2)}
+.sclear[hidden]{display:none}
+.stickytop{position:sticky;top:0;z-index:5;background:var(--bg);padding:var(--s2) 0 var(--s2)}
+.sumstrip{margin-top:var(--s2);padding:var(--s3) var(--s4);border:1px solid var(--line);background:var(--paper);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.sumstrip small{display:block;font-weight:400;color:var(--mute);font-size:13px;margin-top:2px}
 </style>
 </head>
 <body>
@@ -690,7 +724,7 @@ const FIX = {
     agency: { name: 'Shree Demo Agencies', addr: 'Plot 12, Industrial Area, Demo City', phone: '9000000000', note: 'Balaji distributor — fictional demo details' },
     bank: { name: 'Demo Bank', holder: 'Shree Demo Agencies', acNo: '0000 0000 0101', ifsc: 'DEMO0000101', branch: 'Demo Branch' },
     upi: { id: 'shreedemo@demoupi', phone: '9000000000' },
-    paper: 'A4', defaultCamera: 'CN-01', helperRequired: false, unloadFee: 160000, agentBp: 100,
+    paper: '80', defaultCamera: 'CN-01', helperRequired: false, unloadFee: 160000, agentBp: 100,
     reasons: ['Purchase receipt', 'Loading', 'Delivery', 'Good return', 'Damaged / expired hold', 'Count correction', 'Retail issue', 'Direct sale', 'Inter-agency sale'],
   }),
 };
@@ -762,7 +796,7 @@ const CAP_TEXT = {
 };
 const CAP_ALL = Object.keys(CAP_TEXT);
 const ROLES = {
-  FULL: { label: 'Full access', blurb: 'Every module, no role limits. For development and testing.', all: true, caps: CAP_ALL },
+  FULL: { label: 'All in one', blurb: 'The complete app on one login: every screen and every action, no role limits.', all: true, caps: CAP_ALL },
   OWNER: { label: 'Owner', blurb: 'Complete business overview, money, stock, staff, approvals, and operations.', all: true, caps: CAP_ALL, who: null },
   MANAGER: { label: 'Manager', blurb: 'Orders, loading, staff duties, stock verification, and operational management.', pos: ['MANAGER'],
     caps: ['viewAllOrders', 'createOrder', 'editOrder', 'cancelOrder', 'createCustomer', 'editCustomer', 'viewAllCustomers', 'approveStock', 'preparePickup', 'assignDriver', 'confirmLoading', 'startTrip',
@@ -788,6 +822,8 @@ function need(cap) { if (can(cap)) return; fail((roleDef() ? roleDef().label : '
 function needAny(caps) { if (canAny(caps)) return; fail((roleDef() ? roleDef().label : 'This') + ' role cannot ' + (CAP_TEXT[caps[0]] || 'do this') + '.'); }
 function sys(fn) { ACTOR.sys++; try { return fn(); } finally { ACTOR.sys--; } }
 const actorStaff = () => ACTOR.staffId ? staffOf(ACTOR.staffId) : null;
+const staffSeesKhata = s => !!s && (s.seeKhata != null ? !!s.seeKhata : ['MANAGER', 'CEO'].includes(s.position));        // OFF by default for drivers, helpers, agents, retailers
+const seeBalances = () => ACTOR.sys > 0 || hasAll() || staffSeesKhata(actorStaff());
 function actorBy() { if (ACTOR.sys > 0 || !ACTOR.role) return { role: 'SETUP', staffId: null, name: 'Demo set-up', simulated: true }; const s = actorStaff(); return { role: ACTOR.role, staffId: s ? s.id : null, name: s ? s.name : roleDef().label, simulated: true }; }
 const actorText = a => a ? (a.role === 'SETUP' ? 'demo set-up' : (ROLES[a.role] ? ROLES[a.role].label : a.role) + (a.staffId ? ' · ' + a.name : '') + ' (simulated)') : '';
 const roleNeedsWho = r => !!(ROLES[r] && (ROLES[r].pos || ROLES[r].drv));
@@ -808,7 +844,7 @@ function canDoc(d) {                                              // [type, id] 
   const ty = d[0], id = d[1];
   if (ty === 'DC') { const x = chalOf(id); return !!x && ((x.tripId && myTrip(tripOf(x.tripId))) || (!!x.partyId && inMyAreas(cust(x.partyId)))); }
   if (ty === 'BILL') { const s = saleOf(id); return !!s && (s.partyId === meId() || (s.tripId && myTrip(tripOf(s.tripId))) || (!!s.partyId && inMyAreas(cust(s.partyId))) || (!!s.by && s.by.staffId === meId() && s.source === 'RETAIL')); }
-  if (ty === 'MANIFEST') return myTrip(tripOf(id));
+  if (ty === 'MANIFEST' || ty === 'RETURN') return myTrip(tripOf(id));
   if (ty === 'STATEMENT') return can('viewOwnKhata') && id === meId();
   return false;
 }
@@ -832,7 +868,7 @@ const custTypeLabel = { SHOP: 'Shop', AGENCY: 'Other agency', OCCASIONAL: 'Occas
 const partyKind = id => { const p = party(id); if (!p) return ''; return isStaffId(id) ? (posLabel[p.position] || 'Staff') : (custTypeLabel[p.type] || 'Customer'); };
 const isAgent = id => isStaffId(id) && ['AGENT', 'PERSONAL_AGENT'].includes((staffOf(id) || {}).position);
 const needsApprovalParty = id => isStaffId(id) && ['AGENT', 'PERSONAL_AGENT', 'RETAILER'].includes((staffOf(id) || {}).position);
-const prodLabel = pr => pr.name + ' ₹' + (pr.mrp / 100);
+const prodLabel = pr => '₹' + (pr.mrp / 100) + ' ' + pr.name;                    // rate first: "₹5 Salted Chips" — the same everywhere
 
 function nid(k) { S.seq[k] = (S.seq[k] || 0) + 1; return k + S.seq[k]; }
 function nextNo(k, prefix) { S.nums[k] = (S.nums[k] || 0) + 1; return prefix + '-' + S.nums[k]; }
@@ -1145,6 +1181,7 @@ function deliver(orderId, accepted, reason, token) { needTripWork((orderOf(order
   if (tokUsed(token)) return { dup: true, order: o };
   const t = tripOf(o.tripId);
   if (!t || t.status !== 'ON_ROAD' || o.status !== 'ON_ROAD') fail('This order is not out for delivery.');
+  { const nx = ACTOR.sys > 0 ? null : nextStop(t); if (nx && nx.id !== o.id) fail('Finish the earlier stop first — next is ' + orderTitle(nx) + ' (stop ' + (tripOrders(t).indexOf(nx) + 1) + ').'); }
   let accTotal = 0, allFull = true;
   for (const pid in o.alloc) {
     const a = accepted[pid] || 0;
@@ -1220,11 +1257,11 @@ function partyDueIncl(pid) {
   let pend = 0; for (const p of S.payments) if (p.partyId === pid && payActive(p) && !p.counted) pend += p.amount;
   return Math.max(0, partyDue(pid) - pend);
 }
-function allocate(pid, amount, saleId) {
+function allocate(pid, amount, saleId, skip) {
   if (!pid) return [];
   if (saleId) return [{ saleId, amount }];
   let rem = amount; const out = [];
-  for (const s of S.sales.filter(x => x.partyId === pid && !x.cashAndCarry).sort((a, b) => a.at - b.at)) {
+  for (const s of S.sales.filter(x => x.partyId === pid && !x.cashAndCarry && x.id !== skip).sort((a, b) => a.at - b.at)) {
     if (rem <= 0) break; const d = saleDueIncl(s);
     if (d > 0) { const x = Math.min(d, rem); out.push({ saleId: s.id, amount: x }); rem -= x; }
   }
@@ -1237,14 +1274,14 @@ function recordPayment(o) { { const sl0 = o.saleId ? saleOf(o.saleId) : null; ne
   if (!S.settings.pay[method]) fail(PAY_LABEL[method] + ' is switched off in Settings.');
   if (!(amount > 0)) fail('Enter an amount to collect.');
   const sale = saleId ? saleOf(saleId) : null;
-  const maxDue = sale ? saleDueIncl(sale) : (partyId ? partyDueIncl(partyId) : amount);
+  const maxDue = o.maxDue != null ? o.maxDue : (sale ? saleDueIncl(sale) : (partyId ? partyDueIncl(partyId) : amount));
   if (amount > maxDue) { fail('That is more than the ' + rs(maxDue) + ' still due.'); }
   const d = details || {};
   if (method === 'CHEQUE' && (!(d.no || '').trim() || !(d.date || '').trim() || !(d.bank || '').trim())) { fail('Cheque number, date and bank are all needed.'); }
   tokUse(token);
   const agent = partyId && isAgent(partyId);
   const p = { id: nid('y'), no: nextNo('R', 'R'), at: new Date(), partyId: partyId || null, saleId: saleId || null, method, amount, collectorId: collectorId || null, tripId: tripId || null,
-    details: d, alloc: allocate(partyId, amount, saleId), stage: 'PENDING', counted: false, handoverId: null, by: actorBy() };
+    details: d, alloc: allocate(partyId, amount, saleId, o.skipSaleId), stage: 'PENDING', counted: false, handoverId: null, by: actorBy() };
   S.payments.push(p);
   const who = partyId ? partyName(partyId) : 'Walk-in customer';
   if (agent) {                                        // Agent submission: nothing counts until the office verifies it
@@ -1338,11 +1375,11 @@ function handoverCount(tid, counted, note) { need('reconcilePickup');
   const t = tripOf(tid); if (!t) fail('Pickup not found.');
   const ps = tripCash(t), expected = ps.reduce((s, p) => s + p.amount, 0);
   if (!(counted >= 0)) fail('Enter the counted cash.');
-  if (counted !== expected && !(note || '').trim()) fail('Counted cash is ' + rs(Math.abs(counted - expected)) + (counted < expected ? ' short' : ' extra') + ' — write a short note to explain.');
+  if (counted !== expected && (note || '').trim().length < 5) fail('Counted cash is ' + rs(Math.abs(counted - expected)) + (counted < expected ? ' short' : ' extra') + ' — write a short note to explain.');
   let h = t.handoverId ? byId(S.handovers, t.handoverId) : null;
   if (h && h.status === 'VERIFIED') fail('The money was already verified.');
   if (!h) { h = { id: nid('h'), no: nextNo('H', 'H'), tripId: t.id, collectorId: t.driverId }; S.handovers.push(h); t.handoverId = h.id; }
-  Object.assign(h, { expected, counted, diff: counted - expected, note: (note || '').trim(), at: new Date(), status: 'COUNTED', payIds: ps.map(p => p.id) });
+  Object.assign(h, { expected, counted, diff: counted - expected, note: (note || '').trim(), at: new Date(), by: actorBy(), status: 'COUNTED', payIds: ps.map(p => p.id) });
   ps.forEach(p => { p.stage = 'HANDED'; p.handoverId = h.id; });
   log('HANDOVER', staffOf(t.driverId).name + ' handed ' + rs(counted) + ' to the Manager (expected ' + rs(expected) + ')', { trip: t.id });
   return h;
@@ -1370,7 +1407,7 @@ function tripSummary(t) {
     online: pays.filter(p => p.method !== 'CASH').reduce((s, p) => s + p.amount, 0) };
 }
 /* Close the pickup only when EVERYTHING on the vehicle is accounted for and money is counted. */
-function closeTrip(tid, goods, token) { need('reconcilePickup');
+function closeTrip(tid, goods, token, times) { need('reconcilePickup');
   const t = tripOf(tid); if (!t || t.status !== 'RETURNED') fail('This pickup is not waiting for the return check.');
   if (tokUsed(token)) return t;
   for (const pid in t.custody) {
@@ -1392,10 +1429,21 @@ function closeTrip(tid, goods, token) { need('reconcilePickup');
   }
   t.goods = goods;
   verifyHandover(t);
-  t.status = 'CLOSED'; t.closedAt = new Date();
+  t.status = 'CLOSED'; t.closedAt = new Date(); t.closedBy = actorBy(); t.returnTimes = Object.assign({}, times || {});
   t.closeSummary = tripSummary(t);
   log('PICKUP', t.no + ' closed — everything accounted for', { trip: t.id });
   return t;
+}
+
+/* ---- every print is recorded with its own time (the first one is also kept as printedAt for older records) ---- */
+const lastPrint = x => x && x.prints && x.prints.length ? x.prints[x.prints.length - 1] : (x && x.printedAt) || null;
+function notePrint(docs) { need('printDocs'); const now = new Date();
+  docs.forEach(d => { const ty = d[0], id = d[1];
+    if (ty === 'DC') { const dc = chalOf(id); if (!dc) return; (dc.prints = dc.prints || []).push(now); if (!dc.printedAt) dc.printedAt = now; const o = S.orders.find(x => x.dcId === id); if (o) o.history.push({ at: now, text: 'Challan printed' + (dc.prints.length > 1 ? ' again (print ' + dc.prints.length + ')' : '') }); log('CHALLAN', dc.no + ' printed at ' + fmtT(now)); }
+    else if (ty === 'BILL') { const s = saleOf(id); if (!s) return; (s.prints = s.prints || []).push(now); log('CHALLAN', 'Bill ' + s.no + ' printed at ' + fmtT(now)); }
+    else if (ty === 'RETURN') { const tr = tripOf(id); if (!tr) return; (tr.returnPrints = tr.returnPrints || []).push(now); log('PICKUP', tr.no + ' return receipt printed at ' + fmtT(now), { trip: tr.id }); }
+    else if (ty === 'MANIFEST') { const tr = tripOf(id); if (!tr) return; (tr.sheetPrints = tr.sheetPrints || []).push(now); log('PICKUP', tr.no + ' loading sheet printed at ' + fmtT(now), { trip: tr.id }); }
+  });
 }
 
 /* ---------- 43-domain-misc.js ---------- */
@@ -1759,6 +1807,27 @@ const Chip = (t, tone) => h('span', { class: 'chip' + (tone ? ' ' + tone : '') }
 const KV = (k, v, cls) => h('div', { class: 'kv' + (cls ? ' ' + cls : '') }, h('span', null, k), h('span', null, v));
 const Sec = (t, right) => h('div', { class: 'sec' }, h('span', null, t), right || null);
 const Empty = t => h('div', { class: 'empty' }, t);
+
+/* ---- HIDE: things the tester asked to take OFF the screen. Nothing is deleted: set a flag to false and the old control comes back. ---- */
+const HIDE = {
+  cartAddCustomer: true,       // ADD NEW CUSTOMER while taking an order (customers are added in More → Customers)
+  stopArrows: true,            // the ↑ ↓ buttons on "Delivery order" (tap-to-order replaces them)
+  crewFullScreenSearch: true,  // the full-screen driver/helper search with its CANCEL button (an inline dropdown with × replaces it)
+  usualCamera: true,           // the pre-selected USUAL camera and its badge (the camera is chosen by hand)
+  challanViewBtn: true,        // the separate VIEW CHALLAN button on the delivery challan (PRINT / VIEW CHALLAN does both)
+  bulkChallanPrint: true,      // printing every customer's challan together from the office (only the loading sheet prints there)
+};
+/* ---- TOTAL QUANTITY: one reusable component. Sums every line by unit (BOX · LADI/JAR · PACKET/PCS), hides zeros, "10 BOX | 5 LADI". ---- */
+const UNIT_ORDER = ['BOX', 'LADI', 'JAR', 'PACKET', 'PCS'];
+function qtyTotals(items) {
+  const m = new Map();
+  items.forEach(it => { const pr = prod(it.pid); if (!pr || !(it.base > 0)) return; breakdown(pr, it.base).forEach(x => { if (x[1] > 0) m.set(x[0], (m.get(x[0]) || 0) + x[1]); }); });
+  return Array.from(m.entries()).sort((a, b) => UNIT_ORDER.indexOf(a[0]) - UNIT_ORDER.indexOf(b[0]));
+}
+const qtyTotalText = items => { const t = qtyTotals(items); return t.length ? t.map(x => x[1] + NB + x[0]).join(' | ') : '—'; };
+const TotalQty = (items, label) => h('div', { class: 'totqty' }, h('span', null, label || 'TOTAL QUANTITY'), h('b', null, qtyTotalText(items)));
+const loadItems = o => o.alloc ? Object.keys(o.alloc).filter(pid => o.alloc[pid] > 0).map(pid => ({ pid, base: o.alloc[pid] })) : o.lines;
+const prodSearchText = x => prodLabel(x) + ' ' + x.name + ' ' + x.nick + ' ' + (x.mrp / 100) + 'rs ₹' + (x.mrp / 100);
 const Field = (label, input, err, errEl) => h('div', null, h('label', { class: 'lbl' }, label, input), err ? h('div', { class: 'errtxt' }, err) : null, errEl || null);
 const Toggle = (title, sub, on, onChange) => h('button', { class: 'tog', type: 'button', role: 'switch', 'aria-checked': String(!!on), onClick: function () { const v = this.getAttribute('aria-checked') !== 'true'; try { onChange(v); this.setAttribute('aria-checked', String(v)); } catch (err) { handleErr(err); } } },
   h('span', { class: 'tx' }, h('b', null, title), sub ? h('span', null, sub) : null), h('span', { class: 'sw' }));
@@ -1768,8 +1837,12 @@ function Seg(options, value, onChange) {          // options: [[value,label],...
   return wrap;
 }
 function searchBox(placeholder, value, onInput) {
-  const inp = h('input', { class: 'input', type: 'search', placeholder, 'aria-label': placeholder, autocomplete: 'off', value: value || '', onInput: () => onInput(inp.value) });
-  return h('div', { class: 'search' }, ic('search'), inp);
+  const sync = () => { clr.hidden = !inp.value; };
+  const inp = h('input', { class: 'input', type: 'search', placeholder, 'aria-label': placeholder, autocomplete: 'off', value: value || '', onInput: () => { sync(); const b = inp.closest('.body'); if (b) b.scrollTop = 0; onInput(inp.value); } });
+  const clr = h('button', { type: 'button', class: 'sclear', 'aria-label': 'Clear search', hidden: !value, onPointerdown: ev => ev.preventDefault(), onMousedown: ev => ev.preventDefault(), onClick: () => { inp.value = ''; sync(); onInput(''); inp.focus(); } }, '×');
+  const selAll = () => { if (inp.value) { try { inp.select(); inp.setSelectionRange(0, inp.value.length); } catch (e) { /* ignore */ } } };
+  inp.addEventListener('focus', () => setTimeout(selAll, 0)); inp.addEventListener('click', selAll);
+  return h('div', { class: 'search' }, ic('search'), inp, clr);
 }
 /* searchable list in a charcoal pane. items → rows via render(); query lives in the stack entry so Back keeps it. */
 function pickList(E, o) {
@@ -1780,7 +1853,8 @@ function pickList(E, o) {
     setKids(listBox, items.length ? Pane(items.map(o.render)) : Pane(h('div', { class: 'empty' }, o.empty || 'Nothing found')));
   };
   draw();
-  return h('div', null, searchBox(o.placeholder, E.st.q, v => { E.st.q = v; draw(); }), h('div', { class: 'mt12' }, listBox));
+  const sb = searchBox(o.placeholder, E.st.q, v => { E.st.q = v; draw(); });
+  return h('div', null, o.strip ? h('div', { class: 'stickytop' }, sb, o.strip()) : sb, h('div', { class: 'mt12' }, listBox));
 }
 /* + / − stepper that writes straight back to the draft (no re-render, so the keyboard stays open) */
 function stepper(o) {
@@ -1855,7 +1929,8 @@ const nav = {
   top: () => UI.stack[UI.stack.length - 1],
   go(name, params, opts) {
     if (!ROUTES[name]) throw new Error('Unknown screen ' + name);
-    closeSheet(); UI.stack.push({ name, params: params || {}, st: {}, help: false }); show('fwd'); syncHistory();
+    closeSheet(); { const cur = nav.top(), b = UI.screen && UI.screen.querySelector('.body'); if (cur && b) cur.scroll = b.scrollTop; }
+    UI.stack.push({ name, params: params || {}, st: {}, help: false }); show('fwd'); syncHistory();
   },
   replace(name, params) { closeSheet(); UI.stack[UI.stack.length - 1] = { name, params: params || {}, st: {}, help: false }; show('fwd'); },
   back() { if (UI.stack.length <= 1) return; closeSheet(); UI.stack.pop(); show('back'); syncHistory(); },
@@ -1879,6 +1954,7 @@ function show(dir) {
   old.forEach(o => { o.classList.add('leave'); o.setAttribute('aria-hidden', 'true'); setTimeout(() => o.remove(), 190); });
   if (dir === 'fwd') el.classList.add('enter'); else if (dir === 'back') el.classList.add('enter-back');
   stage.append(el); UI.screen = el;
+  if (dir === 'back' && E.scroll) { const nb = el.querySelector('.body'); if (nb) nb.scrollTop = E.scroll; }          // coming back to a list: it stays where you left it
   $('#app').classList.toggle('flow', !TABS.includes(E.name));
   renderTabs(); renderDemoBar();
   const inp = el.querySelector('[data-autofocus]');
@@ -2056,7 +2132,7 @@ const todayFull = (p, E) => {
 
 function orderRow(o, hl) {
   const st = orderState(o), t = orderTotals(o).total, a = o.saleId ? saleTotal(saleOf(o.saleId)) : t;
-  return Row({ title: orderTitle(o), sub: [areaOf(o.partyId), o.no].filter(Boolean).join(' · '), right: rs(a), rightSub: st.due > 0 ? 'DUE ' + rs(st.due) : st.text, onClick: () => nav.go('order.detail', { id: o.id }), cls: S.highlight === o.id || hl || !ORDER_SETS.DONE(o) ? 'new' : '', k: o.id });
+  return Row({ title: orderTitle(o), sub: [areaOf(o.partyId), o.no].filter(Boolean).join(' · '), right: rs(a), rightSub: st.due > 0 && seeBalances() ? 'DUE ' + rs(st.due) : st.text, onClick: () => nav.go('order.detail', { id: o.id }), cls: S.highlight === o.id || hl || !ORDER_SETS.DONE(o) ? 'new' : '', k: o.id });
 }
 /* ---- Orders: taken orders are grouped by AREA. Loading / on the road is tracked on the Tracking screen, not here. ---- */
 const orderArea = o => areaOf(o.partyId) || 'No area';
@@ -2098,15 +2174,16 @@ route('orders.area', (p, E) => {
 function linesPane(rows, tot, o) {
   o = o || {};
   const pane = h('div', { class: 'pane' });
-  rows.forEach(r => {
+  rows.forEach((r, ri) => {
     const pr = prod(r.pid);
     const parts = r.units && Object.keys(r.units).length ? Object.keys(r.units).map(u => [u, r.units[u]]) : breakdown(pr, r.base);
     const blk = h('div', { class: 'ol' + (o.edit ? ' tap' : '') },
-      h('div', { class: 'nm' }, h('span', null, prodLabel(pr)), h('span', null, rs(r.amt))),
+      h('div', { class: 'nm' }, h('span', null, (ri + 1) + '. ' + prodLabel(pr)), h('span', null, rs(r.amt))),
       parts.map(([u, n]) => h('div', { class: 'ln' }, h('span', null, n + ' ' + u), h('span', { class: 'rt' }, '× ' + (u === pr.base ? rsr : rs)(unitPrice(pr, u, r.rate))), h('span', { class: 'a' }, rs(n * unitPrice(pr, u, r.rate)))))
     );
     if (o.edit) { const b = h('button', { type: 'button', class: 'row', style: { padding: 0, minHeight: 0, border: 0, display: 'block' }, onClick: act(() => o.edit(r)), 'aria-label': 'Change ' + pr.name }, blk); pane.append(b); } else pane.append(blk);
   });
+  if (o.totalQty !== false && rows.length) pane.append(TotalQty(rows));
   const t = h('div', { class: 'ol-tot' });
   if (tot.waived) { t.append(KV('Items', rs(tot.items))); t.append(KV('Paise waived', '−' + rs(tot.waived))); }
   if (o.discount) t.append(KV('Discount ' + pctText(o.discount.bp), '−' + rs(o.discount.amt)));
@@ -2175,29 +2252,40 @@ const inAreaName = (c, area) => { const a = ((c.addr && c.addr.area) || '').trim
 function cartAreas(p, E, C) {                                           // Taking Order, screen 1: which area?
   const mode = p.mode, shops = partiesFor(mode), names = S.areas.map(a => a.name).filter(nm => can('viewAllCustomers') || myAreas().includes(nm.toLowerCase()));
   if (shops.some(c => !((c.addr && c.addr.area) || '').trim())) names.push('No area');
+  const addOK = can('createCustomer') && !(mode === 'order' && HIDE.cartAddCustomer);
   const rows = names.map(nm => { const cs = shops.filter(c => inAreaName(c, nm)), open = cs.filter(c => openOrdersOf(c.id).length).length;
-    return Row({ title: nm, sub: plural(cs.length, 'customer') + (open ? ' · ' + open + ' ordered' : ''), right: cs.length, rightSub: cs.length === 1 ? 'shop' : 'shops', onClick: () => nav.go('cart.cust', { mode, area: nm }) }); });
+    return { name: nm, row: Row({ title: nm, sub: plural(cs.length, 'customer') + (open ? ' · ' + open + ' ordered' : ''), right: cs.length, rightSub: cs.length === 1 ? 'shop' : 'shops', onClick: () => nav.go('cart.cust', { mode, area: nm }) }) }; });
+  const pending = shops.filter(c => !openOrdersOf(c.id).length && names.some(nm => inAreaName(c, nm))).length;
+  const listBox = h('div'), drawA = () => { const q = (E.st.aq || '').trim().toLowerCase(), m = rows.filter(r => !q || r.name.toLowerCase().includes(q)); setKids(listBox, m.length ? Pane(m.map(r => r.row)) : Pane(Empty('No area found.'))); };
+  drawA();
   const body = h('div', null, h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'WHICH AREA?')),
-    rows.length ? Pane(rows) : Pane(Empty(can('createCustomer') ? 'No areas or customers yet. Add the first customer below.' : 'No customers in your areas yet. Ask the Manager to add them.')));
-  return { title: C.title, step: { label: C.label, n: 1, of: C.steps }, body, foot: rows.length || !can('createCustomer') ? undefined : [Btn('ADD NEW CUSTOMER', { kind: 'primary', onClick: () => { S.drafts.cust = { name: '', shop: '', phone: '', addr: {}, tok: nid('tok'), type: 'SHOP', lockType: false, ret: null, then: mode }; nav.go('cust.name'); } })],
+    rows.length ? h('div', null, searchBox('Search area', E.st.aq, v => { E.st.aq = v; drawA(); }), h('div', { class: 'sumstrip' }, plural(names.length, 'area') + ' · ' + plural(pending, 'shop') + ' yet to order'), h('div', { class: 'mt12' }, listBox))
+      : Pane(Empty(addOK ? 'No areas or customers yet. Add the first customer below.' : can('createCustomer') ? 'No areas or customers yet. Add the first customer in More → Customers.' : 'No customers in your areas yet. Ask the Manager to add them.')));
+  return { title: C.title, step: { label: C.label, n: 1, of: C.steps }, body, foot: rows.length || !addOK ? undefined : [Btn('ADD NEW CUSTOMER', { kind: 'primary', onClick: () => { S.drafts.cust = { name: '', shop: '', phone: '', addr: {}, tok: nid('tok'), type: 'SHOP', lockType: false, ret: null, then: mode }; nav.go('cust.name'); } })],
     help: ['Orders are taken one area at a time.', 'Pick the area, then the customer. Nothing is saved until the last confirm.'] };
 }
 const open1 = shops => shops.some(c => openOrdersOf(c.id).length);
+const areaWaiting = area => S.orders.filter(o => ORDER_SETS.WAITING(o) && orderArea(o) === area && (can('viewAllOrders') || myOrder(o)));
 route('cart.cust', (p, E) => {
   const mode = p.mode, C = CARTS[mode], c = cartOf(mode);
   if (mode === 'order' && !p.area) return cartAreas(p, E, C);
-  const area = mode === 'order' ? p.area : null;
+  const area = mode === 'order' ? p.area : null, addOK = can('createCustomer') && !(mode === 'order' && HIDE.cartAddCustomer);
   const body = h('div', null,
     h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, C.who)),
-    pickList(E, { placeholder: 'Search customer', empty: 'No customer found. Add a new one below.', items: () => partiesFor(mode).filter(x => !area || inAreaName(x, area)), text: x => [x.shop, x.name, x.phone, x.addr && x.addr.area, x.position].join(' '),
+    pickList(E, { placeholder: 'Search customer', empty: addOK ? 'No customer found. Add a new one below.' : 'No customer found.', items: () => partiesFor(mode).filter(x => !area || inAreaName(x, area)),
+      strip: area && mode === 'order' ? () => { const os = areaWaiting(area); return h('div', { class: 'sumstrip' }, os.length ? plural(os.length, 'order') + ' · ' + qtyTotalText(os.flatMap(o => o.lines)) + ' · ' + rs(os.reduce((s, o) => s + orderTotals(o).total, 0)) : 'No orders yet in ' + area); } : null, text: x => [x.shop, x.name, x.phone, x.addr && x.addr.area, x.position].join(' '),
       render: x => { if (isStaffId(x.id)) return personRow(x, () => chooseCartParty(x, mode)); const oo = mode === 'order' ? openOrdersOf(x.id) : [];
         return custRow(x, () => chooseCartParty(x, mode), oo.length ? { cls: 'new', chip: 'ORDERED', sub: [x.shop ? x.name : null, oo.length === 1 ? oo[0].no + ' · ' + rs(orderTotals(oo[0]).total) : plural(oo.length, 'order') + ' waiting'].filter(Boolean).join(' · ') } : null); } }));
   const foot = [];
   if (mode === 'godown') foot.push(Btn('OCCASIONAL BUYER (NAME ONLY)', { kind: 'dark', onClick: () => nav.go('ss.buyer', { forCart: mode }) }));
-  if (can('createCustomer')) foot.unshift(Btn(mode === 'ia' ? 'ADD NEW AGENCY' : 'ADD NEW CUSTOMER', { kind: 'primary', onClick: () => {
+  if (addOK) foot.unshift(Btn(mode === 'ia' ? 'ADD NEW AGENCY' : 'ADD NEW CUSTOMER', { kind: 'primary', onClick: () => {
     if (area) S.drafts.cust = { name: '', shop: '', phone: '', addr: area === 'No area' ? {} : { area }, tok: nid('tok'), type: 'SHOP', lockType: false, ret: null, then: mode };
     else { S.drafts.cust = S.drafts.cust || { name: '', shop: '', phone: '', addr: {}, tok: nid('tok') }; S.drafts.cust.type = mode === 'ia' ? 'AGENCY' : (S.drafts.cust.type === 'AGENCY' ? 'SHOP' : S.drafts.cust.type || 'SHOP'); }
     S.drafts.cust.then = mode; S.drafts.cust.ret = null; S.drafts.cust.lockType = mode === 'ia'; if (mode === 'ia') S.drafts.cust.type = 'AGENCY'; nav.go('cust.name'); } }));
+  if (mode === 'order' && area && can('preparePickup')) { const os = areaWaiting(area), cs = partiesFor(mode).filter(x => inAreaName(x, area)), pend = cs.filter(x => !openOrdersOf(x.id).length).length;
+    foot.push(Btn(os.length ? 'START LOADING (' + os.length + (os.length === 1 ? ' ORDER)' : ' ORDERS)') : 'START LOADING', { kind: 'primary', icon: 'truck', disabled: !os.length, onClick: () => {
+      const go = () => { S.drafts.pk = { orderIds: os.filter(o => !(o.needsApproval && !o.approved)).map(o => o.id), area }; nav.go('pk.orders'); };
+      if (pend) confirmSheet({ title: 'Start loading now?', sub: plural(os.length, 'order') + ' ready, ' + plural(pend, 'customer') + ' still pending.', yes: 'START LOADING', no: 'KEEP TAKING ORDERS', onYes: go }); else go(); } })); }
   return { title: area || C.title, sub: area ? C.title : null, step: { label: C.label, n: 1, of: C.steps }, body, foot, help: ['You are choosing who this is for.', 'Nothing is saved until the last confirm. You can go back at any time.'] };
 });
 
@@ -2209,16 +2297,21 @@ route('cart.prod', (p, E) => {
   const calc = cartCalc(c);
   const body = h('div', null,
     h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, c.editId ? 'CHANGE PRODUCTS' : 'WHAT PRODUCTS?')),
-    pickList(E, { placeholder: 'Search product', empty: S.products.length ? 'No product found.' : 'No products yet. Add them in More → Settings → Stock.', items: () => prods, text: x => prodLabel(x) + ' ' + x.nick + ' ' + (x.mrp / 100) + 'rs ₹' + (x.mrp / 100),
+    pickList(E, { placeholder: 'Search product', empty: S.products.length ? 'No product found.' : 'No products yet. Add them in More → Settings → Stock.', items: () => prods, text: prodSearchText,
       render: x => { const l = c.lines.find(q => q.pid === x.id); const out = stockMode && avail(x.id) <= 0;
         return Row({ title: prodLabel(x), sub: stockMode ? 'In godown: ' + qtyText(x, avail(x.id)) : unitList(x).join(' · '), right: l ? '✓ ' + qtyText(x, l.base) : (out ? 'OUT' : null), cls: out ? 'off' : '', onClick: out ? null : () => nav.go('cart.qty', { mode, pid: x.id }) }); } }));
   const n = c.lines.length;
   const foot = [];
-  if (n) foot.push(h('div', { class: 'flowbar' }, h('span', null, plural(n, 'product'), h('small', null, 'so far for ' + partyName(c.partyId))), h('b', null, rs(calc.total))));
+  if (n) foot.push(h('div', { class: 'flowbar' }, h('span', null, plural(n, 'product') + ' · ' + qtyTotalText(c.lines), h('small', null, 'so far for ' + partyName(c.partyId))), h('b', null, rs(calc.total))));
   foot.push(Btn(c.editId ? 'REVIEW CHANGES' : C.done, { kind: 'primary', disabled: !n, onClick: () => nav.go(mode === 'ia' ? 'ia.rates' : 'cart.review', { mode }) }));
   return { title: C.title, sub: partyName(c.partyId), step: { label: C.label, n: 2, of: C.steps }, body, foot, help: ['Tap a product, then choose how many.', 'You can add as many products as you need. Your order is only saved when you confirm it.'] };
 });
 
+function autoClearSearch() {
+  const prev = UI.stack[UI.stack.length - 2]; if (!prev || prev.name !== 'cart.prod' || !prev.st.q) return;
+  const q = prev.st.q.trim().toLowerCase(); if (!q) return;
+  if (S.products.filter(x => x.active && prodSearchText(x).toLowerCase().includes(q)).length <= 1) prev.st.q = '';
+}
 route('cart.qty', (p, E) => {
   const mode = p.mode, c = cartOf(mode), pr = prod(p.pid), C = CARTS[mode];
   const line = c.lines.find(l => l.pid === pr.id);
@@ -2235,7 +2328,7 @@ route('cart.qty', (p, E) => {
     if (cap_ != null && l.base > cap_) fail('Godown has only ' + qtyText(pr, cap_));
     const i = c.lines.findIndex(q => q.pid === pr.id); if (i >= 0) c.lines[i] = l; else c.lines.push(l);
     if (c.editId && orderOf(c.editId).prices[pr.id] == null) orderOf(c.editId).prices[pr.id] = pr.sell;
-    nav.back(); toast(prodLabel(pr) + ' added');
+    autoClearSearch(); nav.back(); toast(prodLabel(pr) + ' added');
   } });
   const body = h('div', null,
     h('div', { class: 'oq' }, h('div', { class: 'q' }, 'HOW MANY?'), h('div', { class: 'big mt8' }, prodLabel(pr)), stockMode ? h('div', { class: 'mute mt8' }, 'In godown: ' + qtyText(pr, avail(pr.id))) : null),
@@ -2256,7 +2349,7 @@ route('cart.review', (p, E) => {
     docTitle(c.editId ? 'Editing order' : mode === 'order' ? 'Order for' : 'Sale to', partyName(c.partyId)),
     linesPane(tot.rows, tot, { edit: r => nav.go('cart.qty', { mode, pid: r.pid }), totalLabel: mode === 'order' ? 'Order total' : 'Total' }),
     h('div', { class: 'center mute', style: { fontSize: '14px' } }, 'Tap a product to change it. Prices are the agency selling price (not the printed MRP).'));
-    const foot = [Btn(mode === 'order' ? (c.editId ? 'SAVE CHANGES' : 'CONFIRM ORDER') : C.confirm, { kind: 'primary', onClick: () => cartConfirm(mode) }), Btn('ADD MORE PRODUCTS', { kind: 'ghost', onClick: () => nav.back() })];
+    const foot = [h('div', { class: 'flowbar' }, h('span', null, plural(c.lines.length, 'item') + ' · ' + qtyTotalText(c.lines)), h('b', null, rs(tot.total))), Btn(mode === 'order' ? (c.editId ? 'SAVE CHANGES' : 'CONFIRM ORDER') : C.confirm, { kind: 'primary', onClick: () => cartConfirm(mode) }), Btn('ADD MORE PRODUCTS', { kind: 'ghost', onClick: () => nav.back() })];
   return { title: C.title, sub: partyName(c.partyId), step: { label: C.label, n: C.reviewN || 4, of: C.steps }, body, foot, help: ['Check the customer and the quantities.', 'Confirming saves the order only. No stock moves until loading is confirmed.', 'Next: the order appears in your Orders list.'] };
 });
 function cartConfirm(mode) {
@@ -2388,7 +2481,7 @@ route('pk.summary', (p, E) => {
   const d = S.drafts.pk, os = pickOrders(); if (!d || !os.length) return noPick();
   const cards = os.map((o, i) => h('div', { class: 'card pcard' }, h('div', { class: 'eyebrow' }, 'ORDER ' + (i + 1) + ' OF ' + os.length),
     h('div', { class: 'pc-t' }, orderTitle(o)), h('div', { class: 'mute', style: { fontSize: '13px' } }, [areaOf(o.partyId), o.no].filter(Boolean).join(' · ')),
-    h('div', { class: 'mt8' }, o.lines.map(l => KV(prodLabel(prod(l.pid)), qtyText(prod(l.pid), l.base)))), KV('Order value', rs(orderTotals(o).total), 'tot')));
+    h('div', { class: 'mt8' }, o.lines.map((l, j) => KV((j + 1) + '. ' + prodLabel(prod(l.pid)), qtyText(prod(l.pid), l.base)))), TotalQty(o.lines), KV('Order value', rs(orderTotals(o).total), 'tot')));
   const car = h('div', { class: 'pcar', role: 'group', 'aria-label': 'Orders to pick — swipe sideways' }, cards);
   const cnt = h('b', null, '1 of ' + os.length), dots = os.map((o, i) => h('i', { class: i ? '' : 'on' }));
   const go = i => { const c = cards[Math.max(0, Math.min(cards.length - 1, i))]; car.scrollTo({ left: c.offsetLeft - car.offsetLeft - (parseFloat(getComputedStyle(car).paddingLeft) || 0), behavior: 'smooth' }); };
@@ -2404,8 +2497,9 @@ route('pk.totals', (p, E) => {
   const total = pickTotals(os), shorts = shortOf(total);
   const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'All together'), h('div', { class: 'hint' }, 'Everything these ' + plural(os.length, 'order') + ' need from the godown.')),
     h('div', { class: 'card ptot' }, h('div', { class: 'eyebrow' }, plural(os.length, 'order').toUpperCase() + (d.area ? ' · ' + d.area.toUpperCase() : '')),
-      Object.keys(total).map(pid => { const pr = prod(pid), short = avail(pid) < total[pid];
-        return h('div', { class: 'pt-line' + (short ? ' short' : '') }, h('div', { class: 'pt-n' }, prodLabel(pr), h('div', { class: 'pt-s' }, short ? 'Godown has only ' + qtyText(pr, avail(pid)) : baseText(pr, total[pid]))), h('div', { class: 'pt-q' }, qtyText(pr, total[pid]))); })),
+      Object.keys(total).map((pid, pi) => { const pr = prod(pid), short = avail(pid) < total[pid];
+        return h('div', { class: 'pt-line' + (short ? ' short' : '') }, h('div', { class: 'pt-n' }, (pi + 1) + '. ' + prodLabel(pr), h('div', { class: 'pt-s' }, short ? 'Godown has only ' + qtyText(pr, avail(pid)) : baseText(pr, total[pid]))), h('div', { class: 'pt-q' }, qtyText(pr, total[pid]))); })),
+    h('div', { class: 'pane' }, TotalQty(Object.keys(total).map(pid => ({ pid, base: total[pid] })))),
     shorts.length ? h('div', { class: 'aside bad' }, h('b', null, plural(shorts.length, 'product') + ' short in the godown. '), 'Fix the stock count or the orders first. You come straight back here.') : null);
   return { title: 'Total to pick', sub: plural(os.length, 'order') + (d.area ? ' · ' + d.area : ''), step: { label: 'LOADING PICKUP', n: 3, of: pkSteps(os.length).length }, body,
     foot: [shorts.length ? Btn('FIX STOCK FIRST', { kind: 'primary', onClick: () => nav.go('pk.shortage') }) : Btn('CONTINUE — CHOOSE THE VEHICLE', { kind: 'primary', onClick: () => { const t = prepareTrip(d.orderIds); t.fromArea = d.area || null; delete S.drafts.pk; nav.go('pk.vehicle', { tid: t.id }); } })] };
@@ -2444,7 +2538,50 @@ route('pk.vehicle', (p, E) => {
   return { title: 'Pick Vehicle', step: pkStep(t, 'vehicle'), body, onBack: () => backToOrders(t), help: 'Choose the vehicle that will carry these orders. A vehicle already on another job is greyed out. Back returns to the pick list.', foot: [t.vehicleId ? Btn('NEXT', { kind: 'primary', onClick: () => nav.go('pk.driver', { tid: t.id }) }) : null, cancelLink(t)] };
 });
 /* ---- 3. driver (required), then helper (can be skipped): a centred title and search pill that glide to the top when you tap them ---- */
+/* ---- inline search-and-pick: a title, a search pill with a × inside it, and a dropdown card right under the pill (no full-screen takeover, nothing hides under the browser bar) ---- */
+function inlinePicker(o) {
+  const results = h('div', { class: 'dd-card', hidden: true, 'aria-live': 'polite' });
+  const input = h('input', { class: 'input dd-in', type: 'text', id: 'sp-q', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search', placeholder: o.placeholder || 'Search and pick', 'aria-label': o.aria || 'Search' });
+  let open = false;
+  const stage = h('div', { class: 'dd', 'data-sp': '1' });
+  const draw = () => { clr.hidden = !(input.value || open); setKids(results, ...o.fill(input.value.trim().toLowerCase())); };
+  const on = () => { open = true; results.hidden = false; stage.classList.add('open'); draw(); };
+  const off = () => { open = false; results.hidden = true; stage.classList.remove('open'); input.value = ''; input.blur(); clr.hidden = true; };
+  const clr = h('button', { type: 'button', class: 'sclear', 'aria-label': 'Clear or close', hidden: true, onPointerdown: ev => ev.preventDefault(), onMousedown: ev => ev.preventDefault(), onClick: () => { if (input.value) { input.value = ''; draw(); input.focus(); } else off(); } }, '×');
+  const fit = () => { const vv = window.visualViewport; if (!vv || results.hidden) return; const top = results.getBoundingClientRect().top; results.style.maxHeight = Math.max(120, vv.height - top - 12) + 'px'; };      // the on-screen keyboard shrinks the visual viewport: keep the whole list above it
+  if (window.visualViewport) { const f = () => { if (!stage.isConnected) { window.visualViewport.removeEventListener('resize', f); return; } fit(); }; window.visualViewport.addEventListener('resize', f); }
+  input.addEventListener('focus', () => { on(); setTimeout(() => { try { stage.scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (e) { /* ignore */ } fit(); }, 80); setTimeout(fit, 400); });
+  input.addEventListener('input', draw);
+  const outside = ev => { if (!stage.isConnected) { document.removeEventListener('pointerdown', outside, true); return; } if (open && !stage.contains(ev.target)) off(); };
+  document.addEventListener('pointerdown', outside, true);
+  setKids(stage, h('div', { class: 'dd-head' }, h('h2', { class: 'dd-title' }, o.title), o.hint ? h('div', { class: 'dd-hint' }, o.hint) : null), h('div', { class: 'dd-bar' }, input, clr), results, o.below || null);
+  return stage;
+}
 function crewPicker(p, E, kind) {
+  const t = tripOf(p.tid), D = kind === 'D', key = D ? 'driverId' : 'helperId', word = D ? 'driver' : 'helper';
+  const pool = () => S.staff.filter(s => s.active && (D ? s.driver : s.position === 'HELPER') && s.id !== (D ? t.helperId : t.driverId));
+  const recent = () => { const seen = []; S.trips.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(x => { if (x[key] && !seen.includes(x[key])) seen.push(x[key]); }); const ids = new Set(pool().map(s => s.id)); return seen.filter(id => ids.has(id)).map(staffOf).slice(0, 5); };
+  const goNext = () => { if (D) nav.go('pk.helper', { tid: t.id }); else { t.helperDone = true; nav.go(tripOrders(t).length > 1 ? 'pk.stops' : 'pk.load', { tid: t.id }); } };
+  const pick = s => { setTripPart(t.id, key, s.id); goNext(); };
+  const row = s => { const busy = busyStaff(s.id, t.id), on = t[key] === s.id;
+    return Row({ title: s.name, sub: posLabel[s.position] + (D ? ' · can drive' : ''), chip: busy ? 'ON ANOTHER PICKUP' : on ? 'SELECTED' : null, tone: busy ? 'bad' : 'ok', cls: busy ? 'off' : '', onClick: busy ? null : () => pick(s) }); };
+  const none = D ? 'No one can drive yet. In More → Settings → Staff turn on “Can be assigned as driver”.' : 'No helper available.';
+  const fill = q => {
+    const all = pool();
+    if (q) { const m = all.filter(s => (s.name + ' ' + posLabel[s.position]).toLowerCase().includes(q)); return [m.length ? Pane(m.map(row)) : Pane(Empty(all.length ? 'No one found with that name.' : none))]; }
+    const rec = recent(), ids = new Set(rec.map(s => s.id)), rest = all.filter(s => !ids.has(s.id)), shown = rest.slice(0, rec.length ? 3 : 6);
+    return [rec.length ? Sec('Recent ' + word + 's') : null, rec.length ? Pane(rec.map(row)) : null, shown.length ? Sec(rec.length ? 'Others' : 'Staff') : null, shown.length ? Pane(shown.map(row)) : null,
+      rest.length > shown.length ? h('div', { class: 'hint', style: { marginTop: '10px' } }, 'Type a name to find ' + (rest.length - shown.length) + ' more.') : null, !all.length ? Pane(Empty(none)) : null];
+  };
+  const cur = staffOf(t[key]);
+  const stage = inlinePicker({ title: D ? 'Pick Driver' : 'Pick Helper', hint: D ? 'Who is driving this pickup?' : 'Who is helping? You can skip this.', aria: 'Search for the ' + word, fill,
+    below: cur ? h('div', { class: 'dd-sel' }, h('span', { class: 'mute' }, 'Selected'), h('b', null, cur.name)) : null });
+  const foot = [];
+  if (D) foot.push(Btn(t.driverId ? 'NEXT — HELPER' : 'PICK A DRIVER FIRST', { kind: 'primary', disabled: !t.driverId, onClick: goNext }));
+  else { foot.push(Btn(t.helperId ? 'NEXT' : 'NO HELPER — SKIP', { kind: 'primary', onClick: goNext })); if (t.helperId) foot.push(Btn('REMOVE THE HELPER', { kind: 'link', onClick: () => { setTripPart(t.id, 'helperId', null); nav.refresh(); } })); }
+  return { title: D ? 'Driver' : 'Helper', step: pkStep(t, D ? 'driver' : 'helper'), body: stage, foot, help: D ? 'A driver is needed before loading can finish. Tap the search to see recent drivers.' : 'A helper is optional. Tap the search to see recent helpers, or skip.' };
+}
+function crewPickerOld(p, E, kind) {
   const t = tripOf(p.tid), D = kind === 'D', key = D ? 'driverId' : 'helperId', word = D ? 'driver' : 'helper';
   const pool = () => S.staff.filter(s => s.active && (D ? s.driver : s.position === 'HELPER') && s.id !== (D ? t.helperId : t.driverId));
   const recent = () => { const seen = []; S.trips.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(x => { if (x[key] && !seen.includes(x[key])) seen.push(x[key]); }); const ids = new Set(pool().map(s => s.id)); return seen.filter(id => ids.has(id)).map(staffOf).slice(0, 5); };
@@ -2475,16 +2612,36 @@ function crewPicker(p, E, kind) {
   else { foot.push(Btn(t.helperId ? 'NEXT' : 'NO HELPER — SKIP', { kind: 'primary', onClick: goNext })); if (t.helperId) foot.push(Btn('REMOVE THE HELPER', { kind: 'link', onClick: () => { setTripPart(t.id, 'helperId', null); nav.refresh(); } })); }
   return { title: D ? 'Driver' : 'Helper', step: pkStep(t, D ? 'driver' : 'helper'), body: stage, foot, help: D ? 'A driver is needed before loading can finish. Tap the search to see recent drivers.' : 'A helper is optional. Tap the search to see recent helpers, or skip.' };
 }
-route('pk.driver', (p, E) => crewPicker(p, E, 'D')); route('pk.helper', (p, E) => crewPicker(p, E, 'H'));
+route('pk.driver', (p, E) => HIDE.crewFullScreenSearch ? crewPicker(p, E, 'D') : crewPickerOld(p, E, 'D')); route('pk.helper', (p, E) => HIDE.crewFullScreenSearch ? crewPicker(p, E, 'H') : crewPickerOld(p, E, 'H'));
 /* ---- 4b. stop order (manual) ---- */
-route('pk.stops', (p, E) => {
+function stopsArrows(p, E) {
   const t = tripOf(p.tid), os = tripOrders(t);
   const body = h('div', null, h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Which shop first?'), h('div', { class: 'hint' }, 'Use the arrows to set the order of delivery stops.')),
     Pane(os.map((o, i) => h('div', { class: 'row' }, h('span', { class: 'chip' }, i + 1), h('div', { class: 'l' }, h('div', { class: 't' }, orderTitle(o)), h('div', { class: 's' }, areaOf(o.partyId))),
       h('button', { class: 'btn ghost sm', type: 'button', style: { minWidth: '48px', padding: 0 }, disabled: i === 0, 'aria-label': 'Move up', onClick: act(() => { reorderStops(t.id, o.id, -1); nav.refresh(); }) }, ic('up')),
       h('button', { class: 'btn ghost sm', type: 'button', style: { minWidth: '48px', padding: 0 }, disabled: i === os.length - 1, 'aria-label': 'Move down', onClick: act(() => { reorderStops(t.id, o.id, 1); nav.refresh(); }) }, ic('down'))))));
   return { title: 'Delivery order', step: pkStep(t, 'stops'), body, foot: [Btn('CONTINUE', { kind: 'primary', onClick: () => nav.go('pk.load', { tid: t.id }) })] };
-});
+}
+/* tap the shops in LOADING order: 1st tapped goes to the FRONT of the vehicle, the last tapped sits by the DOOR and is the FIRST delivery */
+function setStopOrder(tid, ids) { need('preparePickup');
+  const t = tripOf(tid); if (!t || t.status !== 'LOADING') fail('This pickup can no longer be changed.');
+  t.orderIds = ids.concat(t.orderIds.filter(i => !ids.includes(i)));
+}
+function stopsTap(p, E) {
+  const t = tripOf(p.tid), os = tripOrders(t), seq = E.st.seq || (E.st.seq = []);
+  const tap = o => { const i = seq.indexOf(o.id); if (i >= 0) seq.splice(i, 1); else seq.push(o.id); nav.refresh(); };
+  const rows = os.map(o => { const k = seq.indexOf(o.id), on = k >= 0, tag = !on ? null : k === seq.length - 1 && seq.length > 1 ? 'Door · 1st delivery' : k === 0 ? 'Front · Load 1st' : null;
+    return h('button', { class: 'row', type: 'button', 'aria-pressed': String(on), onClick: act(() => tap(o)) },
+      h('span', { class: 'check' + (on ? ' on' : '') }, on ? String(k + 1) : null),
+      h('div', { class: 'l' }, h('div', { class: 't' }, orderTitle(o)), h('div', { class: 's' }, [areaOf(o.partyId), qtyTotalText(loadItems(o))].filter(Boolean).join(' · '))),
+      tag ? h('div', { class: 'r', style: { fontSize: '12px', fontWeight: 700, textAlign: 'right', maxWidth: '40%' } }, tag) : null); });
+  const all = seq.length === os.length;
+  const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'TAP IN LOADING ORDER'), h('div', { class: 'hint' }, 'Tap the 1st shop to load at the front of the vehicle. The last one tapped loads near the door and is the 1st delivery.')),
+    h('div', null, h('div', { class: 'sec' }, h('span', null, seq.length + ' of ' + os.length + ' tapped'), seq.length ? Btn('RESET', { kind: 'link', cls: 'sm', onClick: () => { seq.length = 0; nav.refresh(); } }) : null), Pane(rows)));
+  return { title: 'Loading order', step: pkStep(t, 'stops'), body, help: 'Tap the shops in the order you load them. Tap a numbered shop again to remove it — the numbers after it move down. The delivery order is worked out for you: the last shop loaded is delivered first.',
+    foot: [Btn(all ? 'CONTINUE' : 'TAP EVERY SHOP FIRST', { kind: 'primary', disabled: !all, onClick: () => { setStopOrder(t.id, seq.slice().reverse()); nav.go('pk.load', { tid: t.id }); } })] };
+}
+route('pk.stops', (p, E) => HIDE.stopArrows ? stopsTap(p, E) : stopsArrows(p, E));
 
 /* ---- 5. loading list: tick each product (counts are fixed beforehand — to change an order, change it in that customer's order) ---- */
 const tripCams = t => Array.isArray(t.cameraIds) ? t.cameraIds : (t.cameraId ? [t.cameraId] : []);
@@ -2494,10 +2651,12 @@ route('pk.load', (p, E) => {
   const t = tripOf(p.tid), needs = tripNeeds(t), pids = Object.keys(needs);
   const done = pids.filter(pid => t.counted[pid] != null).length, allOk = done === pids.length, diffs = loadDiffs(t);
   const toggle = pid => { if (t.counted[pid] != null) delete t.counted[pid]; else { if (avail(pid) < needs[pid]) fail('Godown has only ' + qtyText(prod(pid), avail(pid)) + ' of ' + prod(pid).name + ' now. Cancel this pickup, fix the stock, and start again.'); t.counted[pid] = needs[pid]; } nav.refresh(); };
-  const rows = pids.map(pid => { const pr = prod(pid), ok = t.counted[pid] != null;
+  const allItems = pids.map(pid => ({ pid, base: needs[pid] })), gotMap = new Map(qtyTotals(pids.filter(pid => t.counted[pid] != null).map(pid => ({ pid, base: needs[pid] }))));
+  const loadStrip = h('div', { class: 'stickytop' }, h('div', { class: 'sumstrip' }, done + '/' + pids.length + ' items · ' + qtyTotals(allItems).map(x => (gotMap.get(x[0]) || 0) + '/' + x[1] + NB + x[0]).join(' | ') + ' loaded'));
+  const rows = pids.map((pid, pi) => { const pr = prod(pid), ok = t.counted[pid] != null;
     return h('button', { class: 'row', type: 'button', 'aria-pressed': String(ok), onClick: act(() => toggle(pid)) }, h('span', { class: 'check' + (ok ? ' on' : '') }, ok ? ic('check') : null),
-      h('div', { class: 'l' }, h('div', { class: 't' }, prodLabel(pr)), h('div', { class: 's' }, ok ? 'Loaded ✓' : 'Put on the vehicle')), h('div', { class: 'r', style: { fontSize: '15px', fontWeight: 700, maxWidth: '46%', textAlign: 'right' } }, qtyText(pr, needs[pid]))); });
-  const body = h('div', null, tripBar(t), h('div', { class: 'oq mt12', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Loading list'), h('div', { class: 'hint' }, 'Tick each product as it goes on the vehicle. ' + done + ' of ' + pids.length + ' ticked.')), Pane(rows),
+      h('div', { class: 'l' }, h('div', { class: 't' }, (pi + 1) + '. ' + prodLabel(pr)), h('div', { class: 's' }, ok ? 'Loaded ✓' : 'Put on the vehicle')), h('div', { class: 'r', style: { fontSize: '15px', fontWeight: 700, maxWidth: '46%', textAlign: 'right' } }, qtyText(pr, needs[pid]))); });
+  const body = h('div', null, loadStrip, tripBar(t), h('div', { class: 'oq mt12', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Loading list'), h('div', { class: 'hint' }, 'Tick each product as it goes on the vehicle. ' + done + ' of ' + pids.length + ' ticked.')), Pane(rows), h('div', { class: 'pane mt12' }, TotalQty(allItems)),
     h('div', { class: 'mt12' }, Btn(allOk ? 'UNTICK ALL' : 'TICK ALL', { kind: 'link', onClick: () => { if (allOk) pids.forEach(pid => delete t.counted[pid]); else pids.forEach(pid => { if (t.counted[pid] == null && avail(pid) >= needs[pid]) t.counted[pid] = needs[pid]; }); nav.refresh(); } })));
   return { title: 'Loading list', step: pkStep(t, 'load'), body, help: ['This is the combined list of everything the selected orders need.', 'To change a quantity, change it in that customer’s order, not here. Nothing leaves the godown until you confirm.'],
     foot: [Btn(allOk ? 'CONTINUE' : 'TICK EVERY PRODUCT FIRST', { kind: 'primary', disabled: !allOk, onClick: () => nav.go(diffs.length ? 'pk.mismatch' : 'pk.camera', { tid: t.id }) }), cancelLink(t)] };
@@ -2517,46 +2676,67 @@ function camSheet(t, mode) {                                       // 'main' = p
     const row = h('button', { class: 'row', type: 'button', 'aria-pressed': String(sel.has(c.id)), onClick: () => {
       if (mode === 'main') { setTripCameras(t.id, [c.id].concat(cur.slice(1).filter(x => x !== c.id))); closeSheet(); nav.refresh(); return; }
       if (sel.has(c.id)) sel.delete(c.id); else sel.add(c.id); const on = sel.has(c.id); chk.className = 'check' + (on ? ' on' : ''); chk.replaceChildren(...(on ? [ic('check')] : [])); row.setAttribute('aria-pressed', String(on)); } },
-      chk, h('div', { class: 'l' }, h('div', { class: 't' }, 'Camera ' + c.id, c.id === S.settings.defaultCamera ? [' ', Chip('USUAL', 'ok')] : null), h('div', { class: 's' }, c.desc || 'No note')));
+      chk, h('div', { class: 'l' }, h('div', { class: 't' }, 'Camera ' + c.id, !HIDE.usualCamera && c.id === S.settings.defaultCamera ? [' ', Chip('USUAL', 'ok')] : null), h('div', { class: 's' }, c.desc || 'No note')));
     return row; });
   openSheet({ title: mode === 'main' ? 'Main camera' : 'More cameras', sub: mode === 'main' ? 'Which camera watched the loading?' : 'Tick every other camera that could see the vehicle while it was loaded.',
     body: rows.length ? Pane(rows) : Empty('No other camera is set up.'), actions: mode === 'main' ? [sheetClose('CANCEL')] : [Btn('DONE', { kind: 'primary', onClick: () => { setTripCameras(t.id, [main].concat(Array.from(sel)).filter(Boolean)); closeSheet(); nav.refresh(); } }), sheetClose('CANCEL')] });
 }
 route('pk.camera', (p, E) => {
   const t = tripOf(p.tid); if (!t || t.status !== 'LOADING') return { title: 'Camera', body: Empty('This pickup is no longer being loaded.'), foot: [Btn('BACK', { kind: 'primary', onClick: () => nav.back() })] };
-  const cams = S.cameras.filter(c => c.active), usual = cams.find(c => c.id === S.settings.defaultCamera) || null, camOf = id => cams.find(c => c.id === id);
-  let ids = tripCams(t).filter(camOf); if (!ids.length && usual) { sys(() => setTripCameras(t.id, [usual.id])); ids = [usual.id]; }
+  const cams = S.cameras.filter(c => c.active), usual = HIDE.usualCamera ? null : (cams.find(c => c.id === S.settings.defaultCamera) || null), camOf = id => cams.find(c => c.id === id);
+  let ids = tripCams(t).filter(camOf); if (!ids.length && usual) { sys(() => setTripCameras(t.id, [usual.id])); ids = [usual.id]; }          // (only when the USUAL camera is switched back on in HIDE)
   const main = camOf(ids[0]) || null, more = ids.slice(1).map(camOf).filter(Boolean);
-  const camRow = c => Row({ title: 'Camera ' + c.id, sub: c.desc || 'No note', chip: c.id === S.settings.defaultCamera ? 'USUAL' : null });
-  const body = h('div', null, tripBar(t), h('div', { class: 'oq mt12', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Which camera watched the loading?'),
-      h('div', { class: 'hint' }, main && usual ? 'The usual camera is chosen. If other cameras could also see the vehicle being loaded, add them below.' : 'Choose the main one, so the footage can be found later.')),
-    !cams.length ? h('div', { class: 'aside' }, 'No camera numbers are set up, so none is needed now. Add cameras in Settings.') : null,
-    main ? Pane([camRow(main)]) : cams.length ? Btn('CHOOSE THE MAIN CAMERA', { kind: 'dark', onClick: () => camSheet(t, 'main') }) : null,
-    main && !usual ? h('div', { class: 'mt8' }, Btn('CHANGE THE MAIN CAMERA', { kind: 'link', onClick: () => camSheet(t, 'main') })) : null,
+  const set = list => { setTripCameras(t.id, list); nav.refresh(); };
+  const camRow = c => h('div', { class: 'row' }, h('div', { class: 'l' }, h('div', { class: 't' }, 'Camera ' + c.id, !HIDE.usualCamera && c.id === S.settings.defaultCamera ? [' ', Chip('USUAL', 'ok')] : null), h('div', { class: 's' }, c.desc || 'No note')),
+    h('button', { type: 'button', class: 'xbtn', 'aria-label': 'Remove camera ' + c.id, onClick: act(() => set(ids.filter(x => x !== c.id))) }, '×'));
+  const picker = cams.length && !main ? inlinePicker({ title: 'Which camera watched the loading?', hint: 'Select the camera watching the loading.', aria: 'Search for the camera', fill: q => {
+    const m = cams.filter(c => ('camera ' + c.id + ' ' + (c.desc || '')).toLowerCase().includes(q));
+    return [m.length ? Pane(m.map(c => Row({ title: 'Camera ' + c.id, sub: c.desc || 'No note', onClick: () => set([c.id]) }))) : Pane(Empty('No camera found.'))]; } }) : null;
+  const body = h('div', null, tripBar(t), h('div', { class: 'mt12' }, !cams.length ? h('div', { class: 'aside' }, 'No camera numbers are set up, so none is needed now. Add cameras in Settings.') : picker,
+    main ? h('div', null, h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'Camera chosen'), h('div', { class: 'hint' }, 'Tap × to change or remove it.')), Pane([camRow(main)])) : null,
     more.length ? h('div', null, Sec('Also seen by'), Pane(more.map(camRow))) : null,
-    main && cams.length > 1 ? h('div', { class: 'mt12' }, Btn(more.length ? 'CHANGE THE EXTRA CAMERAS' : 'ADD MORE CAMERAS (OPTIONAL)', { kind: 'link', icon: 'plus', onClick: () => camSheet(t, 'more') })) : null);
-  return { title: 'Camera', step: pkStep(t, 'camera'), body, help: 'The usual camera is the main one. Add more cameras only if they could also see the vehicle while it was loaded. It is only a reference for finding the footage.',
-    foot: [Btn(cams.length && !main ? 'CHOOSE A CAMERA' : 'CONTINUE', { kind: 'primary', disabled: !!cams.length && !main, onClick: () => nav.go('pk.confirm', { tid: t.id }) }), cancelLink(t)] };
+    main && cams.length > 1 ? h('div', { class: 'mt12' }, Btn(more.length ? 'CHANGE THE EXTRA CAMERAS' : '+ ADD MORE CAMERAS (OPTIONAL)', { kind: 'link', onClick: () => camSheet(t, 'more') })) : null));
+  return { title: 'Camera', step: pkStep(t, 'camera'), body, help: 'Choose the camera that was watching while the vehicle was loaded, so the footage can be found later. Add more cameras only if they could also see the vehicle.',
+    foot: [Btn(cams.length && !main ? 'PICK A CAMERA FIRST' : 'CONTINUE', { kind: 'primary', disabled: !!cams.length && !main, onClick: () => nav.go('pk.confirm', { tid: t.id }) }), cancelLink(t)] };
 });
 
 /* ---- 7. confirm loading ---- */
 route('pk.confirm', (p, E) => {
-  const t = tripOf(p.tid), needs = tripNeeds(t);
+  const t = tripOf(p.tid), needs = tripNeeds(t), os = tripOrders(t), pids = Object.keys(needs), items = pids.map(pid => ({ pid, base: needs[pid] }));
   const body = h('div', { class: 'gap' },
     h('div', { class: 'pane' }, h('div', { class: 'pad' }, KV('Vehicle', vehOf(t.vehicleId).reg + ' (' + t.no + ')'), KV('Driver', staffOf(t.driverId).name), KV('Helper', t.helperId ? staffOf(t.helperId).name : '—'), KV('Camera' + (tripCams(t).length > 1 ? 's' : ''), camText(t)))),
-    Sec('Orders on this pickup'), Pane(tripOrders(t).map((o, i) => Row({ title: (i + 1) + '. ' + orderTitle(o), sub: areaOf(o.partyId) + ' · ' + (chalOf(o.dcId) ? chalOf(o.dcId).no + ' (prepared)' : ''), right: rs(orderTotals(o).total) }))),
-    Sec('Loaded products'), Pane(Object.keys(needs).map(pid => Row({ title: prodLabel(prod(pid)), sub: 'Counted ' + qtyText(prod(pid), t.counted[pid]), right: '✓' }))));
+    Sec('Orders on this pickup'), Pane(os.map((o, i) => Row({ title: (i + 1) + '. ' + orderTitle(o), sub: [areaOf(o.partyId), chalOf(o.dcId) && chalOf(o.dcId).no, qtyTotalText(loadItems(o))].filter(Boolean).join(' · '), right: rs(orderTotals(o).total) })).concat([h('div', { class: 'totqty' }, h('span', null, 'TOTAL PAYMENT'), h('b', null, rs(os.reduce((s, o) => s + orderTotals(o).total, 0))))])),
+    Sec('Loaded products'), Pane(pids.map((pid, i) => Row({ title: (i + 1) + '. ' + prodLabel(prod(pid)), right: qtyText(prod(pid), t.counted[pid]) + ' ✓' })).concat([h('div', { class: 'totqty' }, h('span', null, 'TOTAL'), h('b', null, plural(pids.length, 'product') + ' · ' + qtyTotalText(items)))])));
   return { title: 'Confirm Loading', step: pkStep(t, 'confirm'), body, help: ['Confirming loading moves these goods from godown stock to the selected pickup.', 'After this, the stock is counted as being on the vehicle until it is delivered or brought back.'],
     foot: [Btn('CONFIRM LOADING', { kind: 'primary', onClick: () => { confirmLoading(t.id, 'ld-' + t.id); nav.reset([['today'], ['pk.ready', { tid: t.id }]], 'fwd'); toast('Loading confirmed — stock moved to ' + vehOf(t.vehicleId).reg); } }),
-      Btn('PRINT', { kind: 'dark', icon: 'print', onClick: () => nav.go('print', { docs: [['MANIFEST', t.id]].concat(tripOrders(t).map(o => ['DC', o.dcId])), start: 0 }) }), cancelLink(t)] };
+      Btn(HIDE.bulkChallanPrint ? 'PRINT LOADING SHEET' : 'PRINT', { kind: 'dark', icon: 'print', onClick: () => HIDE.bulkChallanPrint ? nav.go('pk.sheet', { tid: t.id }) : nav.go('print', { docs: [['MANIFEST', t.id]].concat(tripOrders(t).map(o => ['DC', o.dcId])), start: 0 }) }), cancelLink(t)] };
 });
 route('pk.ready', (p, E) => {
   const t = tripOf(p.tid);
   if (t.status !== 'READY') return { title: t.no, body: Empty('This pickup is ' + t.status.toLowerCase().replace('_', ' ') + '.'), foot: [Btn('OPEN PICKUP', { kind: 'primary', onClick: () => tripGo(t) })] };
-  const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'Pickup number'), h('div', { class: 'huge' }, t.no), h('div', { class: 'mt8' }, vehOf(t.vehicleId).reg + ' · ' + staffOf(t.driverId).name + (t.helperId ? ' + ' + staffOf(t.helperId).name : '')), h('div', { class: 'mt8' }, Chip('LOADED', 'ok')))),
-    Sec('Orders'), Pane(tripOrders(t).map((o, i) => Row({ title: (i + 1) + '. ' + orderTitle(o), sub: areaOf(o.partyId) + ' · ' + chalOf(o.dcId).no + ' ' + chalOf(o.dcId).status.toLowerCase(), right: rs(orderTotals(o).total) }))));
-  return { title: 'Pickup Ready', body, help: 'Starting the trip issues the delivery challans. The driver then works through the stops one by one.', foot: [can('startTrip') ? Btn('START TRIP', { kind: 'primary', icon: 'truck', onClick: () => { startTrip(t.id); nav.replace('pk.road', { tid: t.id }); toast('Trip started'); } }) : null,
-    Btn('PRINT', { kind: 'dark', icon: 'print', onClick: () => nav.go('print', { docs: [['MANIFEST', t.id]].concat(tripOrders(t).map(o => ['DC', o.dcId])), start: 0 }) })] };
+  const os = tripOrders(t), sheetDone = !!((t.sheetPrints && t.sheetPrints.length) || t.sheetSkippedAt);
+  const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'Pickup number'), h('div', { class: 'huge' }, t.no), h('div', { class: 'mt8' }, vehOf(t.vehicleId).reg + ' · ' + staffOf(t.driverId).name + (t.helperId ? ' + ' + staffOf(t.helperId).name : '')), h('div', { class: 'mt8' }, Chip('LOADED', 'ok')),
+      t.loadedAt ? h('div', { class: 'mute mt8', style: { fontSize: '14px' } }, fmtDT(t.loadedAt) + (tripCams(t).length ? ' · ' + camText(t) : '')) : null)),
+    Sec('Orders'), Pane(os.map((o, i) => Row({ title: (i + 1) + '. ' + orderTitle(o), sub: [areaOf(o.partyId), chalOf(o.dcId).no, qtyTotalText(loadItems(o)), chalOf(o.dcId).status.toLowerCase()].filter(Boolean).join(' · '), right: rs(orderTotals(o).total) })).concat([h('div', { class: 'totqty' }, h('span', null, 'TOTAL PAYMENT (' + os.length + (os.length === 1 ? ' ORDER' : ' ORDERS') + ' · ' + qtyTotalText(os.flatMap(loadItems)) + ')'), h('b', null, rs(os.reduce((s, o) => s + orderTotals(o).total, 0))))])));
+  const printBtn = (again) => Btn(again ? 'PRINT LOADING SHEET AGAIN' : 'PRINT LOADING SHEET', { kind: again ? 'dark' : 'primary', icon: 'print', onClick: () => HIDE.bulkChallanPrint ? nav.go('pk.sheet', { tid: t.id }) : nav.go('print', { docs: [['MANIFEST', t.id]].concat(os.map(o => ['DC', o.dcId])), start: 0 }) });
+  const foot = [];
+  if (can('startTrip')) {
+    if (sheetDone) foot.push(Btn('START TRIP', { kind: 'primary', icon: 'truck', onClick: () => { startTrip(t.id); nav.replace('pk.road', { tid: t.id }); toast('Trip started'); } }), printBtn(true));
+    else foot.push(printBtn(false), Btn('START TRIP — PRINT THE SHEET FIRST', { kind: 'ghost', icon: 'truck', disabled: true }));
+  } else foot.push(printBtn(sheetDone));
+  return { title: 'Pickup Ready', body, help: 'Print the loading sheet and hand it to the loading helper. That unlocks START TRIP, which issues the delivery challans. Challans and bills themselves are printed at each shop, not here.', foot };
+});
+/* the loading sheet: printed in the office, handed to the helper. Customer challans and bills are NOT printed from here. */
+function skipSheet(tid) { need('preparePickup'); const t = tripOf(tid); if (!t) fail('Pickup not found.'); t.sheetSkippedAt = new Date(); log('PICKUP', t.no + ' loading sheet not printed (skipped)', { trip: t.id }); }
+route('pk.sheet', (p, E) => {
+  const t = tripOf(p.tid); if (!t) return { title: 'Loading sheet', body: Empty('Pickup not found.') };
+  const last = (t.sheetPrints || []).slice(-1)[0], printed = !!last, os = tripOrders(t);
+  const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'LOADING SHEET'), h('div', { class: 'big mt8' }, t.no), h('div', { class: 'mt8' }, (t.vehicleId ? vehOf(t.vehicleId).reg : '') + (t.driverId ? ' · ' + staffOf(t.driverId).name : '')), h('div', { class: 'mute mt8', style: { fontSize: '14px' } }, plural(os.length, 'order') + ' · ' + qtyTotalText(os.flatMap(loadItems))))),
+    printed ? h('div', { class: 'aside' }, h('b', null, 'Loading sheet printed at ' + fmtT(last) + (t.sheetPrints.length > 1 ? ' (print ' + t.sheetPrints.length + ')' : '') + '. '), 'Hand over the sheet to the loading helper, then continue.')
+      : h('div', { class: 'aside' }, 'This prints the summary loading sheet only. Each shop’s challan and bill are printed at the shop, when the driver delivers.'));
+  return { title: 'Loading sheet', sub: t.no, body, help: 'The loading sheet lists what is on the vehicle. The time you print it is saved with the pickup.',
+    foot: printed ? [Btn('CONTINUE', { kind: 'primary', onClick: () => nav.back() }), Btn('PRINT AGAIN', { kind: 'dark', icon: 'print', onClick: () => nav.go('print', { docs: [['MANIFEST', t.id]], start: 0, autoprint: true }) })]
+      : [Btn('PRINT LOADING SHEET', { kind: 'primary', icon: 'print', onClick: () => nav.go('print', { docs: [['MANIFEST', t.id]], start: 0, autoprint: true }) }), Btn('SKIP FOR NOW', { kind: 'link', onClick: () => { skipSheet(t.id); nav.back(); } })] };
 });
 
 /* ---- on the road: the next stop stands out ---- */
@@ -2574,10 +2754,14 @@ route('pk.road', (p, E) => {
   if (!t || t.status !== 'ON_ROAD') return { title: t ? t.no : 'Pickup', body: Empty('This pickup is not on the road.'), foot: [Btn('OK', { kind: 'primary', onClick: () => t ? tripGo(t) : nav.reset([['today']]) })] };
   const os = tripOrders(t), nx = nextStop(t), done = os.filter(o => o.status !== 'ON_ROAD'), later = os.filter(o => o.status === 'ON_ROAD' && o !== nx);
   const body = h('div', { class: 'gap' });
-  const stopCard = (o, isNext) => { const c = party(o.partyId);
-    return h('div', { class: isNext ? 'pane ink' : 'card' }, h('div', { class: isNext ? 'pad' : null }, h('div', { class: 'eyebrow' }, isNext ? 'Next stop' : 'Then'), h('div', { style: { fontSize: isNext ? '26px' : '20px', fontWeight: 700, margin: '4px 0' } }, orderTitle(o).toUpperCase()), h('div', null, c && c.addr ? addrLine(c) : areaOf(o.partyId)),
+  const stopCard = (o, isNext) => { const c = party(o.partyId), idx = os.indexOf(o) + 1, dc = chalOf(o.dcId), nxIdx = nx ? os.indexOf(nx) + 1 : 0;
+    return h('div', { class: isNext ? 'pane ink' : 'card' }, h('div', { class: isNext ? 'pad' : null }, h('div', { class: 'eyebrow' }, (isNext ? 'Next stop' : 'Then') + ' · ' + idx + ' of ' + os.length),
+      h('div', { style: { fontSize: isNext ? '26px' : '20px', fontWeight: 700, margin: '4px 0' } }, orderTitle(o).toUpperCase()),
+      h('div', { style: { display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', gap: '2px 12px' } }, h('div', null, [areaOf(o.partyId), dc && dc.no].filter(Boolean).join(' · ')), h('b', { style: { whiteSpace: 'nowrap', fontSize: isNext ? '20px' : '17px' } }, qtyTotalText(loadItems(o)))),
+      h('div', { style: { fontSize: '14px', marginTop: '4px', opacity: .85 } }, c && c.addr ? addrLine(c) : ''),
       h('div', { class: 'mt8', style: { fontSize: isNext ? '22px' : '18px', fontWeight: 700 } }, rs(orderTotals(o).total)),
-      h('div', { class: 'gap mt16' }, Btn('OPEN ORDER', { kind: isNext ? 'primary' : 'dark', onClick: () => nav.go('dl.detail', { oid: o.id }) }), c && c.addr ? Btn(mapsUrlLabel(c), { kind: 'ghost', cls: 'sm', icon: 'nav', onClick: () => openMaps(c), aria: 'Open maps' }) : null))); };
+      h('div', { class: 'gap mt16' }, isNext ? Btn('OPEN ORDER', { kind: 'primary', onClick: () => nav.go('dl.detail', { oid: o.id }) }) : Btn('LOCKED — FINISH STOP ' + nxIdx + ' FIRST', { kind: 'dark', disabled: true }),
+        h('div', { class: 'btnrow split' }, c && c.addr && mapsUrl(c) ? Btn('MAPS', { kind: 'ghost', cls: 'sm', icon: 'nav', onClick: () => openMaps(c), aria: 'Open maps' }) : null, c && custPhones(c).length ? Btn('CALL', { kind: 'ghost', cls: 'sm', icon: 'phone', onClick: () => dial(c), aria: 'Call ' + partyName(o.partyId) }) : null)))); };
   if (nx) body.append(stopCard(nx, true));
   else body.append(h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { style: { fontSize: '22px', fontWeight: 700 } }, 'All stops done ✓'), h('div', { class: 'mt8 mute' }, 'Go back to the godown for the return check.'))));
   later.forEach(o => body.append(stopCard(o, false)));
@@ -2587,7 +2771,7 @@ route('pk.road', (p, E) => {
   if (t.unsafe.length) body.append(h('div', { class: 'card' }, h('b', null, 'Not sellable on board: '), t.unsafe.map(u => qtyText(prod(u.pid), u.base) + ' ' + prod(u.pid).name + ' (' + u.kind.toLowerCase() + ')').join(', '), h('div', { class: 'mute', style: { fontSize: '13px' } }, 'These can never be sold. They come back to the godown as held goods.')));
   const foot = [];
   if (!nx) foot.push(Btn(can('reconcilePickup') ? 'BACK AT GODOWN — START RETURN' : 'BACK AT GODOWN', { kind: 'primary', onClick: () => { arriveBack(t.id); if (can('reconcilePickup')) nav.replace('tr.goods', { tid: t.id }); else { nav.reset([['today']]); toast('Marked back at the godown — the Manager will check the return'); } } }));
-  return { title: 'On the road', sub: vehOf(t.vehicleId).reg + ' · ' + staffOf(t.driverId).name, body, foot, back: true, help: ['The next shop to visit is shown first.', 'Open the order at the shop to confirm what was delivered, then collect the money.'] };
+  return { title: 'On the road', sub: vehOf(t.vehicleId).reg + ' · ' + staffOf(t.driverId).name + ' · ' + (os.length - pendingStops(t).length) + ' / ' + os.length + ' STOPS DONE', body, foot, back: true, help: ['The next shop to visit is shown first.', 'Open the order at the shop to confirm what was delivered, then collect the money.'] };
 });
 const mapsUrlLabel = c => c.addr.lat != null ? 'OPEN MAPS' : 'OPEN MAPS (BY ADDRESS)';
 
@@ -2610,15 +2794,16 @@ route('pk.left', (p, E) => {
 route('dl.detail', (p, E) => {
   const o = orderOf(p.oid), t = tripOf(o.tripId), c = party(o.partyId);
   if (o.status !== 'ON_ROAD') return { title: orderTitle(o), body: h('div', { class: 'gap' }, Empty('This order is already ' + orderState(o).text.toLowerCase() + '.')), foot: [Btn('OPEN ORDER', { kind: 'primary', onClick: () => nav.replace('order.detail', { id: o.id }) })] };
+  { const nx = nextStop(t); if (nx && nx.id !== o.id) return { title: 'Stop ' + (tripOrders(t).indexOf(o) + 1), sub: orderTitle(o), center: true, body: h('div', { class: 'gap center' }, h('div', { class: 'donemark' }, ic('lock')), h('div', { class: 'big' }, 'Locked'), h('div', { class: 'mute' }, 'Finish ' + orderTitle(nx) + ' (stop ' + (tripOrders(t).indexOf(nx) + 1) + ') first. The shops are visited one after the other.')), foot: [Btn('GO TO THE NEXT STOP', { kind: 'primary', onClick: () => nav.replace('dl.detail', { oid: nx.id }) })] }; }
   const tot = orderTotals(o), allocRows = tot.rows.filter(r => o.alloc[r.pid] != null);
   const rows = Object.keys(o.alloc).filter(pid => o.alloc[pid] > 0).map(pid => ({ pid, base: o.alloc[pid], units: o.lines.find(l => l.pid === pid) && o.lines.find(l => l.pid === pid).base === o.alloc[pid] ? o.lines.find(l => l.pid === pid).units : {}, rate: o.prices[pid], amt: o.alloc[pid] * o.prices[pid] }));
   const tt = totalsOf(rows.map(r => ({ pid: r.pid, base: r.base, units: r.units })), o.prices);
   const body = h('div', { class: 'gap' },
     h('div', { class: 'dochead' }, h('div', { class: 'eyebrow' }, 'Deliver to · ' + o.no), h('div', { class: 'big mt8' }, orderTitle(o)), c && c.addr && c.addr.area ? h('div', { class: 'meta mt8' }, addrLine(c)) : null, c && c.phone ? h('div', { class: 'meta' }, '☎ ' + c.phone) : null),
     linesPane(tt.rows, tt, { totalLabel: 'Amount' }),
-    c && c.addr && mapsUrl(c) ? Btn(mapsUrlLabel(c), { kind: 'ghost', cls: 'sm', icon: 'nav', onClick: () => openMaps(c) }) : null);
+    h('div', { class: 'btnrow split' }, c && c.addr && mapsUrl(c) ? Btn(mapsUrlLabel(c), { kind: 'ghost', cls: 'sm', icon: 'nav', onClick: () => openMaps(c) }) : null, c && custPhones(c).length ? Btn('CALL', { kind: 'ghost', cls: 'sm', icon: 'phone', onClick: () => dial(c) }) : null));
   return { title: 'Delivery', sub: t.no + ' · ' + vehOf(t.vehicleId).reg, body, help: ['Confirm what the shop accepted.', 'If the shop takes everything, tap CONFIRM DELIVERY. If not, choose “not fully delivered” — the app works out what is left on the pickup.'],
-    foot: [Btn('CONFIRM DELIVERY', { kind: 'primary', onClick: () => { const r = deliver(o.id, Object.assign({}, o.alloc), null, 'dl-' + o.id); nav.popTo('pk.road'); nav.go('dl.print', { oid: o.id }); toast('Delivered — ' + orderTitle(o)); } }), Btn('NOT FULLY DELIVERED?', { kind: 'link', onClick: () => nav.go('dl.outcome', { oid: o.id }) })] };
+    foot: [Btn('NOT FULLY DELIVERED?', { kind: 'ghost', onClick: () => nav.go('dl.outcome', { oid: o.id }) }), Btn('CONFIRM DELIVERY', { kind: 'primary', onClick: () => { const r = deliver(o.id, Object.assign({}, o.alloc), null, 'dl-' + o.id); nav.popTo('pk.road'); nav.go('dl.print', { oid: o.id }); toast('Delivered — ' + orderTitle(o)); } })] };
 });
 route('dl.outcome', (p, E) => {
   const o = orderOf(p.oid);
@@ -2651,26 +2836,29 @@ route('dl.partial', (p, E) => {
 });
 route('dl.print', (p, E) => {
   const o = orderOf(p.oid), dc = chalOf(o.dcId), sale = o.saleId ? saleOf(o.saleId) : null;
-  const docs = [['DC', dc.id]].concat(sale ? [['BILL', sale.id]] : []), printed = !!dc.printedAt;
-  const doPrint = () => { if (!dc.printedAt) { dc.printedAt = new Date(); o.history.push({ at: dc.printedAt, text: 'Challan' + (sale ? ' and bill' : '') + ' printed' }); log('CHALLAN', dc.no + (sale ? ' and bill ' + sale.no : '') + ' printed'); } nav.go('print', { docs, start: 0, autoprint: true }); };
+  const docs = [['DC', dc.id]].concat(sale ? [['BILL', sale.id]] : []), printed = !!(lastPrint(dc) || lastPrint(sale));
+  const doPrint = () => nav.go('print', { docs, start: 0, autoprint: true, recAll: true });
+  const paperLine = (name, x) => KV(name, lastPrint(x) ? 'printed ' + fmtT(lastPrint(x)) + (x.prints && x.prints.length > 1 ? ' · ' + x.prints.length + ' prints' : '') : 'not printed');
   const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'FOR ' + orderTitle(o).toUpperCase()), h('div', { class: 'big mt8' }, 'Challan & Bill'),
       h('div', { class: 'mt8' }, dc.no + (sale ? ' · Bill ' + sale.no + ' · ' + rs(saleTotal(sale)) : '')))),
-    printed ? h('div', { class: 'aside' }, h('b', null, 'Printed at ' + fmtT(dc.printedAt) + '. '), 'Hand the papers to the shop, then continue.') : h('div', { class: 'aside' }, 'Print the challan and the bill now and give them to the shop. The time is saved with this delivery.'));
+    printed ? h('div', { class: 'card' }, paperLine('Challan (DC) ' + dc.no, dc), sale ? paperLine('Bill ' + sale.no, sale) : null) : null,
+    printed ? h('div', { class: 'aside' }, 'Hand the papers to the shop, then continue.') : h('div', { class: 'aside' }, 'Print the challan and the bill now and give them to the shop. The time is saved with this delivery.'));
   return { title: 'Print DC & Bill', sub: orderTitle(o), body, help: 'Printing the papers is part of every delivery. You can skip it, but the time of printing (or skipping) is saved in the delivery record.',
-    foot: printed ? [Btn('CONTINUE', { kind: 'primary', onClick: () => nav.replace('dl.challan', { oid: o.id }) }), Btn('PRINT AGAIN', { kind: 'dark', icon: 'print', onClick: doPrint })]
+    foot: printed ? [Btn('CONTINUE', { kind: 'primary', onClick: () => nav.replace('dl.challan', { oid: o.id }) }), h('div', { class: 'btnrow' }, Btn('PRINT CHALLAN AGAIN', { kind: 'dark', cls: 'sm', icon: 'print', onClick: () => nav.go('print', { docs, start: 0, autoprint: true }) }), sale ? Btn('PRINT BILL AGAIN', { kind: 'dark', cls: 'sm', icon: 'print', onClick: () => nav.go('print', { docs, start: 1, autoprint: true }) }) : null)]
       : [Btn('PRINT DC & BILL', { kind: 'primary', icon: 'print', onClick: doPrint }), Btn('SKIP FOR NOW', { kind: 'link', onClick: () => { dc.printSkippedAt = new Date(); o.history.push({ at: dc.printSkippedAt, text: 'Printing of challan and bill skipped' }); log('CHALLAN', dc.no + ' printing skipped'); nav.replace('dl.challan', { oid: o.id }); } })] };
 });
 route('dl.challan', (p, E) => {
   const o = orderOf(p.oid), dc = chalOf(o.dcId), sale = o.saleId ? saleOf(o.saleId) : null;
   const lines = Object.keys(dc.delivered || {}).filter(pid => dc.delivered[pid] > 0);
   const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, orderTitle(o).toUpperCase() + ' ORDER'), h('div', { class: 'big' }, dc.no), h('div', { class: 'mt8' }, Chip(dc.status === 'DELIVERED' ? 'DELIVERED' : dc.status === 'PARTIAL' ? 'PARTLY DELIVERED' : dc.status, dc.status === 'DELIVERED' ? 'ok' : 'warn')))),
-    Pane(lines.map(pid => Row({ title: prodLabel(prod(pid)), sub: dc.delivered[pid] < o.alloc[pid] ? 'Ordered for this shop: ' + qtyText(prod(pid), o.alloc[pid]) : 'In full', right: qtyText(prod(pid), dc.delivered[pid]) }))),
+    Pane(lines.map((pid, i) => Row({ title: (i + 1) + '. ' + prodLabel(prod(pid)), sub: dc.delivered[pid] < o.alloc[pid] ? 'Ordered for this shop: ' + qtyText(prod(pid), o.alloc[pid]) : 'In full', right: qtyText(prod(pid), dc.delivered[pid]) })).concat([TotalQty(lines.map(pid => ({ pid, base: dc.delivered[pid] })), 'TOTAL DELIVERED')])),
     sale ? h('div', { class: 'card' }, KV('Bill ' + sale.no, rs(saleTotal(sale)))) : null,
-    (() => { const dv = S.deliveries.find(x => x.orderId === o.id), rows = [dv ? KV('Delivered at', fmtT(dv.at)) : null, dc.printedAt ? KV('Challan & bill printed', fmtT(dc.printedAt)) : dc.printSkippedAt ? KV('Printing', 'Skipped at ' + fmtT(dc.printSkippedAt)) : null, dc.confirmedAt ? KV('Record confirmed', fmtT(dc.confirmedAt)) : null].filter(Boolean); return rows.length ? h('div', { class: 'card' }, h('b', null, 'Times'), rows) : null; })(),
+    (() => { const dv = S.deliveries.find(x => x.orderId === o.id), rows = [dv ? KV('Delivered at', fmtT(dv.at)) : null, lastPrint(dc) ? KV('Challan printed', fmtT(lastPrint(dc)) + (dc.prints && dc.prints.length > 1 ? ' · ' + dc.prints.length + ' prints' : '')) : dc.printSkippedAt ? KV('Printing', 'Skipped at ' + fmtT(dc.printSkippedAt)) : null, sale && lastPrint(sale) ? KV('Bill printed', fmtT(lastPrint(sale)) + (sale.prints && sale.prints.length > 1 ? ' · ' + sale.prints.length + ' prints' : '')) : null, dc.confirmedAt ? KV('Record confirmed', fmtT(dc.confirmedAt)) : null].filter(Boolean); return rows.length ? h('div', { class: 'card' }, h('b', null, 'Times'), rows) : null; })(),
     h('div', { class: 'mute center', style: { fontSize: '14px' } }, 'The challan is the goods paper (what moved). The bill is the money charge. Print the challan for the shop to sign.'));
   return { title: 'Delivery Challan', sub: orderTitle(o), body, help: 'Confirming the delivery record marks this challan as the final delivered copy. Next you collect the money.',
     foot: [Btn(dc.confirmedAt ? 'CONTINUE TO MONEY' : 'CONFIRM DELIVERY RECORD', { kind: 'primary', onClick: () => { if (!dc.confirmedAt) { dc.confirmedAt = new Date(); reviseDC(dc, 'Delivery record confirmed'); log('CHALLAN', dc.no + ' delivery record confirmed'); } nav.replace('col.home', { sid: sale.id }); } }),
-      h('div', { class: 'btnrow' }, Btn('VIEW CHALLAN', { kind: 'dark', onClick: () => nav.go('print', { docs: [['DC', dc.id], ['BILL', sale.id]], start: 0 }) }), Btn('PRINT', { kind: 'dark', icon: 'print', onClick: () => { if (!dc.printedAt) { dc.printedAt = new Date(); o.history.push({ at: dc.printedAt, text: 'Challan and bill printed' }); } nav.go('print', { docs: [['DC', dc.id], ['BILL', sale.id]], start: 0, autoprint: true }); } }))] };
+      HIDE.challanViewBtn ? Btn('PRINT / VIEW CHALLAN', { kind: 'dark', icon: 'print', onClick: () => nav.go('print', { docs: [['DC', dc.id], ['BILL', sale.id]], start: 0 }) })
+        : h('div', { class: 'btnrow' }, Btn('VIEW CHALLAN', { kind: 'dark', onClick: () => nav.go('print', { docs: [['DC', dc.id], ['BILL', sale.id]], start: 0 }) }), Btn('PRINT', { kind: 'dark', icon: 'print', onClick: () => { if (!dc.printedAt) { dc.printedAt = new Date(); o.history.push({ at: dc.printedAt, text: 'Challan and bill printed' }); } nav.go('print', { docs: [['DC', dc.id], ['BILL', sale.id]], start: 0, autoprint: true }); } }))] };
 });
 
 /* =====================================================================
@@ -2742,12 +2930,14 @@ function denomCounter(d, onChange, label) {
 function colCtx(p) {
   const sale = p.sid ? saleOf(p.sid) : null, pid = sale ? sale.partyId : p.pid;
   const agent = pid && isAgent(pid);
-  const due = sale ? saleDueIncl(sale) : (pid ? partyDueIncl(pid) : 0);
+  const billDue = sale ? saleDueIncl(sale) : (pid ? partyDueIncl(pid) : 0), oldDue = sale && pid && !agent ? Math.max(0, partyDueIncl(pid) - saleDueIncl(sale)) : 0;
+  const dr = S.drafts.col && S.drafts.col.key === (p.sid || p.pid) ? S.drafts.col : null, alloc = oldDue > 0 && seeBalances() && dr && dr.alloc === 'OLD' ? 'OLD' : 'BILL', due = alloc === 'OLD' ? oldDue : billDue;
   const trip = sale && sale.tripId ? tripOf(sale.tripId) : null;
   const collectorId = !agent && trip && trip.status === 'ON_ROAD' ? trip.driverId : null;
   const label = sale ? (sale.orderId ? orderTitle(orderOf(sale.orderId)).toUpperCase() + ' ORDER' : sale.source === 'SIDE' ? partyName(pid).toUpperCase() + ' — ROAD SALE' : sale.cashAndCarry ? 'COUNTER SALE' : partyName(pid).toUpperCase() + ' — BILL ' + sale.no) : partyName(pid).toUpperCase();
-  return { sale, pid, agent, due, trip, collectorId, label, paid: sale ? salePaid(sale, true) : 0 };
+  return { sale, pid, agent, due, billDue, oldDue, alloc, trip, collectorId, label, paid: sale ? salePaid(sale, true) : 0 };
 }
+const payTarget = (c, p) => c.alloc === 'OLD' ? { saleId: null, skipSaleId: p.sid, maxDue: c.oldDue } : { saleId: p.sid };         // which ledger entry this payment settles
 const colDraft = key => { S.drafts.col = S.drafts.col && S.drafts.col.key === key ? S.drafts.col : { key, tok: nid('tok') }; return S.drafts.col; };
 function afterPayment(p, pay) {
   const c = colCtx(p);
@@ -2764,6 +2954,7 @@ route('col.home', (p, E) => {
   const m = S.settings.pay, partial = c.paid > 0;
   const body = h('div', { class: 'gap center' }, h('div', { class: 'mid' },
     h('div', { class: 'eyebrow' }, c.label), c.due > 0 ? h('div', { class: 'huge mt8' }, (partial ? 'COLLECT REMAINING ' : c.agent ? 'DUE ' : 'COLLECT ') + rs(c.due)) : h('div', { class: 'huge mt8 green' }, 'ALL PAID ✓'),
+    c.oldDue > 0 && c.sale && !c.agent && seeBalances() ? h('div', { class: 'card mt16', style: { textAlign: 'left' } }, KV('This bill', rs(c.billDue)), KV('Old due', rs(c.oldDue)), h('div', { class: 'lbl', style: { marginTop: '8px' } }, 'This payment settles'), Seg([['BILL', 'This bill'], ['OLD', 'Old due']], c.alloc, v => { colDraft(p.sid || p.pid).alloc = v; nav.refresh(); })) : null,
     partial ? h('div', { class: 'mute mt8' }, 'Paid so far ' + rs(c.paid) + (c.sale ? ' of ' + rs(saleTotal(c.sale)) : '')) : null,
     c.sale && c.sale.discount ? h('div', { class: 'mute mt8' }, 'Includes ' + pctText(c.sale.discount.bp) + ' Owner-approved discount') : null,
     c.agent ? h('div', { class: 'aside mt16', style: { textAlign: 'left' } }, 'Money submitted by an Agent counts against the due only after the office verifies it.') : null));
@@ -2772,9 +2963,9 @@ route('col.home', (p, E) => {
     const go = (r) => () => { const d = colDraft(p.sid || p.pid); nav.go(r, p); };
     const pair = (a, b) => h('div', { class: 'pair' }, a, b);
     const bCash = m.CASH ? Btn('CASH', { kind: 'dark', onClick: go('col.cash') }) : null, bOn = (m.UPI || m.BANK) ? Btn('ONLINE', { kind: 'dark', onClick: go('col.online') }) : null;
-    const bChq = m.CHEQUE ? Btn('CHEQUE', { kind: 'dark', onClick: go('col.cheque') }) : null, bDue = !c.agent && c.sale ? Btn('MARK DUE', { kind: 'neg', onClick: () => nav.go('col.due', p) }) : null;
+    const bChq = m.CHEQUE ? Btn('CHEQUE', { kind: 'dark', onClick: go('col.cheque') }) : null, bDue = !c.agent && c.sale && c.alloc === 'BILL' ? Btn('MARK DUE', { kind: 'neg', onClick: () => nav.go('col.due', p) }) : null;
     [[bCash, bOn], [bChq, bDue]].forEach(pr => { const k = pr.filter(Boolean); if (k.length === 2) foot.push(pair(k[0], k[1])); else if (k.length === 1) foot.push(k[0]); });
-    if (c.sale && !c.sale.discount && !c.sale.cashAndCarry && c.paid === 0 && can('approveDiscount')) foot.push(Btn('GIVE DISCOUNT', { kind: 'link', onClick: () => nav.go('disc', { sid: c.sale.id }) }));
+    if (c.sale && c.alloc === 'BILL' && !c.sale.discount && !c.sale.cashAndCarry && c.paid === 0 && can('approveDiscount')) foot.push(Btn('GIVE DISCOUNT', { kind: 'link', onClick: () => nav.go('disc', { sid: c.sale.id }) }));
   } else foot.push(Btn('DONE', { kind: 'primary', onClick: () => nav.replace('col.done', p) }));
   return { title: 'Collect', sub: c.agent ? 'Agent payment' : (c.trip ? c.trip.no : ''), body, foot, center: true, help: ['Choose how the customer is paying. Only the next screen for that method appears.', 'Cash collected on the road stays with the driver until the Manager counts it at pickup return. Online and cheque payments wait for an office check.'] };
 });
@@ -2782,7 +2973,7 @@ const noteDetails = (o, n) => { n = (n || '').trim(); if (n) o.note = n; return 
 const noteField = st => Field('Note (optional)', h('input', { class: 'input', id: 'pnote', maxlength: 120, placeholder: 'Anything to remember about this payment', value: st.note || '', 'aria-label': 'Note', onInput: ev => { st.note = ev.target.value; } }));
 route('col.cash', (p, E) => {
   const c = colCtx(p), d = E.st.d || (E.st.d = {});
-  const info = h('div', { class: 'center mt12' }), btn = Btn('CONFIRM COLLECTION', { kind: 'primary', disabled: true, onClick: () => { const amt = denomTotal(d); const dr = colDraft(p.sid || p.pid); const pay = recordPayment({ partyId: c.pid, saleId: p.sid, method: 'CASH', amount: amt, collectorId: c.collectorId, tripId: c.trip ? c.trip.id : null, details: noteDetails({ denoms: Object.assign({}, d) }, E.st.note), token: dr.tok }); afterPayment(p, pay); } });
+  const info = h('div', { class: 'center mt12' }), btn = Btn('CONFIRM COLLECTION', { kind: 'primary', disabled: true, onClick: () => { const amt = denomTotal(d); const dr = colDraft(p.sid || p.pid); const pay = recordPayment({ partyId: c.pid, ...payTarget(c, p), method: 'CASH', amount: amt, collectorId: c.collectorId, tripId: c.trip ? c.trip.id : null, details: noteDetails({ denoms: Object.assign({}, d) }, E.st.note), token: dr.tok }); afterPayment(p, pay); } });
   const body = h('div', null, h('div', { class: 'oq' }, h('div', { class: 'eyebrow' }, c.label), h('div', { class: 'big mt8' }, 'Check cash'), h('div', { class: 'mute mt8' }, 'Due ' + rs(c.due))),
     h('div', { class: 'mt16' }, denomCounter(d, total => {
       const rem = c.due - total;
@@ -2806,7 +2997,7 @@ function onlineScreen(kind) {
       : h('div', { class: 'pane ink' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'Agency UPI'), h('div', { style: { fontSize: '24px', fontWeight: 700, margin: '6px 0' } }, up.id), up.phone ? h('div', null, '☎ UPI phone ' + up.phone) : null, h('div', { class: 'mt8', style: { fontSize: '13px', opacity: .7 } }, 'No payment request is sent from here — the customer pays using this UPI ID.')));
     const amtI = h('input', { class: 'input', id: 'amt', inputmode: 'decimal', value: st.amt, placeholder: 'How much did they pay?', 'aria-label': 'Amount received', onInput: ev => { st.amt = ev.target.value; chk(); } });
     const refI = h('input', { class: 'input', id: 'ref', value: st.ref, placeholder: kind === 'BANK' ? 'Bank reference / UTR (optional)' : 'UPI transaction ID (optional)', maxlength: 40, 'aria-label': 'Payment reference', onInput: ev => { st.ref = ev.target.value; chk(); } });
-    const btn = Btn('CONFIRM — ' + (kind === 'BANK' ? 'BANK' : 'UPI') + ' PAYMENT', { kind: 'primary', disabled: true, onClick: () => { const dr = colDraft(p.sid || p.pid); const pay = recordPayment({ partyId: c.pid, saleId: p.sid, method: kind, amount: parseRs(st.amt), collectorId: null, tripId: c.trip ? c.trip.id : null, details: noteDetails({ ref: st.ref.trim() }, st.note), token: dr.tok }); afterPayment(p, pay); } });
+    const btn = Btn('CONFIRM — ' + (kind === 'BANK' ? 'BANK' : 'UPI') + ' PAYMENT', { kind: 'primary', disabled: true, onClick: () => { const dr = colDraft(p.sid || p.pid); const pay = recordPayment({ partyId: c.pid, ...payTarget(c, p), method: kind, amount: parseRs(st.amt), collectorId: null, tripId: c.trip ? c.trip.id : null, details: noteDetails({ ref: st.ref.trim() }, st.note), token: dr.tok }); afterPayment(p, pay); } });
     const chk = () => { const a = parseRs(st.amt); btn.disabled = !(a > 0 && a <= c.due); };
     chk();
     return { title: kind === 'BANK' ? 'Bank transfer' : 'UPI', sub: c.label, body: h('div', { class: 'gap' }, info, Field('Amount received (₹)', amtI), Btn('FILL THE FULL DUE ' + rs(c.due), { kind: 'link', cls: 'sm', onClick: () => { st.amt = String(c.due / 100).replace(/\.0+$/, ''); amtI.value = st.amt; chk(); } }), Field('Reference number (optional)', refI), noteField(st), h('div', { class: 'mute', style: { fontSize: '14px' } }, 'This payment is recorded as “waiting for office check”. It is not counted as agency money until someone confirms it in the bank.')), foot: [btn] };
@@ -2815,7 +3006,7 @@ function onlineScreen(kind) {
 route('col.bank', onlineScreen('BANK')); route('col.upi', onlineScreen('UPI'));
 route('col.cheque', (p, E) => {
   const c = colCtx(p), st = E.st; if (!st.init) { st.init = 1; st.no = ''; st.date = ymd(new Date()); st.bank = ''; st.amt = ''; }
-  const btn = Btn('CONFIRM CHEQUE', { kind: 'primary', disabled: true, onClick: () => { const dr = colDraft(p.sid || p.pid); const pay = recordPayment({ partyId: c.pid, saleId: p.sid, method: 'CHEQUE', amount: parseRs(st.amt), collectorId: null, tripId: c.trip ? c.trip.id : null, details: noteDetails({ no: st.no.trim(), date: st.date, bank: st.bank.trim() }, st.note), token: dr.tok }); afterPayment(p, pay); } });
+  const btn = Btn('CONFIRM CHEQUE', { kind: 'primary', disabled: true, onClick: () => { const dr = colDraft(p.sid || p.pid); const pay = recordPayment({ partyId: c.pid, ...payTarget(c, p), method: 'CHEQUE', amount: parseRs(st.amt), collectorId: null, tripId: c.trip ? c.trip.id : null, details: noteDetails({ no: st.no.trim(), date: st.date, bank: st.bank.trim() }, st.note), token: dr.tok }); afterPayment(p, pay); } });
   const chk = () => { const a = parseRs(st.amt); btn.disabled = !(a > 0 && a <= c.due && st.no.trim().length >= 3 && st.bank.trim().length >= 2 && st.date); };
   const f = (key, ph, lab, type, mode) => h('input', { class: 'input', type: type || 'text', inputmode: mode, placeholder: ph, value: st[key], maxlength: 40, 'aria-label': lab, onInput: ev => { st[key] = ev.target.value; chk(); } });
   chk();
@@ -3023,12 +3214,19 @@ function receiptSheet(pid, x) {
 }
 
 route('khata', (p, E) => {
-  const has = new Set(khataParties());
-  const body = h('div', null, pickList(E, { placeholder: 'Search person or shop', empty: S.khata.length ? 'No one found.' : 'Nothing in the Khata yet. Bills, payments and wages appear here.',
-    items: () => { const q = (E.st.q || '').trim(); const all = allParties(); const list = q ? all : all.filter(x => has.has(x.id)); return list.slice().sort((a, b) => { const A = netBal(a.id), B = netBal(b.id); const ra = A < 0 ? 0 : A > 0 ? 1 : 2, rb = B < 0 ? 0 : B > 0 ? 1 : 2; return ra - rb || Math.abs(B) - Math.abs(A); }); },
+  const has = new Set(khataParties()), flt = E.st.f || 'ALL';
+  const body = h('div', null, Seg([['ALL', 'All'], ['SHOPS', 'Shops'], ['STAFF', 'Staff & agents'], ['DUES', 'Dues only']], flt, v => { E.st.f = v; nav.refresh(); }), h('div', { class: 'mt12' }), pickList(E, { placeholder: 'Search person or shop', empty: S.khata.length ? 'No one found.' : 'Nothing in the Khata yet. Bills, payments and wages appear here.',
+    items: () => { const q = (E.st.q || '').trim(); const all = allParties(); let list = q ? all : all.filter(x => has.has(x.id)); if (flt === 'SHOPS') list = list.filter(x => !isStaffId(x.id)); else if (flt === 'STAFF') list = list.filter(x => isStaffId(x.id)); else if (flt === 'DUES') list = list.filter(x => netBal(x.id) < 0); return list.slice().sort((a, b) => { const A = netBal(a.id), B = netBal(b.id); const ra = A < 0 ? 0 : A > 0 ? 1 : 2, rb = B < 0 ? 0 : B > 0 ? 1 : 2; return ra - rb || Math.abs(B) - Math.abs(A); }); },
     text: x => [x.shop, x.name, x.position, x.type].join(' '),
     render: x => { const b = netBal(x.id); return Row({ title: x.shop || x.name, sub: partyKind(x.id) + (x.shop ? ' · ' + x.name : ''), right: h('span', { class: b < 0 ? 'red' : b > 0 ? 'green' : '' }, rs(b, { plus: true })), rightSub: balShort(b), onClick: () => nav.go('kh.person', { pid: x.id }) }); } }));
-  return { title: 'Khata', sub: 'Who owes whom', body };
+  return { title: 'Khata', sub: 'Who owes whom', body, foot: can('recordCollection') ? [Btn('RECEIVE PAYMENT', { kind: 'primary', icon: 'coin', onClick: () => nav.go('kh.receive') })] : undefined };
+});
+/* quick receive: pick who paid, go straight to the collection screen (no need to open their ledger first) */
+route('kh.receive', (p, E) => {
+  const body = h('div', null, h('div', { class: 'oq', style: { marginBottom: '12px' } }, h('div', { class: 'q' }, 'WHO IS PAYING?'), h('div', { class: 'hint' }, 'Shops and agents who owe money are listed first.')),
+    pickList(E, { placeholder: 'Search shop or agent', empty: 'Nobody owes anything right now.', items: () => allParties().filter(x => (!isStaffId(x.id) || isAgent(x.id)) && (partyDueIncl(x.id) > 0 || (E.st.q || '').trim())).sort((a, b) => partyDueIncl(b.id) - partyDueIncl(a.id)),
+      text: x => [x.shop, x.name, x.position].join(' '), render: x => { const d = partyDueIncl(x.id); return Row({ title: x.shop || x.name, sub: partyKind(x.id) + (x.shop ? ' · ' + x.name : ''), right: d > 0 ? rs(d) : '—', rightSub: d > 0 ? 'owes' : 'nothing due', cls: d > 0 ? '' : 'off', onClick: d > 0 ? () => nav.go('col.home', { pid: x.id }) : null }); } }));
+  return { title: 'Receive payment', sub: 'Pick who paid', body };
 });
 route('kh.person', (p, E) => {
   const pid = p.pid, pa = party(pid), b = netBal(pid), isS = isStaffId(pid), agent = isAgent(pid), due = partyDueIncl(pid);
@@ -3099,6 +3297,7 @@ route('customer.profile', (p, E) => {
     h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'CURRENT DUE'), h('div', { class: 'huge mt8' + (b < 0 ? ' red' : '') }, rs(Math.max(0, -b))), h('div', { class: 'eyebrow mt8', style: { color: 'var(--ink)' } }, b < 0 ? 'OWES AGENCY' : b > 0 ? 'AGENCY HAS TO PAY ' + rs(b) : 'ALL CLEAR'))),
     h('div', { class: 'card' }, h('b', { style: { fontWeight: 600 } }, c.name), custPhones(c).map(x => h('div', { class: 'row', style: { borderBottom: 0, padding: '4px 0' } }, h('div', { class: 'l' }, h('div', { class: 's' }, x.label), h('div', { class: 't' }, x.num)), callLink(x.num))), c.addr ? h('div', { class: 'mute', style: { fontSize: '14px' } }, addrLine(c) || 'No address saved') : null, c.addr ? h('div', { class: 'mute', style: { fontSize: '13px' } }, locStatus(c)) : null, c.addr && mapsUrl(c) ? h('div', { class: 'mt8' }, Btn('OPEN MAPS', { kind: 'ghost', cls: 'sm', icon: 'nav', onClick: () => openMaps(c) })) : null),
     h('div', { class: 'tiles' }, tiles.map(t => h('button', { class: 'tile', type: 'button', onClick: act(() => t[0] === 'khata' ? nav.go('kh.history', { pid }) : nav.go('customer.section', { pid, sec: t[0] })) }, h('b', null, t[2]), h('span', null, t[1])))));
+  if (!seeBalances() && body.firstElementChild) body.firstElementChild.remove();                     // the CURRENT DUE block is for people allowed to see Khata balances
   return { title: c.shop || c.name, sub: partyKind(pid) + (c.addr && c.addr.area ? ' · ' + c.addr.area : '') + (isActiveCust(c) ? '' : ' · HIDDEN'), big: true, body, foot: [!isActiveCust(c) ? Btn('SHOW CUSTOMER AGAIN', { kind: 'primary', onClick: () => { setCustomerHidden(pid, false); nav.refresh(); toast('Shown again'); } }) : b < 0 ? Btn('RECORD PAYMENT', { kind: 'primary', onClick: () => nav.go('col.home', { pid }) }) : c.type !== 'SHOP' ? null : Btn('TAKE ORDER', { kind: 'primary', icon: 'plus', onClick: () => { const dr = S.drafts.order; if (dr && dr.lines.length && dr.partyId !== pid) fail('Finish or discard the unfinished order on Today first.'); chooseCartParty(c, 'order'); } }), Btn('VIEW STATEMENT', { kind: 'ghost', icon: 'print', onClick: () => nav.go('statement', { pid }) }), c.type !== 'OCCASIONAL' ? h('div', { class: 'linkrow' }, Btn('EDIT DETAILS', { kind: 'link', onClick: () => nav.go('cu.edit', { pid }) }), isActiveCust(c) ? Btn('DELETE OR HIDE', { kind: 'link', cls: 'neg', onClick: () => customerRemoveSheet(c) }) : Btn('DELETE', { kind: 'link', cls: 'neg', onClick: () => customerRemoveSheet(c) })) : null] };
 });
 route('customer.section', (p, E) => {
@@ -3140,7 +3339,7 @@ route('cash.verify', (p, E) => {
    ===================================================================== */
 const retDraft = t => { const all = S.drafts.ret = S.drafts.ret || {}; if (!all[t.id]) {
   const goods = {}; for (const pid in t.custody) if (t.custody[pid] > 0) { const g = { good: t.custody[pid], damaged: 0, expired: 0, short: 0 }; t.unsafe.filter(u => u.pid === pid).forEach(u => { const q = Math.min(u.base, g.good); g.good -= q; if (u.kind === 'DAMAGED') g.damaged += q; else g.expired += q; }); goods[pid] = g; }
-  all[t.id] = { goods, cash: {}, note: '', tok: nid('tok') }; } return all[t.id]; };
+  all[t.id] = { goods, cash: {}, note: '', tok: nid('tok'), times: {} }; } const r = all[t.id]; if (!r.times) r.times = {}; return r; };
 const TR_STEPS = 4;
 route('tr.goods', (p, E) => {
   const t = tripOf(p.tid); if (!t) return { title: 'Return', body: Empty('Not found') };
@@ -3159,7 +3358,10 @@ route('tr.goods', (p, E) => {
       return h('div', { class: 'row' }, h('div', { class: 'l' }, h('div', { class: 't' }, prodLabel(pr)), h('div', { class: 's' }, 'On pickup ' + qtyText(pr, t.custody[pid])),
         h('div', { class: 's', style: { color: 'var(--ink)', marginTop: '4px' } }, [g.good ? 'Good ' + qtyText(pr, g.good) : null, g.damaged ? 'Damaged ' + qtyText(pr, g.damaged) : null, g.expired ? 'Expired ' + qtyText(pr, g.expired) : null, g.short ? 'SHORT ' + qtyText(pr, g.short) : null].filter(Boolean).join(' · '))),
         h('button', { class: 'btn ghost sm', type: 'button', onClick: act(() => edit(pid)) }, 'CHANGE')); })) : Pane(h('div', { class: 'empty' }, 'Nothing is left on the pickup. All goods were delivered or sold. ✓')));
-  return { title: 'Pickup return', sub: t.no + ' · ' + vehOf(t.vehicleId).reg, step: { label: 'PICKUP RETURN', n: 1, of: TR_STEPS }, body, foot: [Btn('CONTINUE', { kind: 'primary', onClick: () => nav.go('tr.money', { tid: t.id }) })], help: ['The goods still inside the pickup must be counted and classified before the trip can close.', 'Good goods return to saleable godown stock once. Damaged or expired goods never go into sellable stock.'] };
+  const vt = d.times.goods;
+  body.append(vt ? h('div', { class: 'aside' }, h('b', null, '✓ Vehicle checked at ' + fmtT(new Date(vt)) + '. '), 'By ' + (d.times.goodsBy || 'the Manager') + '. You can still correct a count above.')
+    : Btn('I HAVE CHECKED THE VEHICLE', { kind: 'dark', onClick: () => { d.times.goods = new Date(); d.times.goodsBy = actorText(actorBy()); nav.refresh(); } }));
+  return { title: 'Pickup return', sub: t.no + ' · ' + vehOf(t.vehicleId).reg, step: { label: 'PICKUP RETURN', n: 1, of: TR_STEPS }, body, foot: [Btn(vt ? 'CONTINUE' : 'CHECK THE VEHICLE FIRST', { kind: 'primary', disabled: !vt, onClick: () => nav.go('tr.money', { tid: t.id }) })], help: ['The goods still inside the pickup must be counted and classified before the trip can close.', 'Good goods return to saleable godown stock once. Damaged or expired goods never go into sellable stock.'] };
 });
 route('tr.money', (p, E) => {
   const t = tripOf(p.tid), d = retDraft(t), pays = tripPayments(t), cashP = pays.filter(y => y.method === 'CASH'), other = pays.filter(y => y.method !== 'CASH');
@@ -3167,10 +3369,10 @@ route('tr.money', (p, E) => {
   const h0 = t.handoverId ? byId(S.handovers, t.handoverId) : null;
   const byCust = {}; pays.forEach(y => { const k = y.partyId ? partyName(y.partyId) : 'Walk-in'; byCust[k] = byCust[k] || []; byCust[k].push(y); });
   if (!E.st.d) E.st.d = d.cash;
-  const diffEl = h('div', { class: 'center mt12' }), noteBox = h('div'), btn = Btn('CONFIRM HANDOVER', { kind: 'primary', disabled: true, onClick: () => { handoverCount(t.id, denomTotal(d.cash), d.note); nav.go('tr.match', { tid: t.id }); } });
+  const diffEl = h('div', { class: 'center mt12' }), noteBox = h('div'), btn = Btn('CONFIRM HANDOVER', { kind: 'primary', disabled: true, onClick: () => { handoverCount(t.id, denomTotal(d.cash), d.note); d.times.money = new Date(); nav.go('tr.match', { tid: t.id }); } });
   const refresh = total => { const diff = total - expected; setKids(diffEl, diff === 0 ? h('b', { class: 'green' }, total > 0 ? '✓ Matches what the driver collected' : '') : h('b', { class: 'red' }, (diff < 0 ? 'SHORT by ' : 'EXTRA by ') + rs(Math.abs(diff))));
-    setKids(noteBox, diff !== 0 ? Field('Explain the difference', h('input', { class: 'input', maxlength: 100, value: d.note, placeholder: 'e.g. customer short-paid, will bring tomorrow', onInput: ev => { d.note = ev.target.value; btn.disabled = !(d.note.trim().length >= 3); } })) : null);
-    btn.disabled = total <= 0 ? true : (diff !== 0 && d.note.trim().length < 3); };
+    setKids(noteBox, diff !== 0 ? Field(diff < 0 ? 'Why is the cash short? (required)' : 'Why is there extra cash? (required)', h('input', { class: 'input', maxlength: 100, value: d.note, placeholder: 'e.g. customer short-paid, will bring tomorrow', onInput: ev => { d.note = ev.target.value; btn.disabled = !(d.note.trim().length >= 5); } })) : null);
+    btn.disabled = total <= 0 ? true : (diff !== 0 && d.note.trim().length < 5); };
   const noCash = expected === 0 && !h0;
   const body = h('div', { class: 'gap' },
     h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Pickup return'), h('div', { class: 'big mt8' }, 'Hand over money'), h('div', { class: 'hint' }, staffOf(t.driverId).name + ' gives the cash to the Manager, who counts it.')),
@@ -3178,18 +3380,18 @@ route('tr.money', (p, E) => {
     other.length ? h('div', { class: 'aside' }, rs(other.reduce((s, y) => s + y.amount, 0)) + ' was paid online or by cheque. That does not go in the cash handover — the office checks it separately.') : null,
     noCash ? null : h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'eyebrow' }, 'CASH THE DRIVER SHOULD HAND OVER'), h('div', { class: 'huge' }, rs(expected)))),
     noCash ? null : h('div', null, h('div', { class: 'sec' }, h('span', null, 'Manager counts the cash')), denomCounter(d.cash, refresh, 'Counted by Manager'), diffEl, noteBox),
-    h0 && h0.status === 'COUNTED' ? h('div', { class: 'card' }, '✓ Counted ' + rs(h0.counted) + (h0.diff ? ' (' + (h0.diff < 0 ? 'short ' : 'extra ') + rs(Math.abs(h0.diff)) + ')' : '') + '. It is verified when you close the pickup.') : null);
+    h0 && h0.status === 'COUNTED' ? h('div', { class: 'card' }, '✓ Counted ' + rs(h0.counted) + (h0.diff ? ' (' + (h0.diff < 0 ? 'short ' : 'extra ') + rs(Math.abs(h0.diff)) + ')' : '') + ' at ' + fmtT(h0.at) + (h0.by ? ' by ' + actorText(h0.by) : '') + '. It is verified when you close the pickup.') : null);
   return { title: 'Hand over money', sub: t.no, step: { label: 'PICKUP RETURN', n: 2, of: TR_STEPS }, body, help: ['The cash is “handed to the Manager” when counted here, and “verified by the office” when the pickup is closed.', 'If the count is different, write why. A shortage stays on the driver’s Khata until explained — it is never erased.'],
     foot: noCash ? [Btn('CONTINUE', { kind: 'primary', onClick: () => nav.go('tr.match', { tid: t.id }) })] : (h0 && h0.status === 'COUNTED' ? [Btn('CONTINUE', { kind: 'primary', onClick: () => nav.go('tr.match', { tid: t.id }) }), Btn('UPDATE THE COUNT', { kind: 'ghost', onClick: () => { btn.click(); } })] : [btn]) };
 });
 route('tr.match', (p, E) => {
   const t = tripOf(p.tid), os = tripOrders(t);
-  const mark = (o, state) => { let note = (t.matches[o.id] && t.matches[o.id].note) || ''; const set = () => { if (state !== 'CHECKED' && note.trim().length < 3) fail('Write a short note about the problem.'); t.matches[o.id] = { state, note: note.trim() }; closeSheet(); nav.refresh(); };
+  const mark = (o, state) => { let note = (t.matches[o.id] && t.matches[o.id].note) || ''; const set = () => { if (state !== 'CHECKED' && note.trim().length < 3) fail('Write a short note about the problem.'); t.matches[o.id] = { state, note: note.trim(), at: new Date(), by: actorText(actorBy()) }; closeSheet(); nav.refresh(); };
     if (state === 'CHECKED') { set(); return; }
     openSheet({ title: state === 'MISMATCH' ? 'What does not match?' : 'Why does it need review?', body: Field('Note', h('input', { class: 'input', maxlength: 100, 'data-autofocus': '1', value: note, onInput: ev => { note = ev.target.value; } })), actions: [Btn('SAVE', { kind: 'primary', onClick: set }), sheetClose('CANCEL')] }); };
   const rows = os.map(o => { const m = t.matches[o.id], sale = o.saleId ? saleOf(o.saleId) : null, st = orderState(o);
     return h('div', { class: 'ol' + (m && m.state === 'CHECKED' ? ' strike' : '') }, h('div', { class: 'nm' }, h('span', null, (m && m.state === 'CHECKED' ? '✓ ' : '') + orderTitle(o)), h('span', null, sale ? rs(saleTotal(sale)) : '—')),
-      h('div', { style: { fontSize: '14px', opacity: .8, marginTop: '4px' } }, st.text + (sale ? ' · paid ' + rs(salePaid(sale, true)) + (saleDue(sale) > 0 ? ' · due ' + rs(saleDue(sale)) : '') : '')),
+      h('div', { style: { fontSize: '14px', opacity: .8, marginTop: '4px' } }, (m && m.at ? 'checked ' + fmtT(new Date(m.at)) + ' · ' : '') + st.text + (sale ? ' · paid ' + rs(salePaid(sale, true)) + (saleDue(sale) > 0 ? ' · due ' + rs(saleDue(sale)) : '') : '')),
       m && m.state !== 'CHECKED' ? h('div', { style: { marginTop: '6px' } }, Chip(m.state === 'MISMATCH' ? 'MISMATCH' : 'NEEDS REVIEW', 'bad'), ' ', m.note) : null,
       h('div', { class: 'btnrow', style: { paddingTop: '10px' } }, Btn('CHECKED', { kind: m && m.state === 'CHECKED' ? 'primary' : 'ghost', cls: 'sm', onClick: () => mark(o, 'CHECKED') }), Btn('MISMATCH', { kind: m && m.state === 'MISMATCH' ? 'danger' : 'ghost', cls: 'sm', onClick: () => mark(o, 'MISMATCH') }), Btn('REVIEW', { kind: m && m.state === 'REVIEW' ? 'danger' : 'ghost', cls: 'sm', onClick: () => mark(o, 'REVIEW') }))); });
   const done = os.every(o => t.matches[o.id]);
@@ -3199,22 +3401,25 @@ route('tr.match', (p, E) => {
 route('tr.confirm', (p, E) => {
   const t = tripOf(p.tid), d = retDraft(t), sm = tripSummary(t), h0 = sm.handover;
   const sum = (m) => Object.keys(m).map(pid => qtyText(prod(pid), m[pid]) + ' ' + prod(pid).name).join(', ') || '—';
+  const block = (title, m, bad) => { const ks = Object.keys(m).filter(pid => m[pid] > 0); return [h('div', { class: 'gblbl' }, title), ks.length ? ks.map((pid, i) => h('div', { class: 'kv' }, h('span', { style: bad ? { color: 'var(--red)' } : null }, (i + 1) + '. ' + prodLabel(prod(pid))), h('b', null, qtyText(prod(pid), m[pid])))) : h('div', { class: 'mute', style: { fontSize: '14px' } }, '—'), ks.length > 1 ? TotalQty(ks.map(pid => ({ pid, base: m[pid] })), 'TOTAL') : null]; };
   const tot = { good: {}, damaged: {}, expired: {}, short: {} }; for (const pid in d.goods) for (const k in tot) if (d.goods[pid][k]) tot[k][pid] = d.goods[pid][k];
   const diffs = []; if (h0 && h0.diff) diffs.push((h0.diff < 0 ? 'Cash short ' : 'Cash extra ') + rs(Math.abs(h0.diff)) + (h0.note ? ' — ' + h0.note : '')); if (Object.keys(tot.short).length) diffs.push('SHORT / missing: ' + sum(tot.short));
   tripOrders(t).forEach(o => { const m = t.matches[o.id]; if (m && m.state !== 'CHECKED') diffs.push(orderTitle(o) + ': ' + (m.state === 'MISMATCH' ? 'mismatch' : 'needs review') + ' — ' + m.note); });
   const ok = !tripCash(t).length || (h0 && h0.status === 'COUNTED');
   const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Pickup return'), h('div', { class: 'big mt8' }, 'Confirm return')),
-    h('div', { class: 'card' }, KV('Goods delivered', sum(sm.delivered)), Object.keys(sm.sold).length ? KV('Sold on the road', sum(sm.sold)) : null, KV('Goods returned (good)', sum(tot.good)), Object.keys(tot.damaged).length ? KV('Damaged', sum(tot.damaged)) : null, Object.keys(tot.expired).length ? KV('Expired', sum(tot.expired)) : null, Object.keys(tot.short).length ? KV('SHORT', h('b', { class: 'red' }, sum(tot.short))) : null),
+    h('div', { class: 'card gb' }, block('Goods delivered', sm.delivered), Object.keys(sm.sold).length ? block('Sold on the road', sm.sold) : null, block('Goods returned — sellable (good)', tot.good), block('Goods returned — damaged', tot.damaged, true), block('Goods returned — expired', tot.expired, true), Object.keys(tot.short).length ? block('SHORT / missing', tot.short, true) : null),
     h('div', { class: 'card' }, KV('Cash collected', rs(sm.cashExpected)), KV('Cash counted by Manager', h0 ? rs(h0.counted) : '—'), KV('Online / cheque (office checks)', rs(sm.online)), KV('Outstanding dues', h('b', { class: sm.dues > 0 ? 'red' : '' }, rs(sm.dues)))),
-    diffs.length ? h('div', { class: 'card', style: { borderColor: 'var(--red)' } }, h('b', { class: 'red' }, 'Differences on record'), diffs.map(x => h('div', { style: { fontSize: '14px', marginTop: '4px' } }, '• ' + x))) : h('div', { class: 'card' }, '✓ Everything agrees. No differences.'));
+    diffs.length ? h('div', { class: 'card', style: { borderColor: 'var(--red)' } }, h('b', { class: 'red' }, 'Differences on record'), diffs.map(x => h('div', { style: { fontSize: '14px', marginTop: '4px' } }, '• ' + x))) : h('div', { class: 'card' }, '✓ Everything agrees. No differences.'),
+    (() => { const w = actorBy(), last = tripOrders(t).map(o => t.matches[o.id] && t.matches[o.id].at).filter(Boolean).map(x => new Date(x)).sort((a, b) => b - a)[0];
+      return h('div', { class: 'card' }, h('b', null, 'Sign-off'), KV('Closing as', actorText(w)), d.times.goods ? KV('Vehicle checked', fmtT(new Date(d.times.goods))) : null, h0 ? KV('Cash counted', fmtT(new Date(h0.at)) + (h0.by ? ' · ' + actorText(h0.by) : '')) : null, last ? KV('Orders checked', fmtT(last)) : null, KV('Closing now', fmtDT(new Date()))); })());
   return { title: 'Confirm return', sub: t.no, step: { label: 'PICKUP RETURN', n: 4, of: TR_STEPS }, body, help: 'Closing the pickup moves good goods back to sellable stock, keeps damaged/expired goods apart, verifies the counted cash and locks this trip. Differences stay on record.',
-    foot: [Btn('CLOSE PICKUP', { kind: 'primary', disabled: !ok, onClick: () => { closeTrip(t.id, d.goods, d.tok); delete S.drafts.ret[t.id]; nav.reset([['today'], ['tr.done', { tid: t.id }]]); toast(t.no + ' closed'); } })] };
+    foot: [Btn('CLOSE PICKUP', { kind: 'primary', disabled: !ok, onClick: () => { closeTrip(t.id, d.goods, d.tok, d.times); delete S.drafts.ret[t.id]; nav.reset([['today'], ['tr.done', { tid: t.id }]]); toast(t.no + ' closed'); } })] };
 });
 route('tr.done', (p, E) => {
   const t = tripOf(p.tid), sm = t.closeSummary;
   return { title: 'Pickup closed', sub: t.no, back: false, body: h('div', { class: 'gap' }, h('div', { class: 'center' }, h('div', { class: 'donemark' }, ic('check')), h('div', { class: 'big' }, 'All accounted for')),
-    h('div', { class: 'card' }, KV('Cash verified', rs(sm.cashVerified)), KV('Online / cheque to check', rs(sm.online)), KV('Outstanding dues', rs(sm.dues))), t.shortages.length ? h('div', { class: 'card' }, h('b', { class: 'red' }, 'Shortage on record: '), t.shortages.map(x => qtyText(prod(x.pid), x.base) + ' ' + prod(x.pid).name).join(', ')) : null),
-    foot: [Btn('DONE', { kind: 'primary', onClick: () => nav.reset([['today']]) }), Btn('PRINT TRIP SUMMARY', { kind: 'ghost', icon: 'print', onClick: () => nav.go('print', { docs: [['MANIFEST', t.id]], start: 0 }) })] };
+    h('div', { class: 'card' }, KV('Cash verified', rs(sm.cashVerified)), KV('Online / cheque to check', rs(sm.online)), KV('Outstanding dues', rs(sm.dues))), t.closedAt ? h('div', { class: 'card' }, h('b', null, 'Signed off'), KV('Closed', fmtDT(new Date(t.closedAt))), t.closedBy ? KV('By', actorText(t.closedBy)) : null) : null, t.shortages.length ? h('div', { class: 'card' }, h('b', { class: 'red' }, 'Shortage on record: '), t.shortages.map(x => qtyText(prod(x.pid), x.base) + ' ' + prod(x.pid).name).join(', ')) : null),
+    foot: [Btn('DONE', { kind: 'primary', onClick: () => nav.reset([['today']]) }), Btn('PRINT RETURN RECEIPT', { kind: 'ghost', icon: 'print', onClick: () => nav.go('print', { docs: [['RETURN', t.id]], start: 0 }) }), Btn('PRINT TRIP SUMMARY (LOADING SHEET)', { kind: 'link', onClick: () => nav.go('print', { docs: [['MANIFEST', t.id]], start: 0 }) })] };
 });
 
 /* ---------- 63-screens-ops.js ---------- */
@@ -3228,6 +3433,15 @@ function moveProduct(pid, dir) { need('manageProducts');
   const a = S.products, i = a.findIndex(p => p.id === pid), j = i + dir; if (i < 0 || j < 0 || j >= a.length) return;
   [a[i], a[j]] = [a[j], a[i]]; log('PRODUCT', a[j].name + ' moved ' + (dir < 0 ? 'up' : 'down') + ' — now number ' + (j + 1));
 }
+function moveProductTo(pid, pos) { need('manageProducts');
+  const a = S.products, i = a.findIndex(p => p.id === pid); if (i < 0) return; const j = Math.max(0, Math.min(a.length - 1, pos)); if (i === j) return;
+  const x = a.splice(i, 1)[0]; a.splice(j, 0, x); log('PRODUCT', x.name + ' moved to number ' + (j + 1));
+}
+const productSales = () => { const m = {}; S.sales.forEach(s => (s.lines || []).forEach(l => { m[l.pid] = (m[l.pid] || 0) + (l.amt || 0); })); return m; };
+function arrangeBySales() { need('manageProducts');
+  const m = productSales(), idx = new Map(S.products.map((x, i) => [x.id, i]));
+  S.products.sort((a, b) => (m[b.id] || 0) - (m[a.id] || 0) || idx.get(a.id) - idx.get(b.id)); log('PRODUCT', 'Products arranged by sales — best seller first');
+}
 const serialOf = pid => S.products.findIndex(p => p.id === pid) + 1;
 route('pr.list', (p, E) => {
   const act_ = S.products.filter(x => x.active).length;
@@ -3238,10 +3452,40 @@ route('pr.list', (p, E) => {
     foot: [Btn('ADD PRODUCT', { kind: 'primary', icon: 'plus', onClick: () => startProduct('pr.list') }), S.products.length > 1 ? Btn('CHANGE THE ORDER', { kind: 'ghost', onClick: () => nav.go('pr.order') }) : null] };
 });
 route('pr.order', (p, E) => {
-  const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Which product comes first?'), h('div', { class: 'hint' }, 'Use the arrows. This is the order products appear in everywhere: orders, loading lists, stock and purchases.')),
-    Pane(S.products.map((x, i) => h('div', { class: 'row' }, h('span', { class: 'chip' }, String(i + 1)), h('div', { class: 'l' }, h('div', { class: 't' }, x.name), h('div', { class: 's' }, 'MRP ' + rs(x.mrp) + (x.active ? '' : ' · hidden'))),
-      h('button', { class: 'btn ghost sm', type: 'button', style: { minWidth: '48px', padding: 0 }, disabled: i === 0, 'aria-label': 'Move ' + x.name + ' up', onClick: act(() => { moveProduct(x.id, -1); nav.refresh(); }) }, ic('up')),
-      h('button', { class: 'btn ghost sm', type: 'button', style: { minWidth: '48px', padding: 0 }, disabled: i === S.products.length - 1, 'aria-label': 'Move ' + x.name + ' down', onClick: act(() => { moveProduct(x.id, 1); nav.refresh(); }) }, ic('down'))))));
+  const mode = E.st.mode || 'arrows', sales = productSales();
+  const info = { arrows: 'Use the arrows to move a product up or down.', index: 'Type the new number of a product and press Go — it jumps there.', drag: 'Hold the ≡ handle and drag a product to its new place.', sales: 'Products are ranked by how much they have sold (₹). Tap ARRANGE to apply it.' }[mode];
+  const list = h('div', { class: 'pane' });
+  const rowFor = (x, i) => {
+    const left = mode === 'index' ? h('input', { class: 'idxin', type: 'text', inputmode: 'numeric', value: String(i + 1), 'aria-label': 'Position of ' + x.name, onFocus: ev => ev.target.select(), onKeydown: ev => { if (ev.key === 'Enter') ev.target.blur(); }, onChange: ev => { const v = parseInt(ev.target.value, 10); if (v >= 1) { try { moveProductTo(x.id, v - 1); } catch (e) { handleErr(e); } } nav.refresh(); } }) : h('span', { class: 'chip' }, String(i + 1));
+    const sub = 'MRP ' + rs(x.mrp) + (x.active ? '' : ' · hidden') + (mode === 'sales' ? ' · sold ' + rs(sales[x.id] || 0) : '');
+    const right = mode === 'arrows' ? [h('button', { class: 'btn ghost sm', type: 'button', style: { minWidth: '48px', padding: 0 }, disabled: i === 0, 'aria-label': 'Move ' + x.name + ' up', onClick: act(() => { moveProduct(x.id, -1); nav.refresh(); }) }, ic('up')),
+      h('button', { class: 'btn ghost sm', type: 'button', style: { minWidth: '48px', padding: 0 }, disabled: i === S.products.length - 1, 'aria-label': 'Move ' + x.name + ' down', onClick: act(() => { moveProduct(x.id, 1); nav.refresh(); }) }, ic('down'))]
+      : mode === 'drag' ? [dragHandle(x, i)] : [];
+    return h('div', { class: 'row', 'data-pid': x.id }, left, h('div', { class: 'l' }, h('div', { class: 't' }, x.name), h('div', { class: 's' }, sub)), right);
+  };
+  function dragHandle(x, i) {
+    const handle = h('button', { type: 'button', class: 'dragh', 'aria-label': 'Drag ' + x.name + ' to move it' }, '≡');
+    handle.addEventListener('pointerdown', ev => {
+      ev.preventDefault(); const row = handle.closest('.row'), rows = Array.from(list.children), body = list.closest('.body');
+      const startY = ev.clientY, s0 = body ? body.scrollTop : 0, tops = rows.map(r => r.offsetTop), hs = rows.map(r => r.offsetHeight); let tgt = i;
+      row.classList.add('dragging'); try { handle.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+      const mv = e => {
+        if (body) { const r = body.getBoundingClientRect(); if (e.clientY < r.top + 70) body.scrollTop -= 14; else if (e.clientY > r.bottom - 70) body.scrollTop += 14; }
+        const dy = e.clientY - startY + (body ? body.scrollTop - s0 : 0); row.style.transform = 'translateY(' + dy + 'px)';
+        const mid = tops[i] + hs[i] / 2 + dy; tgt = i; rows.forEach((r, k) => { if (mid >= tops[k] && mid < tops[k] + hs[k]) tgt = k; }); row.dataset.tgt = String(tgt);
+      };
+      const up = () => { handle.removeEventListener('pointermove', mv); handle.removeEventListener('pointerup', up); handle.removeEventListener('pointercancel', up); row.style.transform = ''; row.classList.remove('dragging');
+        if (tgt !== i) { try { moveProductTo(x.id, tgt); } catch (e) { handleErr(e); } } nav.refresh(); };
+      handle.addEventListener('pointermove', mv); handle.addEventListener('pointerup', up); handle.addEventListener('pointercancel', up);
+    });
+    return handle;
+  }
+  S.products.forEach((x, i) => list.append(rowFor(x, i)));
+  const body = h('div', { class: 'gap' }, h('div', { class: 'oq' }, h('div', { class: 'q' }, 'Which product comes first?'), h('div', { class: 'hint' }, 'This is the order products appear in everywhere: orders, loading lists, stock and purchases.')),
+    Seg([['arrows', 'Arrows'], ['index', 'Type number'], ['drag', 'Drag'], ['sales', 'Best sellers']], mode, v => { E.st.mode = v; nav.refresh(); }),
+    h('div', { class: 'mute', style: { fontSize: '14px' } }, info),
+    mode === 'sales' ? Btn('ARRANGE BY SALES', { kind: 'dark', icon: 'plus', onClick: () => confirmSheet({ title: 'Arrange all products by sales?', sub: 'Your current order is replaced. The best seller goes first. Products with no sales keep their place at the end.', yes: 'ARRANGE', no: 'KEEP MY ORDER', onYes: () => { arrangeBySales(); nav.refresh(); toast('Products arranged by sales'); } }) }) : null,
+    list);
   return { title: 'Product order', sub: plural(S.products.length, 'product'), body, foot: [Btn('DONE', { kind: 'primary', onClick: () => nav.back() })] };
 });
 
@@ -3925,7 +4169,7 @@ route('more', (p, E) => {
   const keep = r => { const tt = r && r.querySelector && r.querySelector('.t'), key = tt && tt.firstChild ? tt.firstChild.textContent : '', cp = MORE_CAP[key]; return !cp || can(cp); };
   const sec = (t, rows) => { const k = rows.filter(r => r && keep(r)); return k.length ? h('div', null, Sec(t), Pane(k)) : null; };
   const body = h('div', null,
-    h('div', null, Sec('Demo'), Pane([Row({ title: ACTOR.role === 'FULL' ? 'Full access — no role limits' : 'Viewing as ' + roleDef().label + (actorStaff() ? ' · ' + actorStaff().name : ''), sub: 'Permissions are simulated · tap to switch role', onClick: () => nav.go('me') })])),
+    h('div', null, Sec('Demo'), Pane([Row({ title: ACTOR.role === 'FULL' ? 'All in one — the complete app' : 'Viewing as ' + roleDef().label + (actorStaff() ? ' · ' + actorStaff().name : ''), sub: 'Permissions are simulated · tap to switch role', onClick: () => nav.go('me') })])),
     sec('Sell', [Row({ title: 'Godown sale', sub: 'Customer comes to the godown', onClick: () => startCart('godown') }), Row({ title: 'Retail sale', sub: 'Single packets at the counter', onClick: () => { const d = S.drafts.retail; if (d && d.pid) openSheet({ title: 'Unfinished retail sale', sub: prod(d.pid).name, body: h('div'), actions: [Btn('RESUME IT', { kind: 'primary', onClick: () => { closeSheet(); nav.go('rl.qty'); } }), Btn('START NEW', { kind: 'ghost', onClick: () => { closeSheet(); delete S.drafts.retail; nav.go('rl.prod'); } }), sheetClose('CANCEL')] }); else nav.go('rl.prod'); } }), Row({ title: 'Inter-agency sale', sub: 'Another Balaji agency buys goods', onClick: () => startCart('ia') })]),
     sec('Operate', [Row({ title: 'Tracking', sub: 'Pickups: loading · on the road · back', onClick: () => nav.go('pk.list') }), Row({ title: 'Products', sub: S.products.length ? plural(S.products.length, 'product') + ' · details, prices, order' : 'Add what you sell', onClick: () => nav.go('pr.list') }), Row({ title: 'Stock', sub: 'What is in the godown · receive · count', onClick: () => nav.go('st.list') }),
       Row({ title: 'Customers', sub: S.customers.length ? plural(S.customers.filter(c => c.type !== 'OCCASIONAL').length, 'customer') + ' · ' + plural(S.areas.length, 'area') : 'Add shops and areas', onClick: () => nav.go('cu.list') }),
@@ -3953,6 +4197,7 @@ route('set.staff.edit', (p, E) => {
   const s = staffOf(p.sid), agentish = ['AGENT', 'PERSONAL_AGENT'].includes(s.position);
   const body = h('div', { class: 'gap' }, h('div', { class: 'pane' }, h('div', { class: 'pad center' }, h('div', { class: 'big' }, s.name), h('div', { class: 'mt8' }, Chip(posLabel[s.position].toUpperCase())))),
     h('div', { class: 'card' }, Toggle('Can be assigned as driver', 'A driver is a duty — the position does not change', s.driver, v => { s.driver = v; log('STAFF', s.name + (v ? ' is now driver-eligible' : ' is no longer driver-eligible')); }),
+      Toggle('Can see Khata balances', 'Shows what customers owe on order and shop screens. OFF by default for field staff.', staffSeesKhata(s), v => { s.seeKhata = v; log('STAFF', s.name + (v ? ' can now see Khata balances' : ' can no longer see Khata balances')); }),
       Toggle('Active', 'Inactive people cannot be picked for work; history is kept', s.active, v => { if (!v && busyStaff(s.id)) { fail(s.name + ' is on a pickup right now.'); } s.active = v; log('STAFF', s.name + (v ? ' reactivated' : ' set inactive')); nav.refresh(); })),
     h('div', { class: 'card' }, KV('Joining date', fmtDY(parseYmd(staffJoined(s)))), h('div', { class: 'mt8' }, Btn('CHANGE JOINING DATE', { kind: 'dark', cls: 'sm', onClick: () => editSheet({ title: 'Joining date — ' + s.name, fields: [{ key: 'd', label: 'Date of joining', type: 'date', value: staffJoined(s), max: todayStr() }], onSave: v => { setJoinDate(s.id, v.d); toast('Joining date saved'); } }) }))),
     h('div', { class: 'card' }, KV('Personal details', hasDetails(s) ? [staffPhones(s).length ? plural(staffPhones(s).length, 'phone') : null, s.email ? 'email' : null, s.home ? 'address' : null, s.aadhaar ? 'Aadhaar' : null, staffFamily(s).length ? plural(staffFamily(s).length, 'family contact') : null].filter(Boolean).join(' · ') : 'Not added'), h('div', { class: 'mt8' }, Btn(hasDetails(s) ? 'EDIT PERSONAL DETAILS' : 'ADD PERSONAL DETAILS', { kind: 'dark', cls: 'sm', onClick: () => nav.go('sf.details', { sid: s.id }) }))),
@@ -4134,7 +4379,7 @@ route('set.prod', (p, E) => {
     Btn('CHANGE PRICES', { kind: 'primary', onClick: () => { const nb = x.levels[0].n, bx = p => Number((p * nb / 100).toFixed(8)).toString(), iBuyBox = bx(x.buy || 0), iSellBox = bx(x.sell); return editSheet({ title: 'Prices — ' + x.name, sub: 'Type up to 8 digits after the dot. Or fill the BOX price and the ' + x.base.toLowerCase() + ' price is worked out.', fields: [{ key: 'mrp', label: 'Printed MRP per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: String(x.mrp / 100) }, { key: 'buy', label: 'Buying price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: x.buy ? rateStr(x.buy) : '' }, { key: 'buyBox', label: 'OR buying price per BOX (₹)', type: 'money', value: iBuyBox }, { key: 'sell', label: 'Sell-to-Shop price per ' + x.base.toLowerCase() + ' (₹)', type: 'money', value: rateStr(x.sell) }, { key: 'sellBox', label: 'OR Sell-to-Shop price per BOX (₹)', type: 'money', value: iSellBox }], onSave: v => { const m = parseRs(v.mrp); let u = parseRate(v.buy), a = parseRate(v.sell); if (v.buyBox !== iBuyBox) { const q = parseRate(v.buyBox); if (!(q > 0)) fail('Enter the buying price per BOX.'); u = q / nb; } if (v.sellBox !== iSellBox) { const q = parseRate(v.sellBox); if (!(q > 0)) fail('Enter the Sell-to-Shop price per BOX.'); a = q / nb; } if (!(m > 0) || !(u > 0) || !(a > 0)) fail('Enter the MRP, the buying price and the selling price (MRP up to 2 decimals, the others up to 8).'); if (a > m) fail('The selling price cannot be more than the MRP (' + rs(m) + ').'); x.mrp = m; x.buy = u; x.sell = a; x.retail = m; log('STOCK', x.name + ' prices changed: MRP ' + rs(m) + ', buy ' + rsr(u) + ', sell ' + rsr(a)); } }); } })] };
 });
 /* ---- add a product: name → packing → prices. Every price is per smallest unit (packet / piece); BOX and LADI prices are worked out. ---- */
-const emptyProd = () => ({ name: '', base: 'PACKET', box: '', mid: 'LADI', midN: '', mrp: '', buy: '', sell: '', retail: '', priceBy: 'UNIT' });
+const emptyProd = () => ({ name: '', base: 'PACKET', box: '', mid: 'LADI', midN: '', midBox: '', mrp: '', buy: '', sell: '', retail: '', priceBy: 'UNIT' });
 function startProduct(from) { const d = S.drafts.prod; if (!d || !d.name) S.drafts.prod = Object.assign(emptyProd(), { from }); else d.from = from; nav.go('pr.name'); }
 const prodDraft = () => S.drafts.prod || (S.drafts.prod = emptyProd());
 const unitWord = (base, n) => base === 'PCS' ? (n === 1 ? 'piece' : 'pieces') : (n === 1 ? 'packet' : 'packets');
@@ -4142,7 +4387,10 @@ function packLevels(d) {
   const box = parseInt(d.box, 10), mid = parseInt(d.midN, 10), u = unitWord(d.base, 2);
   if (!(box > 1)) fail('Enter how many ' + u + ' are in 1 BOX.');
   const levels = [{ u: 'BOX', n: box }];
-  if (d.mid) { if (!(mid > 1 && mid < box)) fail('1 ' + d.mid + ' must hold more than 1 and fewer ' + u + ' than a BOX (' + box + ').'); levels.push({ u: d.mid, n: mid }); }
+  if (d.mid) { if (!(mid > 1 && mid < box)) fail('1 ' + d.mid + ' must hold more than 1 and fewer ' + u + ' than a BOX (' + box + ').');
+    const mb = parseInt(d.midBox, 10); if (!(mb > 0)) fail('Enter how many ' + d.mid + ' are in 1 BOX.');
+    if (mb * mid !== box) fail(mb + ' ' + d.mid + ' × ' + mid + ' ' + u + ' = ' + (mb * mid) + ', but 1 BOX holds ' + box + ' ' + u + '. The numbers must match.');
+    levels.push({ u: d.mid, n: mid }); }
   return levels;
 }
 function addProduct(d) { need('manageProducts');
@@ -4167,10 +4415,21 @@ route('pr.name', (p, E) => {
 });
 route('pr.pack', (p, E) => {
   const d = prodDraft(), u = unitWord(d.base, 2);
-  const info = h('div', { class: 'aside' });
-  const upd = () => { const box = parseInt(d.box, 10), mid = parseInt(d.midN, 10);
+  const info = h('div', { class: 'aside' }), warn = h('div', { class: 'errtxt', role: 'alert' });
+  const btn = Btn('CONTINUE', { kind: 'primary', disabled: true, onClick: () => { packLevels(d); nav.go('pr.price'); } });
+  const check = () => {                                                  // the arithmetic must be perfect before the owner can go on
+    const box = parseInt(d.box, 10), mid = parseInt(d.midN, 10), mb = parseInt(d.midBox, 10);
+    if (!(box > 1)) return { ok: false, msg: '' };
+    if (!d.mid) return { ok: true };
+    if (!(mid > 1) || !(mb > 0)) return { ok: false, msg: '' };
+    if (mid >= box) return { ok: false, msg: '1 ' + d.mid + ' must hold fewer ' + u + ' than a BOX (' + box + ').' };
+    if (mb * mid !== box) return { ok: false, msg: mb + ' ' + d.mid + ' × ' + mid + ' ' + u + ' = ' + (mb * mid) + ', but 1 BOX holds ' + box + ' ' + u + '. These numbers must be equal.' };
+    return { ok: true };
+  };
+  const upd = () => { const box = parseInt(d.box, 10), mid = parseInt(d.midN, 10), mb = parseInt(d.midBox, 10), c = check();
+    btn.disabled = !c.ok; warn.textContent = c.msg;
     info.textContent = !(box > 1) ? 'Stock is always kept as one number of ' + u + '. BOX' + (d.mid ? ' and ' + d.mid : '') + ' are just ways of counting it.'
-      : '1 BOX = ' + box + ' ' + u + (d.mid && mid > 1 ? (box % mid === 0 ? ' = ' + box / mid + ' ' + d.mid : '') + ' · 1 ' + d.mid + ' = ' + mid + ' ' + u : ''); };
+      : c.ok ? '✓ 1 BOX = ' + box + ' ' + u + (d.mid ? ' = ' + mb + ' ' + d.mid + ' × ' + mid + ' ' + u : '') : '1 BOX = ' + box + ' ' + u + (d.mid && mid > 1 ? ' · 1 ' + d.mid + ' = ' + mid + ' ' + u : ''); };
   const num = (key, label, ph) => Field(label, h('input', { class: 'input', id: 'pk-' + key, inputmode: 'numeric', maxlength: 5, placeholder: ph, value: d[key], onInput: ev => { ev.target.value = ev.target.value.replace(/\D/g, ''); d[key] = ev.target.value; upd(); } }));
   const body = h('div', null,
     h('div', { class: 'oq' }, h('div', { class: 'q' }, 'How is it packed?')),
@@ -4178,10 +4437,11 @@ route('pr.pack', (p, E) => {
     num('box', 'How many ' + u + ' in 1 BOX?', 'e.g. 192'),
     h('div', { class: 'lbl' }, 'Middle unit'), Seg([['LADI', 'LADI'], ['JAR', 'JAR'], ['', 'NONE']], d.mid, v => { d.mid = v; nav.refresh(); }),
     d.mid ? num('midN', 'How many ' + u + ' in 1 ' + d.mid + '?', 'e.g. 12') : null,
-    h('div', { class: 'mt24' }, info));
+    d.mid ? num('midBox', 'How many ' + d.mid + ' in 1 BOX?', 'e.g. 16') : null,
+    warn, h('div', { class: 'mt24' }, info));
   upd();
-  return { title: 'Add product', sub: d.name, step: PR_STEP(2), body, foot: [Btn('CONTINUE', { kind: 'primary', onClick: () => { packLevels(d); nav.go('pr.price'); } })],
-    help: 'Example: Simply Salted comes 192 packets to a BOX, and 12 packets to a LADI. Orders can then mix BOX, LADI and PACKET freely.' };
+  return { title: 'Add product', sub: d.name, step: PR_STEP(2), body, foot: [btn],
+    help: 'Example: Simply Salted comes 192 packets to a BOX, 12 packets to a LADI, so 16 LADI to a BOX (16 × 12 = 192). The numbers must agree or you cannot continue.' };
 });
 route('pr.price', (p, E) => {
   const d = prodDraft(), levels = packLevels(d), unit = unitWord(d.base, 1), per = d.priceBy === 'BOX' ? 'BOX' : 'UNIT', boxN = levels[0].n, perWord = per === 'BOX' ? 'BOX' : unit;
@@ -4375,7 +4635,7 @@ route('set.more', (p, E) => {
     Sec('Expense types'), Pane(S.expenseCats.map(c => Row({ title: c }))), Btn('ADD EXPENSE TYPE', { kind: 'dark', cls: 'sm', onClick: () => editSheet({ title: 'Add expense type', save: 'ADD', fields: [{ key: 'n', label: 'Name' }], onSave: v => { const n = v.n.trim(); if (n.length < 2) fail('Enter a name.'); if (S.expenseCats.includes(n)) fail('Already there.'); S.expenseCats.push(n); } }) }),
     Sec('Agency details'), Pane([Row({ title: ag.name, sub: [ag.addr, ag.phone ? '☎ ' + ag.phone : ''].filter(Boolean).join(' · ') || 'Add your agency address and phone — they print on every bill', onClick: () => editSheet({ title: 'Agency details', fields: [{ key: 'name', label: 'Agency name', value: ag.name }, { key: 'addr', label: 'Address', value: ag.addr, maxlength: 90 }, { key: 'phone', label: 'Phone', value: ag.phone, maxlength: 12 }], onSave: v => { if (v.name.trim().length < 2) fail('Enter the agency name.'); Object.assign(ag, { name: v.name.trim(), addr: v.addr.trim(), phone: v.phone.trim() }); } }) }),
       Row({ title: 'Bank details shown to customers', sub: [bk.name, bk.acNo, up.id ? 'UPI ' + up.id : ''].filter(Boolean).join(' · ') || 'Not set — add your bank account and UPI ID', onClick: () => editSheet({ title: 'Bank & UPI', fields: [{ key: 'name', label: 'Bank', value: bk.name }, { key: 'acNo', label: 'Account number', value: bk.acNo }, { key: 'ifsc', label: 'IFSC', value: bk.ifsc }, { key: 'upi', label: 'UPI id', value: up.id }], onSave: v => { bk.name = v.name; bk.acNo = v.acNo; bk.ifsc = v.ifsc; up.id = v.upi; } }) })]),
-    Sec('Print'), h('div', { class: 'card' }, h('div', { class: 'lbl', style: { marginTop: 0 } }, 'Usual paper size'), Seg([['A4', 'A4'], ['80', '80 mm'], ['58', '58 mm']], S.settings.paper === 'A4' ? 'A4' : S.settings.paper, v => { S.settings.paper = v; })),
+    Sec('Print'), h('div', { class: 'card' }, h('div', { class: 'lbl', style: { marginTop: 0 } }, 'Usual paper size'), Seg([['A4', 'A4'], ['80', '80 mm'], ['58', '58 mm']], S.settings.paper, v => { S.settings.paper = v; S.settings.paperPicked = true; })),
     Sec('Stock'), Pane([Row({ title: 'Stock movement reasons', sub: S.settings.reasons.length + ' reasons', onClick: () => nav.go('set.reasons') })]),
     Sec('Amounts'), Pane([Row({ title: 'Off-duty unloading fee', sub: 'Per job, paid once to one coordinator', right: rs(S.settings.unloadFee), onClick: () => editSheet({ title: 'Unloading fee', fields: [{ key: 'v', label: 'Amount per job (₹)', type: 'money', value: String(S.settings.unloadFee / 100) }], onSave: v => { const a = parseRs(v.v); if (!(a > 0)) fail('Enter an amount.'); S.settings.unloadFee = a; } }) }), Row({ title: 'Usual Agent commission', sub: 'For new Agents', right: pctText(S.settings.agentBp), onClick: () => editSheet({ title: 'Agent commission', fields: [{ key: 'v', label: 'Percent', type: 'num', value: String(S.settings.agentBp / 100) }], onSave: v => { const b = Math.round(parseFloat(v.v) * 100); if (!(b > 0 && b <= 2000)) fail('Enter 0.01 to 20.'); S.settings.agentBp = b; } }) })]));
   return { title: 'Additional', sub: 'Payments, expenses, agency, print', body };
@@ -4502,8 +4762,20 @@ function docStatement(id, paper) {
     h('table', null, h('thead', null, h('tr', null, h('th', null, 'Date'), h('th', null, 'Details'), h('th', { class: 'r' }, 'Amount'), h('th', { class: 'r opt' }, 'Balance'))), h('tbody', null, rows.length ? rows : h('tr', null, h('td', { colspan: 4 }, 'No transactions.')))),
     h('div', { class: 'hr' }), kvp(run < 0 ? 'OWES AGENCY' : run > 0 ? 'AGENCY HAS TO PAY' : 'ALL CLEAR', rs(Math.abs(run)), 'big'), h('div', { class: 'note' }, 'Negative = owes the agency. Sales due, payments, credits and commission are listed in the order they happened.'));
 }
-const DOCS = { DC: docDC, BILL: docBill, MANIFEST: docManifest, STATEMENT: docStatement };
-const docName = ([ty, id]) => ty === 'DC' ? (chalOf(id) ? chalOf(id).no : 'Challan') : ty === 'BILL' ? 'Bill ' + (saleOf(id) ? saleOf(id).no : '') : ty === 'MANIFEST' ? 'Loading list' : 'Statement';
+/* the return receipt: the permanent audit paper of a closed pickup — goods, cash, differences, who signed off and when */
+function docReturn(id, paper) {
+  const t = tripOf(id), sm = t.closeSummary || tripSummary(t), g = t.goods || {}, rt = t.returnTimes || {}, hv = sm.handover;
+  const bucket = k => { const m = {}; for (const pid in g) if (g[pid][k]) m[pid] = g[pid][k]; return m; };
+  const tbl = (title, m) => { const ks = Object.keys(m).filter(pid => m[pid] > 0); return h('div', null, h('b', null, title), h('table', null, h('tbody', null, ks.length ? ks.map((pid, i) => h('tr', null, h('td', null, (i + 1) + '. ' + prodLabel(prod(pid))), h('td', { class: 'r' }, qtyText(prod(pid), m[pid])))) : h('tr', null, h('td', { colspan: 2 }, '—'))))); };
+  return h('div', { class: 'paper ' + PAPERS[paper][0] },
+    docHead('PICKUP RETURN RECEIPT', t.no, kvp('Closed', t.closedAt ? fmtDT(new Date(t.closedAt)) : 'not closed yet')), kvp('Vehicle', t.vehicleId ? vehOf(t.vehicleId).reg : '—'), kvp('Driver', t.driverId ? staffOf(t.driverId).name : '—'),
+    tbl('Goods delivered', sm.delivered), Object.keys(sm.sold).length ? tbl('Sold on the road', sm.sold) : null, tbl('Returned — sellable (good)', bucket('good')), tbl('Returned — damaged', bucket('damaged')), tbl('Returned — expired', bucket('expired')), Object.keys(bucket('short')).length ? tbl('SHORT / missing', bucket('short')) : null,
+    h('div', { class: 'hr' }), kvp('Cash collected', rs(sm.cashExpected)), kvp('Cash counted by Manager', hv ? rs(hv.counted) : '—'), hv && hv.diff ? kvp(hv.diff < 0 ? 'Cash short' : 'Cash extra', rs(Math.abs(hv.diff))) : null, hv && hv.note ? kvp('Explanation', hv.note) : null, kvp('Online / cheque', rs(sm.online)), kvp('Outstanding dues', rs(sm.dues)),
+    h('div', { class: 'hr' }), rt.goods ? kvp('Vehicle checked', fmtT(new Date(rt.goods))) : null, hv ? kvp('Cash counted at', fmtT(new Date(hv.at)) + (hv.by ? ' · ' + actorText(hv.by) : '')) : null, t.closedAt ? kvp('Closed at', fmtT(new Date(t.closedAt))) : null, t.closedBy ? kvp('Signed off by', actorText(t.closedBy)) : null,
+    h('div', { class: 'note' }, 'Saved with the pickup. Differences stay on record.'));
+}
+const DOCS = { DC: docDC, BILL: docBill, MANIFEST: docManifest, STATEMENT: docStatement, RETURN: docReturn };
+const docName = ([ty, id]) => ty === 'DC' ? (chalOf(id) ? chalOf(id).no : 'Challan') : ty === 'BILL' ? 'Bill ' + (saleOf(id) ? saleOf(id).no : '') : ty === 'MANIFEST' ? 'Loading sheet' : ty === 'RETURN' ? 'Return receipt' : 'Statement';
 function printNow(doc, paper) {
   const root = $('#printRoot'); setKids(root, doc.cloneNode(true)); root.setAttribute('aria-hidden', 'false');
   if (paper === 'A4') $('#pageSize').textContent = '@page{size:A4;margin:12mm}';
@@ -4515,15 +4787,20 @@ function printNow(doc, paper) {
   window.print();
 }
 route('print', (p, E) => {
-  const docs = p.docs, st = E.st; if (st.i == null) { st.i = p.start || 0; st.paper = S.settings.paper || 'A4'; }
+  const docs = p.docs, st = E.st; if (st.i == null) { st.i = p.start || 0; st.paper = S.settings.paperPicked ? S.settings.paper : (docs[st.i][0] === 'STATEMENT' ? 'A4' : (S.settings.paper || '80')); }   // delivery paper: thermal unless the owner chose otherwise
   const cur = docs[st.i]; const doc = DOCS[cur[0]](cur[1], st.paper);
-  if (p.autoprint && !st.printed) { st.printed = true; setTimeout(() => { try { printNow(doc, st.paper); } catch (e) { /* print dialog unavailable */ } }, 350); }
+  const record = all => { try { notePrint(all ? docs : [cur]); } catch (e) { handleErr(e); } };
+  const again = () => { if (nav.top() === E) nav.refresh(); };
+  if (p.autoprint && !st.printed) { st.printed = true; setTimeout(() => { record(!!p.recAll); try { printNow(doc, st.paper); } catch (e) { /* print dialog unavailable */ } again(); }, 350); }
+  const log_ = cur[0] === 'DC' ? (chalOf(cur[1]) || {}).prints : cur[0] === 'BILL' ? (saleOf(cur[1]) || {}).prints : cur[0] === 'MANIFEST' ? (tripOf(cur[1]) || {}).sheetPrints : cur[0] === 'RETURN' ? (tripOf(cur[1]) || {}).returnPrints : null, lastP = log_ && log_.length ? log_[log_.length - 1] : null;
   const body = h('div', { class: 'gap' }, docs.length > 1 ? Seg(docs.map((d, i) => [i, docName(d)]), st.i, v => { st.i = v; nav.refresh(); }) : null,
-    Seg([['A4', 'A4'], ['80', '80 mm'], ['58', '58 mm']], st.paper, v => { st.paper = v; nav.refresh(); }), h('div', { style: { overflow: 'auto' } }, doc),
+    Seg([['A4', 'A4'], ['80', '80 mm'], ['58', '58 mm']], st.paper, v => { st.paper = v; nav.refresh(); }),
+    lastP ? h('div', { class: 'aside' }, h('b', null, docName(cur) + ' printed at ' + fmtT(lastP) + '. '), log_.length > 1 ? 'This is print ' + log_.length + '.' : 'Every print is saved with its time.') : null,
+    h('div', { style: { overflow: 'auto' } }, doc),
     h('div', { class: 'mute center', style: { fontSize: '13px' } }, 'Browser print only. The 80 mm and 58 mm sizes are layouts for a thermal roll — no printer is connected from here. Choose “Save as PDF” in the print window to make a PDF.'));
-  return { title: 'Print preview', sub: docName(cur), body, foot: [Btn('PRINT / SAVE AS PDF', { kind: 'primary', icon: 'print', onClick: () => printNow(doc, st.paper) })] };
+  return { title: 'Print preview', sub: docName(cur), body, foot: [Btn('PRINT / SAVE AS PDF', { kind: 'primary', icon: 'print', onClick: () => { record(false); try { printNow(doc, st.paper); } catch (e) { /* ignore */ } again(); } })] };
 });
-route('statement', (p, E) => ({ title: 'Statement', sub: partyName(p.pid), body: h('div', { class: 'gap' }, h('div', { class: 'aside' }, 'Everything recorded for ' + partyName(p.pid) + ', in order. Print it or save it as a PDF through the browser’s print window.'), docStatement(p.pid, S.settings.paper || 'A4')),
+route('statement', (p, E) => ({ title: 'Statement', sub: partyName(p.pid), body: h('div', { class: 'gap' }, h('div', { class: 'aside' }, 'Everything recorded for ' + partyName(p.pid) + ', in order. Print it or save it as a PDF through the browser’s print window.'), docStatement(p.pid, S.settings.paperPicked ? S.settings.paper : 'A4')),
   foot: [Btn('PRINT / SAVE AS PDF', { kind: 'primary', icon: 'print', onClick: () => nav.go('print', { docs: [['STATEMENT', p.pid]], start: 0, autoprint: true }) })] }));
 
 /* ---------- 80-storage.js ---------- */
@@ -4551,7 +4828,7 @@ const stateText = () => JSON.stringify(S, storeReplacer);
 function validState(s) { return !!s && typeof s === 'object' && ['products', 'customers', 'staff', 'orders', 'khata', 'cash', 'areas', 'vehicles'].every(k => Array.isArray(s[k])) && s.godown && s.day && s.seq && s.nums; }
 function hydrate(saved) {                                  // fill anything a newer version of the app added, keep everything saved
   const base = newState(false), s = Object.assign(base, saved);
-  s.settings = Object.assign(FIX.settings(), saved.settings || {}); s.settings.pay = Object.assign({ CASH: true, UPI: true, BANK: true, CHEQUE: true }, (saved.settings || {}).pay || {});
+  s.settings = Object.assign(FIX.settings(), saved.settings || {}); if (!s.settings.paperPicked) s.settings.paper = '80'; s.settings.pay = Object.assign({ CASH: true, UPI: true, BANK: true, CHEQUE: true }, (saved.settings || {}).pay || {});
   if (!(s.tokens instanceof Set)) s.tokens = new Set(); if (!s.drafts || typeof s.drafts !== 'object') s.drafts = {};
   return s;
 }
@@ -4727,7 +5004,7 @@ function fbCompose(ctx, el, point, existing) {
 function fbRole() { const s = actorStaff(); return { role: ACTOR.role || null, roleLabel: roleDef() ? roleDef().label : null, staffId: s ? s.id : null, staffName: s ? s.name : null, simulated: true }; }
 function fbExportObject() {
   return { app: 'AgencyPilotV2 tester feedback', build: FB.build, exportedAt: new Date().toISOString(), count: FB.notes.length,
-    howToRead: 'Each note is a change request typed by the customer while testing the app. Each note also has role { role, roleLabel, staffId, staffName }: the SIMULATED demo role the tester was viewing as when they wrote it (FULL = full access, no role limits) — judge a note in the context of that role. screen.route is the route name registered in Demos/AgencyPilotV2/index.html (route(\'name\', …)); scope "element" means they pointed at one part of the screen (see element.text / kind / path / rect); scope "screen" means the whole screen. visibleText is what the screen showed at that moment. rect and point are in CSS pixels relative to the screen; xPct / yPct are percentages of the screen size.',
+    howToRead: 'Each note is a change request typed by the customer while testing the app. Each note also has role { role, roleLabel, staffId, staffName }: the SIMULATED demo role the tester was viewing as when they wrote it (FULL = ALL IN ONE, the complete app with no role limits) — judge a note in the context of that role. screen.route is the route name registered in Demos/AgencyPilotV2/index.html (route(\'name\', …)); scope "element" means they pointed at one part of the screen (see element.text / kind / path / rect); scope "screen" means the whole screen. visibleText is what the screen showed at that moment. rect and point are in CSS pixels relative to the screen; xPct / yPct are percentages of the screen size.',
     device: { userAgent: navigator.userAgent, platform: navigator.platform || '', language: navigator.language, viewport: { w: innerWidth, h: innerHeight }, screen: { w: screen.width, h: screen.height }, pixelRatio: window.devicePixelRatio || 1 },
     notes: FB.notes.slice().sort((a, b) => a.at < b.at ? -1 : 1) };
 }
@@ -4785,7 +5062,7 @@ const ROUTE_RULES = [                                  // first match wins; a sc
   [/^orders(\.all|\.area)?$/, () => can('viewAllOrders')],
   [/^my\.orders$/, () => can('viewOwnOrders')],
   [/^order\.detail$/, p => { const o = orderOf(p.id); return !!o && (myOrder(o) || (!!o.tripId && myTrip(tripOf(o.tripId)))); }],
-  [/^pk\.(orders|summary|totals|shortage|vehicle|driver|helper|stops|load|mismatch|camera|confirm|ready)$/, () => can('preparePickup')],
+  [/^pk\.(orders|summary|totals|shortage|vehicle|driver|helper|stops|load|mismatch|camera|confirm|ready|sheet)$/, () => can('preparePickup')],
   [/^(pk\.list|mg\.pickups)$/, () => can('viewAllTrips')],
   [/^pk\.(view|road)$/, p => myTrip(tripOf(p.tid))],
   [/^pk\.left$/, p => can('recordDelivery') && (can('recordDeliveryAnyTrip') || myTrip(tripOf(p.tid)))],
@@ -4794,6 +5071,7 @@ const ROUTE_RULES = [                                  // first match wins; a sc
   [/^col\./, p => { const s = p.sid ? saleOf(p.sid) : null; return can('recordCollection') && (can('recordDeliveryAnyTrip') || (!!s && myTrip(tripOf(s.tripId)))); }],
   [/^disc$/, () => can('approveDiscount')],
   [/^khata$/, () => can('viewKhataAll')],
+  [/^kh\.receive$/, () => can('recordCollection') && can('viewKhataAll')],
   [/^kh\.(person|history|sales)$/, p => can('viewKhataAll') || (can('viewOwnKhata') && p.pid === meId())],
   [/^me\.khata$/, () => can('viewOwnKhata')],
   [/^kh\.(pay|advance)$/, () => can('payStaff')],
@@ -4858,13 +5136,13 @@ function renderDemoBar() {
   const bar = $('#demobar'), E = nav.top(), app = $('#app'); if (!bar) return;
   const on = !!ACTOR.role && !!E && E.name !== 'roles'; bar.hidden = !on; app.classList.toggle('hasbar', on); if (!on) return;
   const s = actorStaff();
-  setKids(bar, h('span', { class: 'dm-t' }, h('b', null, 'DEMO'), ' · ' + (ACTOR.role === 'FULL' ? 'FULL ACCESS · NO LIMITS' : roleDef().label.toUpperCase() + (s ? ' · ' + s.name.toUpperCase() : '') + ' · SIMULATED')),
+  setKids(bar, h('span', { class: 'dm-t' }, h('b', null, 'DEMO'), ' · ' + (ACTOR.role === 'FULL' ? 'ALL IN ONE · COMPLETE APP' : roleDef().label.toUpperCase() + (s ? ' · ' + s.name.toUpperCase() : '') + ' · SIMULATED')),
     h('button', { type: 'button', class: 'dm-b', onClick: () => { closeSheet(); nav.go('roles'); } }, 'SWITCH'));
 }
 function enterRole(r, sid) {
   ACTOR.role = r; ACTOR.staffId = sid || null; roleSave(); setRoleTabs(); UI.tab = 'today'; closeSheet();
   nav.reset([['today']], 'fwd');
-  toast(r === 'FULL' ? 'Full access — no role limits' : 'Now viewing as ' + ROLES[r].label + (sid && staffOf(sid) ? ' · ' + staffOf(sid).name : ''));
+  toast(r === 'FULL' ? 'All in one — the complete app' : 'Now viewing as ' + ROLES[r].label + (sid && staffOf(sid) ? ' · ' + staffOf(sid).name : ''));
   if (!FB.tipShown) setTimeout(() => { if (!UI.sheet) fbTip(); }, 700);
 }
 function chooseRole(r) {
@@ -4882,9 +5160,10 @@ function loadSample() {
 route('roles', (p, E) => {
   const cards = ROLE_ORDER.map(r => h('button', { class: 'rolecard' + (ACTOR.role === r ? ' on' : ''), type: 'button', onClick: act(() => chooseRole(r)) },
     h('b', null, ROLES[r].label.toUpperCase(), ACTOR.role === r ? [' ', Chip('VIEWING NOW', 'ok')] : null), h('span', null, ROLES[r].blurb)));
-  const body = h('div', { class: 'gap' }, cards,
-    h('div', { class: 'rolegap' }, h('button', { class: 'rolecard full' + (ACTOR.role === 'FULL' ? ' on' : ''), type: 'button', onClick: act(() => enterRole('FULL', null)) },
-      h('b', null, 'FULL ACCESS — DEMO', ACTOR.role === 'FULL' ? [' ', Chip('VIEWING NOW', 'ok')] : null), h('span', null, 'Explore all modules and workflows without role restrictions. For development, debugging and comprehensive testing.'))),
+  const body = h('div', { class: 'gap' },
+    h('button', { class: 'rolecard allin' + (ACTOR.role === 'FULL' ? ' on' : ''), type: 'button', onClick: act(() => enterRole('FULL', null)) },
+      h('b', null, 'ALL IN ONE', ACTOR.role === 'FULL' ? [' ', Chip('VIEWING NOW', 'ok')] : null), h('span', null, 'The complete app, the way it ran before roles: every screen, every action, nothing hidden by role. Choose this to go all out.')),
+    h('div', { class: 'rolelbl' }, 'OR EXPERIENCE THE APP AS ONE PERSON'), cards,
     !S.staff.length ? h('div', { class: 'aside' }, h('b', null, 'No staff yet. '), 'Manager, Agent, Driver, Helper and Retailer are played by staff members. Load the sample agency to try every role.', h('div', { class: 'mt12' }, Btn('LOAD SAMPLE AGENCY', { kind: 'dark', cls: 'sm', onClick: loadSample }))) : null,
     h('div', { class: 'mute center', style: { fontSize: '13px' } }, 'Demo only: there is no password. Roles are simulated, and every role works on the same shared data — switching never resets anything.'),
     ACTOR.role && UI.stack.length > 1 ? Btn('STAY AS ' + ROLES[ACTOR.role].label.toUpperCase(), { kind: 'link', onClick: () => nav.back() }) : null);
@@ -4912,7 +5191,7 @@ route('me', (p, E) => {
     h('div', { class: 'aside' }, h('b', null, 'This is a demo. '), 'There is no password. Roles are simulated on one shared set of data, so a Driver\'s delivery is what the Manager and the Owner see. Switching role never resets anything.'),
     Sec('What this role can do'), h('div', { class: 'card' }, canList.map(t => h('div', { style: { padding: '3px 0', fontSize: '15px' } }, '· ' + t))),
     Pane([Row({ title: 'Feedback notes', sub: FB.notes.length ? plural(FB.notes.filter(x => !x.done).length, 'open note') + ' · notes record which role wrote them' : 'Hold any empty space for 5 seconds to leave a note', onClick: () => nav.go('fb.list') })]));
-  return { title: 'Profile', sub: d.label + (s ? ' · ' + s.name : ''), body, foot: [Btn('SWITCH ROLE', { kind: 'primary', onClick: () => nav.go('roles') }), pool.length > 1 ? Btn('CHANGE PERSON', { kind: 'ghost', onClick: () => nav.go('roles.who', { role: ACTOR.role }) }) : null, ACTOR.role !== 'FULL' ? Btn('RETURN TO FULL ACCESS', { kind: 'link', onClick: () => enterRole('FULL', null) }) : null] };
+  return { title: 'Profile', sub: d.label + (s ? ' · ' + s.name : ''), body, foot: [Btn('SWITCH ROLE', { kind: 'primary', onClick: () => nav.go('roles') }), pool.length > 1 ? Btn('CHANGE PERSON', { kind: 'ghost', onClick: () => nav.go('roles.who', { role: ACTOR.role }) }) : null, ACTOR.role !== 'FULL' ? Btn('RETURN TO ALL IN ONE', { kind: 'link', onClick: () => enterRole('FULL', null) }) : null] };
 });
 
 /* ---- shared pieces for the role homes ---- */
@@ -5006,7 +5285,7 @@ function agentHome(p, E) {
   body.append(Sec('Today\'s orders', todays.length ? h('span', null, todays.length) : null), todays.length ? Pane(todays.map(o => orderRow(o))) : Pane(Empty('No orders taken today yet.')));
   if (pending.length) body.append(Sec('Pending orders'), Pane(pending.slice(0, 6).map(o => orderRow(o))));
   const dues = custs.map(c => ({ c, due: partyDueIncl(c.id) })).filter(x => x.due > 0);
-  body.append(Sec('Collections in my areas'), dues.length ? Pane(dues.map(x => Row({ title: x.c.shop || x.c.name, sub: (x.c.addr && x.c.addr.area) || '', right: rs(x.due), rightSub: 'still to pay' }))) : Pane(Empty('Nothing is due from your customers.')));
+  if (seeBalances()) body.append(Sec('Collections in my areas'), dues.length ? Pane(dues.map(x => Row({ title: x.c.shop || x.c.name, sub: (x.c.addr && x.c.addr.area) || '', right: rs(x.due), rightSub: 'still to pay' }))) : Pane(Empty('Nothing is due from your customers.')));
   const b = s ? netBal(s.id) : 0;
   body.append(Sec('My Khata'), Pane([Row({ title: s ? 'My account' : 'My account', sub: b < 0 ? 'I owe the agency' : b > 0 ? 'The agency owes me' : 'All clear', right: h('span', { class: b < 0 ? 'red' : b > 0 ? 'green' : '' }, rs(b, { plus: true })), onClick: () => nav.tab('me.khata') })]));
   return { hdr, body };
